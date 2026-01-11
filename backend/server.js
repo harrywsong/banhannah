@@ -56,14 +56,22 @@ app.use('/api/', limiter);
 
 
 // ============= UPDATED CORS CONFIGURATION =============
-// FIXED: Added 'ngrok-skip-browser-warning' to allowedHeaders
+// Around line 48-82 in backend/server.js
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+  'http://localhost:5173',
+  'http://localhost:3000'
+];
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, Postman, curl)
+    // Allow requests with no origin (like mobile apps, Postman, curl, ngrok)
     if (!origin) return callback(null, true);
+    
+    // Allow all origins in development for ngrok testing
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, true);
+    }
     
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -76,16 +84,19 @@ const corsOptions = {
   allowedHeaders: [
     'Content-Type', 
     'Authorization',
-    'ngrok-skip-browser-warning'  // <-- CRITICAL: This header is required for ngrok
+    'ngrok-skip-browser-warning',
+    'X-Requested-With',
+    'Accept'
   ],
-  exposedHeaders: ['Content-Type', 'Authorization']
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
 
-// ========== REMOVE THIS LINE (already added above with limits) ==========
-// app.use(express.json());  <-- DELETE THIS
-// ========== END ==========
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
 
 // Create necessary directories
 const uploadsDir = path.join(__dirname, 'uploads');
