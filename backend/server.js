@@ -32,16 +32,22 @@ app.use(cookieParser());
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100
 });
 app.use('/api/', limiter);
 
-// CORS configuration
+// ============= UPDATED CORS CONFIGURATION =============
+// FIXED: Added 'ngrok-skip-browser-warning' to allowedHeaders
+
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'];
+
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (like mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -49,10 +55,18 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization',
+    'ngrok-skip-browser-warning'  // <-- CRITICAL: This header is required for ngrok
+  ],
+  exposedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
+
+// ============= END OF CORS CONFIGURATION =============
+
 app.use(express.json());
 
 // Create necessary directories
@@ -519,5 +533,6 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, async () => {
   console.log(`✓ Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`✓ CORS allowed origins: ${allowedOrigins.join(', ')}`);
   await initializeAdmin();
 });
