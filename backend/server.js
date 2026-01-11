@@ -10,7 +10,7 @@ const app = express();
 const corsOptions = {
   origin: [
     'http://localhost:5173', // Vite dev server
-    'https://your-site.netlify.app', // UPDATE THIS: Your Netlify URL
+    'https://your-banhannah.netlify.app', // UPDATE THIS: Your Netlify URL
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -62,7 +62,7 @@ app.post('/api/files/upload', upload.single('file'), (req, res) => {
     }
     
     // Get your server's URL (you'll configure this)
-    const serverUrl = process.env.SERVER_URL || `http://${req.get('host')}`;
+    const serverUrl = process.env.SERVER_URL || `http://banhannah.duckdns.org:3001`;
     const fileUrl = `${serverUrl}/api/files/download/${req.file.filename}`;
     
     res.json({
