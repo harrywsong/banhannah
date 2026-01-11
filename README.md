@@ -22,10 +22,11 @@ A modern, feature-rich educational platform built with React, Vite, and Tailwind
      - Publish directory: `dist`
    - Click "Deploy site"
 
-3. **Set Environment Variable:**
+3. **Set Environment Variables:**
    - Go to Site settings → Environment variables
    - Add: `VITE_API_URL` = `http://YOUR_RASPBERRY_PI_IP:3001`
-   - Or if using domain: `VITE_API_URL` = `https://yourdomain.com`
+     - Or if using domain: `VITE_API_URL` = `https://yourdomain.com`
+   - Add: `SECRETS_SCAN_OMIT_KEYS` = `VITE_API_URL` (prevents build error - this URL is meant to be public)
    - Trigger a new deploy (Deploys → Trigger deploy → Deploy site)
 
 4. **Update CORS in backend** (see Backend section below)
