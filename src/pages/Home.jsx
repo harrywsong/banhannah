@@ -20,8 +20,8 @@ export default function Home() {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
-    // Duplicate reviews for seamless scrolling animation (no duplicates in initial array)
-    setShuffledReviews([...shuffled, ...shuffled])
+    // Show unique reviews only (removed duplication to prevent showing same review twice)
+    setShuffledReviews(shuffled)
   }, [reviews]) // Reshuffle when reviews change (not just length)
 
   const features = [
@@ -178,11 +178,7 @@ export default function Home() {
             <div className="relative overflow-hidden">
               {/* Scrolling Container */}
               <div 
-                className="flex space-x-6"
-                style={{
-                  animation: `scroll-reviews ${Math.max(shuffledReviews.length * 3, 30)}s linear infinite`,
-                  width: 'max-content'
-                }}
+                className="flex space-x-6 overflow-x-auto"
               >
                 {shuffledReviews.map((review, index) => (
                   <div

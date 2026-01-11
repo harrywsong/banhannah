@@ -4,6 +4,10 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const { PDFDocument } = require('pdf-lib');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+
+const execAsync = promisify(exec);
 
 const app = express();
 
@@ -28,6 +32,37 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Create previews directory if it doesn't exist
+const previewsDir = path.join(uploadsDir, 'previews');
+if (!fs.existsSync(previewsDir)) {
+  fs.mkdirSync(previewsDir, { recursive: true });
+}
+
+// Helper function to generate PDF preview image using pdftoppm (requires poppler-utils)
+async function generatePDFPreview(pdfPath, outputPath) {
+  try {
+    // Use pdftoppm to convert first page to PNG
+    // -png: output format
+    // -f 1 -l 1: first page only
+    // -scale-to-x 800: width
+    // -scale-to-y -1: maintain aspect ratio
+    const command = `pdftoppm -png -f 1 -l 1 -scale-to-x 800 -scale-to-y -1 "${pdfPath}" "${outputPath}"`;
+    await execAsync(command);
+    
+    // pdftoppm outputs with -1, -2, etc. suffix, so we need to rename
+    const outputFile = `${outputPath}-1.png`;
+    if (fs.existsSync(outputFile)) {
+      // Rename to the final output path
+      fs.renameSync(outputFile, outputPath);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('PDF preview generation error:', error);
+    return false;
+  }
+}
+
 // Configure multer for file storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -43,7 +78,15 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage: storage,
   limits: { 
-    fileSize: 50 * 1024 * 1024 // 50MB limit
+    fileSize: 50 * 1024 * 1024 // 50MB limit for files
+  }
+});
+
+// Video upload configuration (larger file size limit)
+const videoUpload = multer({ 
+  storage: storage,
+  limits: { 
+    fileSize: 2 * 1024 * 1024 * 1024 // 2GB limit for videos
   }
 });
 
@@ -54,6 +97,69 @@ app.get('/api/health', (req, res) => {
     message: 'Backend server is running',
     timestamp: new Date().toISOString()
   });
+});
+
+// Video upload endpoint (for lesson videos)
+app.post('/api/videos/upload', videoUpload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video uploaded' });
+    }
+    
+    const serverUrl = process.env.SERVER_URL || `https://nichol-tunnellike-constrictively.ngrok-free.dev`;
+    const videoUrl = `${serverUrl}/api/videos/view/${req.file.filename}`;
+    
+    res.json({
+      success: true,
+      videoUrl: videoUrl,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      fileId: req.file.filename
+    });
+  } catch (error) {
+    console.error('Video upload error:', error);
+    res.status(500).json({ error: 'Video upload failed' });
+  }
+});
+
+// View video endpoint (for streaming)
+app.get('/api/videos/view/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const safeFilename = path.basename(filename);
+    const filePath = path.join(uploadsDir, safeFilename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+    
+    // Determine content type for video
+    const ext = path.extname(safeFilename).toLowerCase();
+    const contentTypes = {
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.ogg': 'video/ogg',
+      '.mov': 'video/quicktime'
+    };
+    const contentType = contentTypes[ext] || 'video/mp4';
+    
+    // Set headers for video streaming
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${path.basename(safeFilename)}"`);
+    
+    // Send file
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error('Video view error:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Video view failed' });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Video view error:', error);
+    res.status(500).json({ error: 'Video view failed' });
+  }
 });
 
 // Upload file endpoint
@@ -82,15 +188,26 @@ app.post('/api/files/upload', upload.single('file'), async (req, res) => {
         const pageCount = pdfDoc.getPageCount();
         pages = `${pageCount} 페이지`;
         
-        // For preview image, we'll use a simpler approach:
-        // Use the view endpoint to generate a preview URL
-        // Note: Generating actual preview images requires PDF rendering (poppler, pdf2png, etc.)
-        // For now, we'll skip automatic preview image generation
-        // Users can manually set preview images, or we can implement this later with poppler-utils
-        previewImage = null;
+        // Generate preview image from first page
+        try {
+          const previewFilename = `${req.file.filename.replace(path.extname(req.file.filename), '')}.png`;
+          const previewPath = path.join(previewsDir, previewFilename);
+          const previewGenerated = await generatePDFPreview(filePath, previewPath);
+          
+          if (previewGenerated) {
+            previewImage = `${serverUrl}/api/files/preview/${previewFilename}`;
+          } else {
+            previewImage = null;
+          }
+        } catch (previewError) {
+          console.error('Preview generation error:', previewError);
+          previewImage = null;
+        }
       } catch (pdfError) {
         console.error('PDF processing error:', pdfError);
         // Continue without page count/preview if processing fails
+        pages = null;
+        previewImage = null;
       }
     } else if (ext === '.pptx' || ext === '.ppt') {
       // PowerPoint processing would require additional libraries (officegen, libreoffice, etc.)
@@ -191,14 +308,16 @@ app.get('/api/files/preview/:filename', (req, res) => {
   try {
     const filename = req.params.filename;
     const safeFilename = path.basename(filename);
-    const previewDir = path.join(uploadsDir, 'previews');
-    const filePath = path.join(previewDir, safeFilename);
+    const filePath = path.join(previewsDir, safeFilename);
     
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'Preview not found' });
     }
     
-    res.setHeader('Content-Type', 'image/png');
+    // Determine content type based on extension
+    const ext = path.extname(safeFilename).toLowerCase();
+    const contentType = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png';
+    res.setHeader('Content-Type', contentType);
     res.sendFile(filePath);
   } catch (error) {
     console.error('Preview error:', error);

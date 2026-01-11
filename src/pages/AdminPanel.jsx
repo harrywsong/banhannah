@@ -1484,13 +1484,57 @@ export default function AdminPanel() {
                           placeholder="레슨 제목"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                         />
-                        <input
-                          type="text"
-                          value={currentLessonForm.videoUrl}
-                          onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, videoUrl: e.target.value })}
-                          placeholder="비디오 URL (선택사항)"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                        />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            비디오 업로드
+                          </label>
+                          <input
+                            type="file"
+                            accept="video/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (file) {
+                                // Check file size (2GB limit)
+                                if (file.size > 2 * 1024 * 1024 * 1024) {
+                                  alert('비디오 파일 크기는 2GB를 초과할 수 없습니다.')
+                                  e.target.value = ''
+                                  return
+                                }
+                                
+                                // Upload video to backend
+                                try {
+                                  const formData = new FormData()
+                                  formData.append('video', file)
+                                  
+                                  const response = await apiRequest(apiEndpoint('videos/upload'), {
+                                    method: 'POST',
+                                    body: formData
+                                  })
+                                  
+                                  if (response.ok) {
+                                    const data = await response.json()
+                                    setCurrentLessonForm({
+                                      ...currentLessonForm,
+                                      videoUrl: data.videoUrl
+                                    })
+                                    alert('비디오가 성공적으로 업로드되었습니다!')
+                                  } else {
+                                    const errorData = await response.json()
+                                    throw new Error(errorData.error || 'Upload failed')
+                                  }
+                                } catch (error) {
+                                  console.error('Video upload error:', error)
+                                  alert(`비디오 업로드에 실패했습니다: ${error.message}\n\n백엔드 서버가 실행 중인지 확인하세요.`)
+                                  e.target.value = ''
+                                }
+                              }
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                          />
+                          {currentLessonForm.videoUrl && (
+                            <p className="text-xs text-green-600 mt-1">✓ 비디오 업로드 완료</p>
+                          )}
+                        </div>
                         <input
                           type="text"
                           value={currentLessonForm.duration}
