@@ -62,7 +62,7 @@ app.post('/api/files/upload', upload.single('file'), (req, res) => {
     }
     
     // Get your server's URL (you'll configure this)
-    const serverUrl = process.env.SERVER_URL || `http://banhannah.duckdns.org:3001`;
+    const serverUrl = process.env.SERVER_URL || `https://banhannah.duckdns.org`;
     const fileUrl = `${serverUrl}/api/files/download/${req.file.filename}`;
     
     res.json({
