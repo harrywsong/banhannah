@@ -12,11 +12,12 @@ const bcrypt = require('bcryptjs');
 const { PDFDocument } = require('pdf-lib');
 const { exec } = require('child_process');
 const { promisify } = require('util');
+
+// Import routes
+const authRoutes = require('./routes/auth');
 const videoRoutes = require('./routes/videos');
 
-
-const authRoutes = require('./routes/auth');
-app.use('/api/videos', videoRoutes);
+// Import middleware
 const { authenticate, requireAdmin, optionalAuth } = require('./middleware/auth');
 const { 
   fileMetadataValidation, 
@@ -27,7 +28,7 @@ const {
 
 const execAsync = promisify(exec);
 const prisma = new PrismaClient();
-const app = express();
+const app = express();  // ← Create app FIRST
 
 // Security middleware
 app.use(helmet());
@@ -188,11 +189,9 @@ app.get('/api/health', (req, res) => {
 
 // Auth routes
 app.use('/api/auth', authRoutes);
-
-// ========== ADD THIS LINE ==========
-const videoRoutes = require('./routes/videos');
 app.use('/api/videos', videoRoutes);
-// ========== END ==========
+
+
 
 // ========== FILE UPLOAD ENDPOINTS ==========
 
