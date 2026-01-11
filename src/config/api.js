@@ -3,25 +3,14 @@
 
 // Determine API URL based on environment
 const getApiUrl = () => {
-  // Check for environment variable (set in build process)
+  // Check for environment variable (set in build process or .env.local for development)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Development: use local backend if running, otherwise use production
-  if (import.meta.env.DEV) {
-    // Check if backend is running locally
-    // You can change this to your Raspberry Pi IP during development
-    return 'http://localhost:3001';
-  }
-  
-  // Production: use your Raspberry Pi URL
-  // Set VITE_API_URL environment variable in Netlify
-  // Examples:
-  // - http://your-raspberry-pi-ip:3001 (local network)
-  // - http://yourname.duckdns.org:3001 (dynamic DNS)
-  // - https://yourdomain.com (with domain)
-  return 'http://localhost:3001'; // Fallback - should use VITE_API_URL env var
+  // Default: Use Raspberry Pi backend (same for dev and production)
+  // Update this URL if your ngrok URL changes
+  return 'https://nichol-tunnellike-constrictively.ngrok-free.dev';
 };
 
 export const API_URL = getApiUrl();

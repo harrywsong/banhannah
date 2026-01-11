@@ -67,8 +67,8 @@ export default function FileDetail() {
       document.body.removeChild(link)
     }
     
-    // Save to user's downloads
-    const myFiles = JSON.parse(localStorage.getItem(`files_${user.id}`) || '[]')
+    // Save to user's downloads (use resources_${user.id} to match Dashboard)
+    const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]')
     const fileToSave = {
       id: file.id,
       title: file.title,
@@ -77,9 +77,9 @@ export default function FileDetail() {
       downloadedAt: new Date().toISOString()
     }
     
-    if (!myFiles.find(f => f.id === file.id)) {
-      myFiles.push(fileToSave)
-      localStorage.setItem(`files_${user.id}`, JSON.stringify(myFiles))
+    if (!myResources.find(f => f.id === file.id)) {
+      myResources.push(fileToSave)
+      localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources))
     }
 
     // Update access count
@@ -94,6 +94,23 @@ export default function FileDetail() {
       setShowViewer(true)
       // Increment access count when viewing in browser
       incrementAccessCount()
+      
+      // Save to user's downloads when viewing (use resources_${user.id} to match Dashboard)
+      if (user) {
+        const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]')
+        const fileToSave = {
+          id: file.id,
+          title: file.title,
+          format: file.format,
+          size: file.size,
+          downloadedAt: new Date().toISOString()
+        }
+        
+        if (!myResources.find(f => f.id === file.id)) {
+          myResources.push(fileToSave)
+          localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources))
+        }
+      }
     } else {
       alert(`브라우저에서 파일을 확인합니다.\n\n파일: ${file.title}\n형식: ${file.format}\n\n파일 URL이 설정되지 않았습니다. 관리자 패널에서 파일 URL을 설정해주세요.`)
     }
@@ -103,6 +120,15 @@ export default function FileDetail() {
     e.preventDefault()
     if (!user) {
       alert('로그인이 필요합니다')
+      return
+    }
+
+    // Check if user has downloaded/accessed the file
+    const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]')
+    const hasDownloaded = myResources.find(f => f.id === file.id)
+    
+    if (!hasDownloaded && !editingReview) {
+      alert('리뷰를 작성하려면 먼저 파일을 다운로드하거나 브라우저에서 보기로 접근해야 합니다.')
       return
     }
 
@@ -377,6 +403,7 @@ export default function FileDetail() {
           </div>
 
           {/* Sidebar */}
+          {!showViewer && (
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-md p-6 sticky top-24">
               <div className="mb-6">
@@ -427,6 +454,7 @@ export default function FileDetail() {
               </div>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

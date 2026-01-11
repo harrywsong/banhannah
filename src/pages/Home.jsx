@@ -20,9 +20,9 @@ export default function Home() {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
-    // Duplicate reviews for seamless loop
+    // Duplicate reviews for seamless scrolling animation (no duplicates in initial array)
     setShuffledReviews([...shuffled, ...shuffled])
-  }, [reviews.length]) // Only reshuffle when number of reviews changes
+  }, [reviews]) // Reshuffle when reviews change (not just length)
 
   const features = [
     {
@@ -206,7 +206,7 @@ export default function Home() {
                       <div>
                         <p className="font-semibold text-gray-900">{review.userName}</p>
                         <p className="text-sm text-gray-500">
-                          {review.itemType === 'resource' || review.itemType === 'file' ? '자료' : review.itemType === 'course' ? '온라인 클래스' : '클래스'} 리뷰
+                          {review.itemType === 'resource' || review.itemType === 'file' ? '자료' : review.itemType === 'course' ? '온라인 코스' : '클래스'} 리뷰
                         </p>
                       </div>
                       <MessageCircle className="h-5 w-5 text-gray-400" />

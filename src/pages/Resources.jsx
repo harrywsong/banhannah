@@ -114,7 +114,7 @@ export default function Resources() {
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">교육 자료</h1>
-          <p className="text-xl text-primary-100">무료 자료를 다운로드하고 온라인 클래스를 통해 학습하세요</p>
+          <p className="text-xl text-primary-100">무료 자료를 다운로드하고 온라인 코스를 통해 학습하세요</p>
         </div>
       </div>
 
@@ -145,7 +145,7 @@ export default function Resources() {
             >
               <div className="flex items-center space-x-2">
                 <PlayCircle className="h-5 w-5" />
-                <span>온라인 클래스</span>
+                <span>온라인 코스</span>
               </div>
             </button>
           </nav>
@@ -159,7 +159,7 @@ export default function Resources() {
               <div className="flex-grow">
                 <h3 className="text-lg font-semibold text-yellow-900 mb-1">로그인이 필요합니다</h3>
                 <p className="text-yellow-800">
-                  파일을 다운로드하거나 온라인 클래스를 보려면 로그인이 필요합니다.
+                  파일을 다운로드하거나 온라인 코스를 보려면 로그인이 필요합니다.
                 </p>
               </div>
               <Link
@@ -298,7 +298,7 @@ export default function Resources() {
             {!user ? (
               <div className="text-center py-12 bg-white rounded-xl">
                 <Lock className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-xl text-gray-600 mb-4">로그인하여 온라인 클래스를 확인하세요</p>
+                <p className="text-xl text-gray-600 mb-4">로그인하여 온라인 코스를 확인하세요</p>
                 <Link
                   to="/login"
                   className="inline-block bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors font-semibold"
@@ -373,7 +373,7 @@ export default function Resources() {
             ) : (
               <div className="text-center py-12 bg-white rounded-xl">
                 <Video className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-xl text-gray-600">검색 조건에 맞는 온라인 클래스가 없습니다.</p>
+                <p className="text-xl text-gray-600">검색 조건에 맞는 온라인 코스가 없습니다.</p>
               </div>
             )}
           </>

@@ -15,6 +15,7 @@ export default function AdminPanel() {
   const [editingClass, setEditingClass] = useState(null)
   const [editingFile, setEditingFile] = useState(null)
   const [editingCourse, setEditingCourse] = useState(null)
+  const [editingLesson, setEditingLesson] = useState(null)
   
   const [classFormData, setClassFormData] = useState({
     title: '',
@@ -46,6 +47,7 @@ export default function AdminPanel() {
     description: '',
     type: 'free',
     price: '',
+    accessDuration: 30, // Days for paid courses
     lessons: []
   })
   
@@ -235,6 +237,7 @@ export default function AdminPanel() {
       id: editingCourse?.id || Date.now(),
       ...courseFormData,
       price: courseFormData.type === 'paid' ? `$${courseFormData.price}` : 'Free',
+      accessDuration: courseFormData.type === 'paid' ? parseInt(courseFormData.accessDuration) : null,
       students: editingCourse?.students || 0,
       createdAt: editingCourse?.createdAt || new Date().toISOString()
     }
@@ -258,13 +261,14 @@ export default function AdminPanel() {
       description: course.description || '',
       type: course.type || 'free',
       price: course.type === 'paid' ? (course.price || '').replace('$', '') : '',
+      accessDuration: course.accessDuration || 30,
       lessons: course.lessons || []
     })
     setShowCourseForm(true)
   }
 
   const handleCourseDelete = (id) => {
-    if (window.confirm('이 온라인 클래스를 삭제하시겠습니까?')) {
+    if (window.confirm('이 온라인 코스를 삭제하시겠습니까?')) {
       const updatedCourses = onlineCourses.filter(c => c.id !== id)
       setOnlineCourses(updatedCourses)
       localStorage.setItem('onlineCourses', JSON.stringify(updatedCourses))
@@ -277,6 +281,7 @@ export default function AdminPanel() {
       description: '',
       type: 'free',
       price: '',
+      accessDuration: 30,
       lessons: []
     })
     setCurrentLessonForm({
@@ -294,14 +299,46 @@ export default function AdminPanel() {
       alert('레슨 제목을 입력하세요')
       return
     }
-    const newLesson = {
-      id: Date.now(),
-      ...currentLessonForm
+    if (editingLesson) {
+      // Update existing lesson
+      setCourseFormData({
+        ...courseFormData,
+        lessons: courseFormData.lessons.map(l => 
+          l.id === editingLesson.id ? { ...currentLessonForm, id: editingLesson.id } : l
+        )
+      })
+      setEditingLesson(null)
+    } else {
+      // Add new lesson
+      const newLesson = {
+        id: Date.now(),
+        ...currentLessonForm
+      }
+      setCourseFormData({
+        ...courseFormData,
+        lessons: [...courseFormData.lessons, newLesson]
+      })
     }
-    setCourseFormData({
-      ...courseFormData,
-      lessons: [...courseFormData.lessons, newLesson]
+    setCurrentLessonForm({
+      title: '',
+      videoUrl: '',
+      duration: '',
+      files: []
     })
+  }
+
+  const handleLessonEdit = (lesson) => {
+    setEditingLesson(lesson)
+    setCurrentLessonForm({
+      title: lesson.title || '',
+      videoUrl: lesson.videoUrl || '',
+      duration: lesson.duration || '',
+      files: lesson.files || []
+    })
+  }
+
+  const handleLessonCancel = () => {
+    setEditingLesson(null)
     setCurrentLessonForm({
       title: '',
       videoUrl: '',
@@ -311,10 +348,12 @@ export default function AdminPanel() {
   }
 
   const removeLessonFromCourse = (lessonId) => {
-    setCourseFormData({
-      ...courseFormData,
-      lessons: courseFormData.lessons.filter(l => l.id !== lessonId)
-    })
+    if (window.confirm('이 레슨을 삭제하시겠습니까?')) {
+      setCourseFormData({
+        ...courseFormData,
+        lessons: courseFormData.lessons.filter(l => l.id !== lessonId)
+      })
+    }
   }
 
   // Show login if not authenticated
@@ -385,7 +424,7 @@ export default function AdminPanel() {
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm font-medium">온라인 클래스</p>
+                <p className="text-gray-500 text-sm font-medium">온라인 코스</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{totalCourses}</p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
@@ -453,7 +492,7 @@ export default function AdminPanel() {
                 }`}
               >
                 <PlayCircle className="h-5 w-5" />
-                <span>온라인 클래스</span>
+                <span>온라인 코스</span>
               </button>
             </nav>
           </div>
@@ -488,8 +527,8 @@ export default function AdminPanel() {
                     <PlayCircle className="h-5 w-5 text-purple-600" />
                   </div>
                   <div className="flex-grow">
-                    <p className="font-semibold text-gray-900">온라인 클래스</p>
-                    <p className="text-sm text-gray-600">{totalCourses}개 클래스 활성</p>
+                    <p className="font-semibold text-gray-900">온라인 코스</p>
+                    <p className="text-sm text-gray-600">{totalCourses}개 코스 활성</p>
                   </div>
                 </div>
               </div>
@@ -533,7 +572,7 @@ export default function AdminPanel() {
                 >
                   <div className="flex items-center space-x-3">
                     <PlayCircle className="h-5 w-5 text-purple-600" />
-                    <span className="font-semibold text-gray-900">새 온라인 클래스 추가</span>
+                    <span className="font-semibold text-gray-900">새 온라인 코스 추가</span>
                   </div>
                   <Plus className="h-5 w-5 text-purple-600" />
                 </button>
@@ -1149,7 +1188,7 @@ export default function AdminPanel() {
         {activeTab === 'courses' && (
           <>
             <div className="mb-6 flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">온라인 클래스 관리</h2>
+              <h2 className="text-2xl font-bold text-gray-900">온라인 코스 관리</h2>
               <button
                 onClick={() => setShowCourseForm(true)}
                 className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2 shadow-lg"
@@ -1165,7 +1204,7 @@ export default function AdminPanel() {
                 <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-t-2xl">
                     <h3 className="text-2xl font-bold">
-                      {editingCourse ? '클래스 수정' : '새 온라인 클래스 추가'}
+                      {editingCourse ? '코스 수정' : '새 온라인 코스 추가'}
                     </h3>
                     <button onClick={resetCourseForm} className="text-white hover:text-gray-200 transition-colors">
                       <X className="h-6 w-6" />
@@ -1183,7 +1222,7 @@ export default function AdminPanel() {
                         value={courseFormData.title}
                         onChange={(e) => setCourseFormData({ ...courseFormData, title: e.target.value })}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        placeholder="예: 기초 영어 회화 클래스"
+                        placeholder="예: 기초 영어 회화 코스"
                       />
                     </div>
 
@@ -1218,21 +1257,38 @@ export default function AdminPanel() {
                       </div>
 
                       {courseFormData.type === 'paid' && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            가격 ($) *
-                          </label>
-                          <input
-                            type="number"
-                            required={courseFormData.type === 'paid'}
-                            min="0"
-                            step="0.01"
-                            value={courseFormData.price}
-                            onChange={(e) => setCourseFormData({ ...courseFormData, price: e.target.value })}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                            placeholder="9.99"
-                          />
-                        </div>
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              가격 ($) *
+                            </label>
+                            <input
+                              type="number"
+                              required={courseFormData.type === 'paid'}
+                              min="0"
+                              step="0.01"
+                              value={courseFormData.price}
+                              onChange={(e) => setCourseFormData({ ...courseFormData, price: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              placeholder="9.99"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              접근 기간 (일) *
+                            </label>
+                            <input
+                              type="number"
+                              required={courseFormData.type === 'paid'}
+                              min="1"
+                              value={courseFormData.accessDuration}
+                              onChange={(e) => setCourseFormData({ ...courseFormData, accessDuration: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              placeholder="30"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">구매 후 접근 가능한 기간 (일 단위)</p>
+                          </div>
+                        </>
                       )}
                     </div>
 
@@ -1256,13 +1312,24 @@ export default function AdminPanel() {
                                   <div className="text-xs text-gray-500 truncate">비디오: {lesson.videoUrl}</div>
                                 )}
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => removeLessonFromCourse(lesson.id)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleLessonEdit(lesson)}
+                                  className="text-blue-600 hover:text-blue-700"
+                                  title="수정"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeLessonFromCourse(lesson.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                  title="삭제"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
                             </div>
                           ))
                         ) : (
@@ -1270,9 +1337,22 @@ export default function AdminPanel() {
                         )}
                       </div>
 
-                      {/* Add Lesson Form */}
+                      {/* Add/Edit Lesson Form */}
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 space-y-3">
-                        <h4 className="font-semibold text-gray-700">레슨 추가</h4>
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-gray-700">
+                            {editingLesson ? '레슨 수정' : '레슨 추가'}
+                          </h4>
+                          {editingLesson && (
+                            <button
+                              type="button"
+                              onClick={handleLessonCancel}
+                              className="text-gray-500 hover:text-gray-700 text-sm"
+                            >
+                              취소
+                            </button>
+                          )}
+                        </div>
                         <input
                           type="text"
                           value={currentLessonForm.title}
@@ -1299,7 +1379,7 @@ export default function AdminPanel() {
                           onClick={addLessonToCourse}
                           className="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
                         >
-                          레슨 추가
+                          {editingLesson ? '레슨 수정' : '레슨 추가'}
                         </button>
                       </div>
                     </div>
@@ -1366,8 +1446,8 @@ export default function AdminPanel() {
             ) : (
               <div className="text-center py-12 bg-white rounded-xl shadow-lg">
                 <PlayCircle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-xl text-gray-600">등록된 온라인 클래스가 없습니다</p>
-                <p className="text-gray-500 mt-2">"새 클래스 추가" 버튼을 클릭하여 첫 번째 온라인 클래스를 생성하세요</p>
+                <p className="text-xl text-gray-600">등록된 온라인 코스가 없습니다</p>
+                <p className="text-gray-500 mt-2">"새 코스 추가" 버튼을 클릭하여 첫 번째 온라인 코스를 생성하세요</p>
               </div>
             )}
           </>

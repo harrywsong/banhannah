@@ -116,6 +116,12 @@ export default function LiveClasses() {
       return
     }
 
+    // Check if user has registered for the class
+    if (!selectedClassForReview || !isRegistered(selectedClassForReview.id)) {
+      alert('리뷰를 작성하려면 먼저 클래스에 등록해야 합니다.')
+      return
+    }
+
     if (editingReview) {
       // Update existing review
       updateReview(editingReview.id, {
