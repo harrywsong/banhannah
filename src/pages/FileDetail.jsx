@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { ArrowLeft, Download, FileText, Clock, Star, MessageCircle, X, Eye } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
+import { apiEndpoint, apiRequest } from '../config/api'
 
 export default function FileDetail() {
   const { id } = useParams()
@@ -228,34 +229,35 @@ export default function FileDetail() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* File Viewer (when viewing) - Full width when sidebar is hidden */}
+        {showViewer && file.fileUrl && (
+          <div className="bg-white rounded-xl shadow-md">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-xl font-bold text-gray-900">{file.title}</h2>
+              <button
+                onClick={() => setShowViewer(false)}
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="w-full" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
+              <iframe
+                src={file.fileUrl}
+                className="w-full h-full border-0"
+                title={`${file.title} 뷰어`}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Grid layout for normal view (when viewer is hidden) */}
+        {!showViewer && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* File Viewer (when viewing) */}
-            {showViewer && file.fileUrl && (
-              <div className="bg-white rounded-xl shadow-md mb-8">
-                <div className="flex items-center justify-between p-4 border-b">
-                  <h2 className="text-xl font-bold text-gray-900">{file.title}</h2>
-                  <button
-                    onClick={() => setShowViewer(false)}
-                    className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                <div className="w-full" style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
-                  <iframe
-                    src={file.fileUrl}
-                    className="w-full h-full border-0"
-                    title={`${file.title} 뷰어`}
-                  />
-                </div>
-              </div>
-            )}
-
             {/* File Header */}
-            {!showViewer && (
-              <div className="bg-white rounded-xl shadow-md p-8 mb-8">
+            <div className="bg-white rounded-xl shadow-md p-8 mb-8">
                 {/* File Preview */}
                 <div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
                   {file.previewImage ? (
@@ -311,11 +313,9 @@ export default function FileDetail() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">파일 소개</h2>
                 <p className="text-gray-700 leading-relaxed">{file.fullDescription || file.description}</p>
               </div>
-              </div>
-            )}
+            </div>
 
             {/* Reviews Section */}
-            {!showViewer && (
             <div className="bg-white rounded-xl shadow-md p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -432,11 +432,9 @@ export default function FileDetail() {
                 </div>
               )}
             </div>
-            )}
           </div>
 
           {/* Sidebar */}
-          {!showViewer && (
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-md p-6 sticky top-24">
               <div className="mb-6">
@@ -487,8 +485,8 @@ export default function FileDetail() {
               </div>
             </div>
           </div>
-          )}
         </div>
+        )}
       </div>
     </div>
   )
