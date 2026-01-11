@@ -4,6 +4,7 @@ import { apiEndpoint, apiRequest } from '../config/api'
 import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield } from 'lucide-react'
 
 export default function AdminPanel() {
+  
   const [adminSession, setAdminSession] = useState(null)
   const [activeTab, setActiveTab] = useState('dashboard') // 'dashboard', 'classes', 'files', or 'courses'
   const [classes, setClasses] = useState([])
@@ -1207,7 +1208,7 @@ useEffect(() => {
                                 })
                                 
                                 xhr.open('POST', apiEndpoint('files/upload'))
-                                xhr.setRequestHeader('ngrok-skip-browser-warning', 'true')
+                                addAuthHeaders(xhr)
                                 xhr.send(formData)
                                 
                               } catch (error) {
@@ -1582,7 +1583,7 @@ useEffect(() => {
                                   })
                                   
                                   xhr.open('POST', apiEndpoint('videos/upload'))
-                                  xhr.setRequestHeader('ngrok-skip-browser-warning', 'true')
+                                  addAuthHeaders(xhr)
                                   xhr.send(formData)
                                   
                                 } catch (error) {
