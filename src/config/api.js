@@ -1,48 +1,82 @@
-// API Configuration
-// This file manages the API endpoint URL for the backend server
+// API Configuration with improved security
 
-// Determine API URL based on environment
+// Get API URL from environment variable
 const getApiUrl = () => {
-  // Check for environment variable (set in build process or .env.local for development)
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Default: Use Raspberry Pi backend (same for dev and production)
-  // Update this URL if your ngrok URL changes
-  return 'https://nichol-tunnellike-constrictively.ngrok-free.dev';
+  // Default for development
+  return 'http://localhost:3001';
 };
 
 export const API_URL = getApiUrl();
 
 // Helper function to build API endpoints
 export const apiEndpoint = (path) => {
-  // Remove leading slash if present
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-  // Prepend /api to all endpoints
   return `${API_URL}/api/${cleanPath}`;
 };
 
-// Helper function to make API requests with proper headers (including ngrok bypass)
+// Helper function to make API requests with authentication
 export const apiRequest = async (url, options = {}) => {
-  // Default headers (but don't set Content-Type if it's FormData - browser will set it)
+  // Get token from localStorage
+  const token = localStorage.getItem('token');
+  
+  // Default headers
   const defaultHeaders = {
-    'ngrok-skip-browser-warning': 'true' // Bypass ngrok's browser warning page
+    'ngrok-skip-browser-warning': 'true'
   };
+  
+  // Add Authorization header if token exists
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
   
   // Only add Content-Type for non-FormData requests
   const isFormData = options.body instanceof FormData;
-  if (!isFormData) {
+  if (!isFormData && options.body) {
     defaultHeaders['Content-Type'] = 'application/json';
   }
   
   const mergedOptions = {
     ...options,
+    credentials: 'include', // Important for cookies
     headers: {
       ...defaultHeaders,
       ...options.headers
     }
   };
   
-  return fetch(url, mergedOptions);
+  try {
+    const response = await fetch(url, mergedOptions);
+    
+    // Handle 401 Unauthorized - clear token and redirect to login
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      // Only redirect if not already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('API request failed:', error);
+    throw error;
+  }
+};
+
+// Helper to handle API errors
+export const handleApiError = (error) => {
+  if (error.response) {
+    // Server responded with error
+    return error.response.data?.error || 'An error occurred';
+  } else if (error.request) {
+    // Request made but no response
+    return 'No response from server. Please check your connection.';
+  } else {
+    // Other errors
+    return error.message || 'An unexpected error occurred';
+  }
 };
