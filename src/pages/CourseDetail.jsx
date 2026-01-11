@@ -4,6 +4,7 @@ import { ArrowLeft, PlayCircle, Video, FileText, Download, Clock, Star, MessageC
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
 import { apiEndpoint, apiRequest } from '../config/api'
+import HLSVideoPlayer from '../components/HLSVideoPlayer'
 
 export default function CourseDetail() {
   const { id } = useParams()
@@ -348,39 +349,86 @@ export default function CourseDetail() {
                 <div className="mt-8 border-t pt-8">
                   <h3 className="text-xl font-bold text-gray-900 mb-4">{selectedLesson.title}</h3>
                   <div className="aspect-video bg-black rounded-lg mb-4 overflow-hidden relative">
-                    {selectedLesson.videoUrl ? (
-                      <>
-                      <iframe
-                        src={(() => {
-                          const url = selectedLesson.videoUrl
-                          const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)
-                          if (youtubeMatch) return `https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?rel=0&modestbranding=1&controls=1&showinfo=0&fs=1&disablekb=0&iv_load_policy=3&cc_load_policy=0&playsinline=1`
-                          const vimeoMatch = url.match(/vimeo\.com\/(\d+)/)
-                          if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?title=0&byline=0&portrait=0`
-                          const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/)
-                          if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`
-                          return url
-                        })()}
-                        className="w-full h-full"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        title={selectedLesson.title}
-                      />
-                      {/* Overlay to block YouTube logo click - positioned at top right */}
-                      <div className="absolute top-0 right-0 w-24 h-16 bg-transparent pointer-events-auto cursor-default z-10" 
-                           onClick={(e) => e.preventDefault()} 
-                           onMouseDown={(e) => e.preventDefault()}
-                      ></div>
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white">
-                        <div className="text-center">
-                          <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
-                          <p className="text-lg font-semibold">비디오가 설정되지 않았습니다</p>
-                        </div>
-                      </div>
-                    )}
+                  {selectedLesson.videoUrl ? (
+  (() => {
+    // Check if it's an HLS video (your Raspberry Pi hosted)
+    const hlsMatch = selectedLesson.videoUrl.match(/\/api\/videos\/hls\/([^\/]+)/);
+    
+    if (hlsMatch) {
+      // Use HLS player for your hosted videos
+      const videoId = hlsMatch[1];
+      return (
+        <HLSVideoPlayer 
+          videoId={videoId}
+          onError={(err) => {
+            console.error('Video error:', err);
+            alert('비디오를 로드하는 중 오류가 발생했습니다: ' + err.message);
+          }}
+        />
+      );
+    } else {
+      // Use iframe for YouTube/Vimeo/Google Drive
+      const url = selectedLesson.videoUrl;
+      const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+      if (youtubeMatch) {
+        return (
+          <iframe
+            src={`https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?rel=0&modestbranding=1&controls=1`}
+            className="w-full h-full"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title={selectedLesson.title}
+          />
+        );
+      }
+      
+      const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+      if (vimeoMatch) {
+        return (
+          <iframe
+            src={`https://player.vimeo.com/video/${vimeoMatch[1]}?title=0&byline=0&portrait=0`}
+            className="w-full h-full"
+            frameBorder="0"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            title={selectedLesson.title}
+          />
+        );
+      }
+      
+      const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+      if (driveMatch) {
+        return (
+          <iframe
+            src={`https://drive.google.com/file/d/${driveMatch[1]}/preview`}
+            className="w-full h-full"
+            frameBorder="0"
+            allow="autoplay"
+            title={selectedLesson.title}
+          />
+        );
+      }
+      
+      // Fallback for unknown URLs
+      return (
+        <div className="w-full h-full flex items-center justify-center text-white">
+          <div className="text-center">
+            <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
+            <p className="text-lg font-semibold">지원되지 않는 비디오 형식입니다</p>
+          </div>
+        </div>
+      );
+    }
+  })()
+) : (
+  <div className="w-full h-full flex items-center justify-center text-white">
+    <div className="text-center">
+      <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
+      <p className="text-lg font-semibold">비디오가 설정되지 않았습니다</p>
+    </div>
+  </div>
+)}
                   </div>
                   {!progress[selectedLesson.id]?.completed && (
                     <button onClick={() => handleMarkComplete(selectedLesson.id)} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">

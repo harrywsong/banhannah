@@ -19,6 +19,7 @@ export default function AdminPanel() {
   const [editingCourse, setEditingCourse] = useState(null)
   const [editingLesson, setEditingLesson] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(null) // { fileName: string, progress: number, type: 'file'|'video' }
+  const [videoSourceType, setVideoSourceType] = useState('upload') // 'upload' or 'url'
   
   const [classFormData, setClassFormData] = useState({
     title: '',
@@ -1533,26 +1534,193 @@ useEffect(() => {
                           placeholder="레슨 제목"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                         />
-<div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            비디오 URL (YouTube, Vimeo, Google Drive 등)
-                          </label>
-                          <input
-                            type="url"
-                            value={currentLessonForm.videoUrl}
-                            onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, videoUrl: e.target.value })}
-                            placeholder="https://www.youtube.com/watch?v=... 또는 https://vimeo.com/..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            YouTube, Vimeo, Google Drive 등의 영상 URL을 입력하세요. 임베드 형식으로 자동 변환됩니다.
-                          </p>
-                          {currentLessonForm.videoUrl && (
-                            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                              <p className="text-xs text-green-700">✓ 비디오 URL이 설정되었습니다</p>
-                            </div>
-                          )}
-                        </div>
+                        {/* Video Upload Section */}
+<div className="space-y-4">
+  <div className="flex items-center justify-between">
+    <label className="block text-sm font-medium text-gray-700">
+      비디오 소스
+    </label>
+    <div className="flex space-x-2">
+      <button
+        type="button"
+        onClick={() => setVideoSourceType('upload')}
+        className={`px-3 py-1 text-xs rounded ${
+          videoSourceType === 'upload'
+            ? 'bg-purple-600 text-white'
+            : 'bg-gray-200 text-gray-700'
+        }`}
+      >
+        파일 업로드
+      </button>
+      <button
+        type="button"
+        onClick={() => setVideoSourceType('url')}
+        className={`px-3 py-1 text-xs rounded ${
+          videoSourceType === 'url'
+            ? 'bg-purple-600 text-white'
+            : 'bg-gray-200 text-gray-700'
+        }`}
+      >
+        외부 URL
+      </button>
+    </div>
+  </div>
+
+  {videoSourceType === 'upload' ? (
+    // File Upload Option
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        비디오 파일 업로드 (Raspberry Pi 호스팅)
+      </label>
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+        <Upload className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+        <p className="text-sm text-gray-600 mb-2">비디오 파일을 선택하여 업로드</p>
+        <input
+          type="file"
+          accept="video/mp4,video/mov,video/avi,video/mkv,video/webm"
+          onChange={async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+              // Check file size (2GB limit)
+              const maxSize = 2 * 1024 * 1024 * 1024; // 2GB
+              if (file.size > maxSize) {
+                alert('파일 크기가 너무 큽니다. 최대 2GB까지 업로드할 수 있습니다.');
+                e.target.value = '';
+                return;
+              }
+
+              const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+              
+              if (!window.confirm(
+                `비디오를 업로드하시겠습니까?\n\n` +
+                `파일: ${file.name}\n` +
+                `크기: ${fileSizeMB} MB\n\n` +
+                `업로드 후 HLS 형식으로 변환됩니다. 변환에 시간이 걸릴 수 있습니다.`
+              )) {
+                e.target.value = '';
+                return;
+              }
+              
+              // Show upload progress
+              setUploadProgress({
+                fileName: file.name,
+                progress: 0,
+                type: 'video'
+              });
+              
+              try {
+                const formData = new FormData();
+                formData.append('video', file);
+                
+                // Create XMLHttpRequest for progress tracking
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.addEventListener('progress', (e) => {
+                  if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    setUploadProgress(prev => ({
+                      ...prev,
+                      progress: percentComplete
+                    }));
+                  }
+                });
+                
+                xhr.addEventListener('load', async () => {
+                  if (xhr.status === 200) {
+                    const data = JSON.parse(xhr.responseText);
+                    if (data.success) {
+                      // Set the HLS URL for the lesson
+                      setCurrentLessonForm({
+                        ...currentLessonForm,
+                        videoUrl: data.hlsUrl
+                      });
+                      alert(
+                        '비디오가 성공적으로 업로드되고 HLS 형식으로 변환되었습니다!\n\n' +
+                        `비디오 ID: ${data.videoId}\n` +
+                        '이제 레슨에 추가할 수 있습니다.'
+                      );
+                    } else {
+                      throw new Error(data.error || 'Upload failed');
+                    }
+                  } else {
+                    const errorData = JSON.parse(xhr.responseText);
+                    throw new Error(errorData.error || 'Upload failed');
+                  }
+                  setUploadProgress(null);
+                  e.target.value = ''; // Reset file input
+                });
+                
+                xhr.addEventListener('error', () => {
+                  console.error('Video upload error');
+                  alert('비디오 업로드에 실패했습니다. 백엔드 서버가 실행 중인지 확인하세요.');
+                  setUploadProgress(null);
+                  e.target.value = '';
+                });
+                
+                const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+                xhr.open('POST', `${API_URL}/api/videos/upload`);
+                addAuthHeaders(xhr);
+                xhr.send(formData);
+                
+              } catch (error) {
+                console.error('Video upload error:', error);
+                alert(`비디오 업로드에 실패했습니다: ${error.message}`);
+                setUploadProgress(null);
+                e.target.value = '';
+              }
+            }
+          }}
+          className="hidden"
+          id="video-upload"
+        />
+        <label
+          htmlFor="video-upload"
+          className="cursor-pointer inline-block bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm mt-2"
+        >
+          비디오 선택
+        </label>
+        <p className="text-xs text-gray-500 mt-3">
+          지원 형식: MP4, MOV, AVI, MKV, WebM (최대 2GB)
+        </p>
+        <p className="text-xs text-gray-400 mt-1">
+          업로드 후 자동으로 HLS 스트리밍 형식으로 변환됩니다.
+        </p>
+      </div>
+      {currentLessonForm.videoUrl && currentLessonForm.videoUrl.includes('/api/videos/hls/') && (
+        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800">
+            ✓ 비디오가 업로드되어 HLS 형식으로 변환되었습니다
+          </p>
+          <p className="text-xs text-green-600 mt-1">
+            URL: {currentLessonForm.videoUrl}
+          </p>
+        </div>
+      )}
+    </div>
+  ) : (
+    // External URL Option
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        외부 비디오 URL (YouTube, Vimeo, Google Drive)
+      </label>
+      <input
+        type="url"
+        value={currentLessonForm.videoUrl}
+        onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, videoUrl: e.target.value })}
+        placeholder="https://www.youtube.com/watch?v=... 또는 https://vimeo.com/..."
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+      />
+      <p className="text-xs text-gray-500 mt-1">
+        YouTube, Vimeo, Google Drive 등의 영상 URL을 입력하세요.
+      </p>
+      {currentLessonForm.videoUrl && !currentLessonForm.videoUrl.includes('/api/videos/hls/') && (
+        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+          <p className="text-xs text-blue-700">✓ 외부 비디오 URL이 설정되었습니다</p>
+        </div>
+      )}
+    </div>
+  )}
+</div>
                         <input
                           type="text"
                           value={currentLessonForm.duration}
@@ -1640,39 +1808,58 @@ useEffect(() => {
         )}
       </div>
       {/* Upload Progress Modal */}
-    {uploadProgress && (
-      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-        <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
-          <div className="text-center mb-6">
-            <Upload className="h-16 w-16 mx-auto text-primary-600 mb-4 animate-bounce" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {uploadProgress.type === 'video' ? '비디오' : '파일'} 업로드 중
-            </h3>
-            <p className="text-gray-600 mb-1">{uploadProgress.fileName}</p>
-            <p className="text-sm text-gray-500">페이지를 떠나지 마세요</p>
+      {uploadProgress && (
+  <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+      <div className="text-center mb-6">
+        <Upload className="h-16 w-16 mx-auto text-primary-600 mb-4 animate-bounce" />
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+          {uploadProgress.converting ? '비디오 변환 중' : 
+           uploadProgress.type === 'video' ? '비디오 업로드 중' : '파일 업로드 중'}
+        </h3>
+        <p className="text-gray-600 mb-1">{uploadProgress.fileName}</p>
+        <p className="text-sm text-gray-500">
+          {uploadProgress.converting 
+            ? 'HLS 형식으로 변환하는 중입니다. 잠시만 기다려주세요...'
+            : '페이지를 떠나지 마세요'
+          }
+        </p>
+      </div>
+      
+      {!uploadProgress.converting && (
+        <div className="mb-4">
+          <div className="flex justify-between text-sm text-gray-600 mb-2">
+            <span>업로드 진행률</span>
+            <span className="font-bold text-primary-600">{uploadProgress.progress}%</span>
           </div>
-          
-          <div className="mb-4">
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
-              <span>진행률</span>
-              <span className="font-bold text-primary-600">{uploadProgress.progress}%</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-primary-500 to-primary-600 h-4 rounded-full transition-all duration-300 ease-out"
-                style={{ width: `${uploadProgress.progress}%` }}
-              />
-            </div>
-          </div>
-          
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-            <p className="text-xs text-yellow-800 text-center">
-              ⚠️ 업로드가 완료될 때까지 이 페이지를 떠나거나 새로고침하지 마세요
-            </p>
+          <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-primary-500 to-primary-600 h-4 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${uploadProgress.progress}%` }}
+            />
           </div>
         </div>
+      )}
+      
+      {uploadProgress.converting && (
+        <div className="mb-4">
+          <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+            <div className="bg-gradient-to-r from-primary-500 to-primary-600 h-4 rounded-full animate-pulse w-full" />
+          </div>
+        </div>
+      )}
+      
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+        <p className="text-xs text-yellow-800 text-center">
+          ⚠️ {uploadProgress.converting 
+            ? '변환이 완료될 때까지 기다려주세요. 서버에서 처리 중입니다.'
+            : '업로드가 완료될 때까지 이 페이지를 떠나지 마세요'
+          }
+        </p>
       </div>
-    )}
+    </div>
+  </div>
+)}
     </div>
   )
 }

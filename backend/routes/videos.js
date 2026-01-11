@@ -48,7 +48,6 @@ const videoUpload = multer({
   }
 });
 
-// ========== VIDEO UPLOAD (Admin only) ==========
 router.post('/upload', authenticate, requireAdmin, videoUpload.single('video'), async (req, res) => {
   try {
     if (!req.file) {
@@ -64,34 +63,64 @@ router.post('/upload', authenticate, requireAdmin, videoUpload.single('video'), 
       fs.mkdirSync(hlsOutputDir, { recursive: true });
     }
 
-    // Convert to HLS using ffmpeg
-    console.log('Converting video to HLS format...');
-    const hlsPath = path.join(hlsOutputDir, 'index.m3u8');
-    
-    // FFmpeg command for HLS conversion with multiple quality levels
-    const ffmpegCommand = `ffmpeg -i "${videoPath}" \
-      -profile:v baseline \
-      -level 3.0 \
-      -start_number 0 \
-      -hls_time 10 \
-      -hls_list_size 0 \
-      -f hls \
-      "${hlsPath}"`;
-
-    await execAsync(ffmpegCommand);
-
-    // Delete original video file to save space (keep only HLS)
-    fs.unlinkSync(videoPath);
-
-    console.log('✓ Video converted to HLS successfully');
-
-    // Return video info
+    // Send immediate response to prevent timeout
     res.json({
       success: true,
       videoId,
-      message: 'Video uploaded and converted to HLS format',
-      hlsUrl: `/api/videos/hls/${videoId}/index.m3u8`
+      message: 'Video uploaded, conversion in progress...',
+      hlsUrl: `/api/videos/hls/${videoId}/index.m3u8`,
+      status: 'processing'
     });
+
+    // Convert to HLS in background (don't await)
+    (async () => {
+      try {
+        console.log(`[${videoId}] Starting HLS conversion...`);
+        const hlsPath = path.join(hlsOutputDir, 'index.m3u8');
+        
+        // OPTIMIZED FFmpeg command - faster conversion
+        const ffmpegCommand = `ffmpeg -i "${videoPath}" \
+          -c:v libx264 \
+          -preset veryfast \
+          -crf 28 \
+          -c:a aac \
+          -b:a 128k \
+          -ac 2 \
+          -profile:v baseline \
+          -level 3.0 \
+          -start_number 0 \
+          -hls_time 10 \
+          -hls_list_size 0 \
+          -hls_segment_filename "${hlsOutputDir}/segment%03d.ts" \
+          -f hls \
+          "${hlsPath}"`;
+
+        await execAsync(ffmpegCommand);
+        
+        // Delete original video file to save space
+        fs.unlinkSync(videoPath);
+        
+        console.log(`[${videoId}] ✓ HLS conversion complete`);
+        
+        // Store conversion status
+        const statusPath = path.join(hlsOutputDir, 'status.json');
+        fs.writeFileSync(statusPath, JSON.stringify({
+          status: 'completed',
+          completedAt: new Date().toISOString()
+        }));
+        
+      } catch (error) {
+        console.error(`[${videoId}] ✗ HLS conversion failed:`, error);
+        
+        // Store error status
+        const statusPath = path.join(hlsOutputDir, 'status.json');
+        fs.writeFileSync(statusPath, JSON.stringify({
+          status: 'failed',
+          error: error.message,
+          failedAt: new Date().toISOString()
+        }));
+      }
+    })();
 
   } catch (error) {
     console.error('Video upload error:', error);

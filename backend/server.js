@@ -33,6 +33,20 @@ const app = express();
 app.use(helmet());
 app.use(cookieParser());
 
+// ========== ADD THIS SECTION ==========
+// Increase timeout limits for video uploads
+app.use((req, res, next) => {
+  // Set timeout to 30 minutes for video uploads
+  req.setTimeout(1800000); // 30 minutes
+  res.setTimeout(1800000);
+  next();
+});
+
+// Increase body parser limits
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// ========== END OF NEW SECTION ==========
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -69,9 +83,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// ============= END OF CORS CONFIGURATION =============
-
-app.use(express.json());
+// ========== REMOVE THIS LINE (already added above with limits) ==========
+// app.use(express.json());  <-- DELETE THIS
+// ========== END ==========
 
 // Create necessary directories
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -158,6 +172,11 @@ app.get('/api/health', (req, res) => {
 
 // Auth routes
 app.use('/api/auth', authRoutes);
+
+// ========== ADD THIS LINE ==========
+const videoRoutes = require('./routes/videos');
+app.use('/api/videos', videoRoutes);
+// ========== END ==========
 
 // ========== FILE UPLOAD ENDPOINTS ==========
 
