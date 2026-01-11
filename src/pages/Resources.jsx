@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Search, Filter, FileText, ArrowRight, Lock, Video, PlayCircle, Download } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { apiEndpoint } from '../config/api'
 
 export default function Resources() {
   const [activeTab, setActiveTab] = useState('files') // 'files' or 'classes'
@@ -10,74 +11,60 @@ export default function Resources() {
   const [files, setFiles] = useState([])
   const [onlineCourses, setOnlineCourses] = useState([])
   const { user } = useAuth()
-  const navigate = useNavigate()
 
   useEffect(() => {
-    // Load files (formerly resources - all free)
-    const savedFiles = localStorage.getItem('resourceFiles')
-    if (savedFiles) {
-      setFiles(JSON.parse(savedFiles))
-    } else {
-      // Default files - migrate old resources or create new defaults
-      const oldResources = JSON.parse(localStorage.getItem('resources') || '[]')
-      if (oldResources.length > 0) {
-        // Migrate old resources to files (make all free)
-        const migratedFiles = oldResources.map(r => ({
-          ...r,
-          type: 'file',
-          price: 'Free'
-        }))
-        setFiles(migratedFiles)
-        localStorage.setItem('resourceFiles', JSON.stringify(migratedFiles))
-      } else {
-        // Default files
-        const defaultFiles = [
-          {
-            id: 1,
-            title: '기초 어휘 워크북',
-            description: '재미있는 활동과 함께하는 초급자를 위한 필수 어휘 연습 문제입니다.',
-            format: 'PDF',
-            size: '2.5 MB',
-            pages: '105 페이지',
-            downloads: 1250,
-            type: 'file',
-            createdAt: new Date().toISOString()
+    // Load files from backend API
+    const loadFiles = async () => {
+      try {
+        const response = await fetch(apiEndpoint('files/metadata'))
+        if (response.ok) {
+          const data = await response.json()
+          setFiles(data.files || [])
+        } else {
+          console.error('Failed to load files from backend')
+          // Fallback to localStorage if backend fails
+          const savedFiles = localStorage.getItem('resourceFiles')
+          if (savedFiles) {
+            setFiles(JSON.parse(savedFiles))
           }
-        ]
-        setFiles(defaultFiles)
-        localStorage.setItem('resourceFiles', JSON.stringify(defaultFiles))
+        }
+      } catch (error) {
+        console.error('Error loading files:', error)
+        // Fallback to localStorage if backend fails
+        const savedFiles = localStorage.getItem('resourceFiles')
+        if (savedFiles) {
+          setFiles(JSON.parse(savedFiles))
+        }
       }
     }
 
-    // Load online courses
-    const savedCourses = localStorage.getItem('onlineCourses')
-    if (savedCourses) {
-      setOnlineCourses(JSON.parse(savedCourses))
-    } else {
-      // Default online courses
-      const defaultCourses = [
-        {
-          id: 1,
-          title: '기초 영어 회화 클래스',
-          description: '초급자를 위한 실용적인 영어 회화 기초 과정입니다.',
-          type: 'free', // free or paid
-          price: 'Free',
-          lessons: [
-            {
-              id: 1,
-              title: '인사하기와 소개',
-              videoUrl: '', // Video URL placeholder
-              duration: '15분',
-              files: [] // Optional files
-            }
-          ],
-          students: 450,
-          createdAt: new Date().toISOString()
+    // Load online courses from backend API
+    const loadCourses = async () => {
+      try {
+        const response = await fetch(apiEndpoint('courses/metadata'))
+        if (response.ok) {
+          const data = await response.json()
+          setOnlineCourses(data.courses || [])
+        } else {
+          console.error('Failed to load courses from backend')
+          // Fallback to localStorage if backend fails
+          const savedCourses = localStorage.getItem('onlineCourses')
+          if (savedCourses) {
+            setOnlineCourses(JSON.parse(savedCourses))
+          }
         }
-      ]
-      setOnlineCourses(defaultCourses)
-      localStorage.setItem('onlineCourses', JSON.stringify(defaultCourses))
+      } catch (error) {
+        console.error('Error loading courses:', error)
+        // Fallback to localStorage if backend fails
+        const savedCourses = localStorage.getItem('onlineCourses')
+        if (savedCourses) {
+          setOnlineCourses(JSON.parse(savedCourses))
+        }
+      }
     }
+
+    loadFiles()
+    loadCourses()
   }, [])
 
   // Filter files (all files are free, but filter UI is there for consistency)

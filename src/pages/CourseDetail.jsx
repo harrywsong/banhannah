@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { ArrowLeft, PlayCircle, Video, FileText, Download, Clock, Star, MessageCircle, X, Lock, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
+import { apiEndpoint } from '../config/api'
 
 export default function CourseDetail() {
   const { id } = useParams()
@@ -21,15 +22,45 @@ export default function CourseDetail() {
   const [progress, setProgress] = useState({}) // Track lesson progress
 
   useEffect(() => {
-    // Allow viewing even without login (but no access to content)
-    const savedCourses = JSON.parse(localStorage.getItem('onlineCourses') || '[]')
-    const foundCourse = savedCourses.find(c => c.id === parseInt(id))
-    if (foundCourse) {
-      setCourse(foundCourse)
-      if (foundCourse.lessons && foundCourse.lessons.length > 0) {
-        setSelectedLesson(foundCourse.lessons[0])
+    // Load course from backend API
+    const loadCourse = async () => {
+      try {
+        const response = await fetch(apiEndpoint(`courses/metadata/${id}`))
+        if (response.ok) {
+          const data = await response.json()
+          const foundCourse = data.course
+          if (foundCourse) {
+            setCourse(foundCourse)
+            if (foundCourse.lessons && foundCourse.lessons.length > 0) {
+              setSelectedLesson(foundCourse.lessons[0])
+            }
+          }
+        } else {
+          // Fallback to localStorage if backend fails
+          const savedCourses = JSON.parse(localStorage.getItem('onlineCourses') || '[]')
+          const foundCourse = savedCourses.find(c => c.id === parseInt(id))
+          if (foundCourse) {
+            setCourse(foundCourse)
+            if (foundCourse.lessons && foundCourse.lessons.length > 0) {
+              setSelectedLesson(foundCourse.lessons[0])
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading course:', error)
+        // Fallback to localStorage if backend fails
+        const savedCourses = JSON.parse(localStorage.getItem('onlineCourses') || '[]')
+        const foundCourse = savedCourses.find(c => c.id === parseInt(id))
+        if (foundCourse) {
+          setCourse(foundCourse)
+          if (foundCourse.lessons && foundCourse.lessons.length > 0) {
+            setSelectedLesson(foundCourse.lessons[0])
+          }
+        }
       }
     }
+
+    loadCourse()
 
     // Load reviews (visible to everyone)
     const itemReviews = getReviewsByItemId(parseInt(id), 'course')

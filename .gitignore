@@ -51,6 +51,7 @@ Desktop.ini
 
 # Backend specific
 backend/uploads/
+backend/data/
 backend/node_modules/
 
 # Netlify

@@ -21,11 +21,34 @@ export default function FileDetail() {
       navigate('/login')
       return
     }
-    const savedFiles = JSON.parse(localStorage.getItem('resourceFiles') || '[]')
-    const foundFile = savedFiles.find(f => f.id === parseInt(id))
-    if (foundFile) {
-      setFile(foundFile)
+
+    // Load file from backend API
+    const loadFile = async () => {
+      try {
+        const response = await fetch(apiEndpoint(`files/metadata/${id}`))
+        if (response.ok) {
+          const data = await response.json()
+          setFile(data.file)
+        } else {
+          // Fallback to localStorage if backend fails
+          const savedFiles = JSON.parse(localStorage.getItem('resourceFiles') || '[]')
+          const foundFile = savedFiles.find(f => f.id === parseInt(id))
+          if (foundFile) {
+            setFile(foundFile)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading file:', error)
+        // Fallback to localStorage if backend fails
+        const savedFiles = JSON.parse(localStorage.getItem('resourceFiles') || '[]')
+        const foundFile = savedFiles.find(f => f.id === parseInt(id))
+        if (foundFile) {
+          setFile(foundFile)
+        }
+      }
     }
+
+    loadFile()
 
     const itemReviews = getReviewsByItemId(parseInt(id), 'file')
     setReviews(itemReviews)
@@ -43,15 +66,25 @@ export default function FileDetail() {
   }
 
   // Helper function to increment access count
-  const incrementAccessCount = () => {
-    const allFiles = JSON.parse(localStorage.getItem('resourceFiles') || '[]')
-    const updatedFiles = allFiles.map(f => 
-      f.id === file.id 
-        ? { ...f, downloads: (f.downloads || 0) + 1 }
-        : f
-    )
-    localStorage.setItem('resourceFiles', JSON.stringify(updatedFiles))
-    setFile({ ...file, downloads: (file.downloads || 0) + 1 })
+  const incrementAccessCount = async () => {
+    if (!file || !file.id) return
+
+    try {
+      const response = await fetch(apiEndpoint(`files/metadata/${file.id}/increment`), {
+        method: 'POST'
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setFile(data.file)
+      } else {
+        // Fallback: update local state
+        setFile({ ...file, downloads: (file.downloads || 0) + 1 })
+      }
+    } catch (error) {
+      console.error('Error incrementing access count:', error)
+      // Fallback: update local state
+      setFile({ ...file, downloads: (file.downloads || 0) + 1 })
+    }
   }
 
   const handleDownload = () => {

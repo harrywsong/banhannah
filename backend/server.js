@@ -206,7 +206,163 @@ app.get('/api/files/preview/:filename', (req, res) => {
   }
 });
 
-// List files endpoint (optional, for admin)
+// Metadata storage file path
+const metadataDir = path.join(__dirname, 'data');
+const filesMetadataPath = path.join(metadataDir, 'files.json');
+const coursesMetadataPath = path.join(metadataDir, 'courses.json');
+const classesMetadataPath = path.join(metadataDir, 'classes.json');
+
+// Create data directory if it doesn't exist
+if (!fs.existsSync(metadataDir)) {
+  fs.mkdirSync(metadataDir, { recursive: true });
+}
+
+// Helper function to read JSON file
+const readJsonFile = (filePath) => {
+  try {
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf8');
+      return JSON.parse(data);
+    }
+    return [];
+  } catch (error) {
+    console.error(`Error reading ${filePath}:`, error);
+    return [];
+  }
+};
+
+// Helper function to write JSON file
+const writeJsonFile = (filePath, data) => {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error(`Error writing ${filePath}:`, error);
+    return false;
+  }
+};
+
+// ========== FILE METADATA ENDPOINTS ==========
+
+// Get all file metadata
+app.get('/api/files/metadata', (req, res) => {
+  try {
+    const files = readJsonFile(filesMetadataPath);
+    res.json({ files });
+  } catch (error) {
+    console.error('Get files metadata error:', error);
+    res.status(500).json({ error: 'Failed to get files metadata' });
+  }
+});
+
+// Get single file metadata
+app.get('/api/files/metadata/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const files = readJsonFile(filesMetadataPath);
+    const file = files.find(f => f.id === id);
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    res.json({ file });
+  } catch (error) {
+    console.error('Get file metadata error:', error);
+    res.status(500).json({ error: 'Failed to get file metadata' });
+  }
+});
+
+// Create file metadata
+app.post('/api/files/metadata', (req, res) => {
+  try {
+    const files = readJsonFile(filesMetadataPath);
+    const newFile = {
+      id: Date.now(),
+      ...req.body,
+      downloads: req.body.downloads || 0,
+      createdAt: req.body.createdAt || new Date().toISOString()
+    };
+    files.push(newFile);
+    if (writeJsonFile(filesMetadataPath, files)) {
+      res.json({ success: true, file: newFile });
+    } else {
+      res.status(500).json({ error: 'Failed to save file metadata' });
+    }
+  } catch (error) {
+    console.error('Create file metadata error:', error);
+    res.status(500).json({ error: 'Failed to create file metadata' });
+  }
+});
+
+// Update file metadata
+app.put('/api/files/metadata/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const files = readJsonFile(filesMetadataPath);
+    const index = files.findIndex(f => f.id === id);
+    if (index === -1) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    files[index] = {
+      ...files[index],
+      ...req.body,
+      id: files[index].id, // Preserve ID
+      createdAt: files[index].createdAt, // Preserve creation date
+      downloads: req.body.downloads !== undefined ? req.body.downloads : files[index].downloads
+    };
+    if (writeJsonFile(filesMetadataPath, files)) {
+      res.json({ success: true, file: files[index] });
+    } else {
+      res.status(500).json({ error: 'Failed to update file metadata' });
+    }
+  } catch (error) {
+    console.error('Update file metadata error:', error);
+    res.status(500).json({ error: 'Failed to update file metadata' });
+  }
+});
+
+// Delete file metadata
+app.delete('/api/files/metadata/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const files = readJsonFile(filesMetadataPath);
+    const index = files.findIndex(f => f.id === id);
+    if (index === -1) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    files.splice(index, 1);
+    if (writeJsonFile(filesMetadataPath, files)) {
+      res.json({ success: true, message: 'File metadata deleted' });
+    } else {
+      res.status(500).json({ error: 'Failed to delete file metadata' });
+    }
+  } catch (error) {
+    console.error('Delete file metadata error:', error);
+    res.status(500).json({ error: 'Failed to delete file metadata' });
+  }
+});
+
+// Increment file access count
+app.post('/api/files/metadata/:id/increment', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const files = readJsonFile(filesMetadataPath);
+    const index = files.findIndex(f => f.id === id);
+    if (index === -1) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    files[index].downloads = (files[index].downloads || 0) + 1;
+    if (writeJsonFile(filesMetadataPath, files)) {
+      res.json({ success: true, file: files[index] });
+    } else {
+      res.status(500).json({ error: 'Failed to increment access count' });
+    }
+  } catch (error) {
+    console.error('Increment access count error:', error);
+    res.status(500).json({ error: 'Failed to increment access count' });
+  }
+});
+
+// List files endpoint (for physical file listing)
 app.get('/api/files', (req, res) => {
   try {
     const files = fs.readdirSync(uploadsDir).map(filename => {
@@ -225,7 +381,7 @@ app.get('/api/files', (req, res) => {
   }
 });
 
-// Delete file endpoint (optional, for admin)
+// Delete physical file endpoint
 app.delete('/api/files/:filename', (req, res) => {
   try {
     const filename = req.params.filename;
@@ -239,8 +395,107 @@ app.delete('/api/files/:filename', (req, res) => {
     fs.unlinkSync(filePath);
     res.json({ success: true, message: 'File deleted' });
   } catch (error) {
-    console.error('Delete error:', error);
+    console.error('Delete file error:', error);
     res.status(500).json({ error: 'Failed to delete file' });
+  }
+});
+
+// ========== COURSE METADATA ENDPOINTS ==========
+
+// Get all course metadata
+app.get('/api/courses/metadata', (req, res) => {
+  try {
+    const courses = readJsonFile(coursesMetadataPath);
+    res.json({ courses });
+  } catch (error) {
+    console.error('Get courses metadata error:', error);
+    res.status(500).json({ error: 'Failed to get courses metadata' });
+  }
+});
+
+// Get single course metadata
+app.get('/api/courses/metadata/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const courses = readJsonFile(coursesMetadataPath);
+    const course = courses.find(c => c.id === id);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+    res.json({ course });
+  } catch (error) {
+    console.error('Get course metadata error:', error);
+    res.status(500).json({ error: 'Failed to get course metadata' });
+  }
+});
+
+// Create course metadata
+app.post('/api/courses/metadata', (req, res) => {
+  try {
+    const courses = readJsonFile(coursesMetadataPath);
+    const newCourse = {
+      id: Date.now(),
+      ...req.body,
+      students: req.body.students || 0,
+      createdAt: req.body.createdAt || new Date().toISOString()
+    };
+    courses.push(newCourse);
+    if (writeJsonFile(coursesMetadataPath, courses)) {
+      res.json({ success: true, course: newCourse });
+    } else {
+      res.status(500).json({ error: 'Failed to save course metadata' });
+    }
+  } catch (error) {
+    console.error('Create course metadata error:', error);
+    res.status(500).json({ error: 'Failed to create course metadata' });
+  }
+});
+
+// Update course metadata
+app.put('/api/courses/metadata/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const courses = readJsonFile(coursesMetadataPath);
+    const index = courses.findIndex(c => c.id === id);
+    if (index === -1) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+    courses[index] = {
+      ...courses[index],
+      ...req.body,
+      id: courses[index].id, // Preserve ID
+      createdAt: courses[index].createdAt, // Preserve creation date
+      students: req.body.students !== undefined ? req.body.students : courses[index].students
+    };
+    if (writeJsonFile(coursesMetadataPath, courses)) {
+      res.json({ success: true, course: courses[index] });
+    } else {
+      res.status(500).json({ error: 'Failed to update course metadata' });
+    }
+  } catch (error) {
+    console.error('Update course metadata error:', error);
+    res.status(500).json({ error: 'Failed to update course metadata' });
+  }
+});
+
+// Delete course metadata
+app.delete('/api/courses/metadata/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const courses = readJsonFile(coursesMetadataPath);
+    const index = courses.findIndex(c => c.id === id);
+    if (index === -1) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+    courses.splice(index, 1);
+    if (writeJsonFile(coursesMetadataPath, courses)) {
+      res.json({ success: true, message: 'Course metadata deleted' });
+    } else {
+      res.status(500).json({ error: 'Failed to delete course metadata' });
+    }
+  } catch (error) {
+    console.error('Delete course metadata error:', error);
+    res.status(500).json({ error: 'Failed to delete course metadata' });
   }
 });
 
@@ -250,5 +505,6 @@ const HOST = process.env.HOST || '0.0.0.0'; // Listen on all interfaces
 app.listen(PORT, HOST, () => {
   console.log(`Backend server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   console.log(`Upload directory: ${uploadsDir}`);
+  console.log(`Metadata directory: ${metadataDir}`);
   console.log(`CORS enabled for: ${corsOptions.origin.join(', ')}`);
 });

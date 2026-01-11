@@ -75,20 +75,64 @@ export default function AdminPanel() {
   useEffect(() => {
     if (!adminSession) return
 
+    // Load classes (still using localStorage for now)
     const savedClasses = localStorage.getItem('liveClasses')
     if (savedClasses) {
       setClasses(JSON.parse(savedClasses))
     }
 
-    const savedFiles = localStorage.getItem('resourceFiles')
-    if (savedFiles) {
-      setFiles(JSON.parse(savedFiles))
+    // Load files from backend API
+    const loadFiles = async () => {
+      try {
+        const response = await fetch(apiEndpoint('files/metadata'))
+        if (response.ok) {
+          const data = await response.json()
+          setFiles(data.files || [])
+        } else {
+          console.error('Failed to load files from backend')
+          // Fallback to localStorage if backend fails
+          const savedFiles = localStorage.getItem('resourceFiles')
+          if (savedFiles) {
+            setFiles(JSON.parse(savedFiles))
+          }
+        }
+      } catch (error) {
+        console.error('Error loading files:', error)
+        // Fallback to localStorage if backend fails
+        const savedFiles = localStorage.getItem('resourceFiles')
+        if (savedFiles) {
+          setFiles(JSON.parse(savedFiles))
+        }
+      }
     }
 
-    const savedCourses = localStorage.getItem('onlineCourses')
-    if (savedCourses) {
-      setOnlineCourses(JSON.parse(savedCourses))
+    // Load courses from backend API
+    const loadCourses = async () => {
+      try {
+        const response = await fetch(apiEndpoint('courses/metadata'))
+        if (response.ok) {
+          const data = await response.json()
+          setOnlineCourses(data.courses || [])
+        } else {
+          console.error('Failed to load courses from backend')
+          // Fallback to localStorage if backend fails
+          const savedCourses = localStorage.getItem('onlineCourses')
+          if (savedCourses) {
+            setOnlineCourses(JSON.parse(savedCourses))
+          }
+        }
+      } catch (error) {
+        console.error('Error loading courses:', error)
+        // Fallback to localStorage if backend fails
+        const savedCourses = localStorage.getItem('onlineCourses')
+        if (savedCourses) {
+          setOnlineCourses(JSON.parse(savedCourses))
+        }
+      }
     }
+
+    loadFiles()
+    loadCourses()
   }, [adminSession])
 
   const handleAdminLogin = (session) => {
@@ -170,27 +214,54 @@ export default function AdminPanel() {
   }
 
   // File handlers (all files are free)
-  const handleFileSubmit = (e) => {
+  const handleFileSubmit = async (e) => {
     e.preventDefault()
 
     const fileData = {
-      id: editingFile?.id || Date.now(),
       ...fileFormData,
       type: 'file',
       downloads: editingFile?.downloads || 0,
       createdAt: editingFile?.createdAt || new Date().toISOString()
     }
 
-    let updatedFiles
-    if (editingFile) {
-      updatedFiles = files.map(f => f.id === editingFile.id ? fileData : f)
-    } else {
-      updatedFiles = [...files, fileData]
-    }
+    try {
+      let response
+      if (editingFile) {
+        // Update existing file
+        response = await fetch(apiEndpoint(`files/metadata/${editingFile.id}`), {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(fileData)
+        })
+      } else {
+        // Create new file
+        response = await fetch(apiEndpoint('files/metadata'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(fileData)
+        })
+      }
 
-    setFiles(updatedFiles)
-    localStorage.setItem('resourceFiles', JSON.stringify(updatedFiles))
-    resetFileForm()
+      if (response.ok) {
+        // Reload files from backend
+        const filesResponse = await fetch(apiEndpoint('files/metadata'))
+        if (filesResponse.ok) {
+          const filesData = await filesResponse.json()
+          setFiles(filesData.files || [])
+        }
+        resetFileForm()
+      } else {
+        const errorData = await response.json()
+        alert(`파일 저장에 실패했습니다: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('File save error:', error)
+      alert(`파일 저장에 실패했습니다: ${error.message}`)
+    }
   }
 
   const handleFileEdit = (file) => {
@@ -207,11 +278,30 @@ export default function AdminPanel() {
     setShowFileForm(true)
   }
 
-  const handleFileDelete = (id) => {
-    if (window.confirm('이 파일을 삭제하시겠습니까?')) {
-      const updatedFiles = files.filter(f => f.id !== id)
-      setFiles(updatedFiles)
-      localStorage.setItem('resourceFiles', JSON.stringify(updatedFiles))
+  const handleFileDelete = async (id) => {
+    if (!window.confirm('이 파일을 삭제하시겠습니까?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(apiEndpoint(`files/metadata/${id}`), {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // Reload files from backend
+        const filesResponse = await fetch(apiEndpoint('files/metadata'))
+        if (filesResponse.ok) {
+          const filesData = await filesResponse.json()
+          setFiles(filesData.files || [])
+        }
+      } else {
+        const errorData = await response.json()
+        alert(`파일 삭제에 실패했습니다: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('File delete error:', error)
+      alert(`파일 삭제에 실패했습니다: ${error.message}`)
     }
   }
 
@@ -230,11 +320,10 @@ export default function AdminPanel() {
   }
 
   // Online Course handlers
-  const handleCourseSubmit = (e) => {
+  const handleCourseSubmit = async (e) => {
     e.preventDefault()
 
     const courseData = {
-      id: editingCourse?.id || Date.now(),
       ...courseFormData,
       price: courseFormData.type === 'paid' ? `$${courseFormData.price}` : 'Free',
       accessDuration: courseFormData.type === 'paid' ? parseInt(courseFormData.accessDuration) : null,
@@ -242,16 +331,44 @@ export default function AdminPanel() {
       createdAt: editingCourse?.createdAt || new Date().toISOString()
     }
 
-    let updatedCourses
-    if (editingCourse) {
-      updatedCourses = onlineCourses.map(c => c.id === editingCourse.id ? courseData : c)
-    } else {
-      updatedCourses = [...onlineCourses, courseData]
-    }
+    try {
+      let response
+      if (editingCourse) {
+        // Update existing course
+        response = await fetch(apiEndpoint(`courses/metadata/${editingCourse.id}`), {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(courseData)
+        })
+      } else {
+        // Create new course
+        response = await fetch(apiEndpoint('courses/metadata'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(courseData)
+        })
+      }
 
-    setOnlineCourses(updatedCourses)
-    localStorage.setItem('onlineCourses', JSON.stringify(updatedCourses))
-    resetCourseForm()
+      if (response.ok) {
+        // Reload courses from backend
+        const coursesResponse = await fetch(apiEndpoint('courses/metadata'))
+        if (coursesResponse.ok) {
+          const coursesData = await coursesResponse.json()
+          setOnlineCourses(coursesData.courses || [])
+        }
+        resetCourseForm()
+      } else {
+        const errorData = await response.json()
+        alert(`코스 저장에 실패했습니다: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Course save error:', error)
+      alert(`코스 저장에 실패했습니다: ${error.message}`)
+    }
   }
 
   const handleCourseEdit = (course) => {
@@ -267,11 +384,30 @@ export default function AdminPanel() {
     setShowCourseForm(true)
   }
 
-  const handleCourseDelete = (id) => {
-    if (window.confirm('이 온라인 코스를 삭제하시겠습니까?')) {
-      const updatedCourses = onlineCourses.filter(c => c.id !== id)
-      setOnlineCourses(updatedCourses)
-      localStorage.setItem('onlineCourses', JSON.stringify(updatedCourses))
+  const handleCourseDelete = async (id) => {
+    if (!window.confirm('이 온라인 코스를 삭제하시겠습니까?')) {
+      return
+    }
+
+    try {
+      const response = await fetch(apiEndpoint(`courses/metadata/${id}`), {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        // Reload courses from backend
+        const coursesResponse = await fetch(apiEndpoint('courses/metadata'))
+        if (coursesResponse.ok) {
+          const coursesData = await coursesResponse.json()
+          setOnlineCourses(coursesData.courses || [])
+        }
+      } else {
+        const errorData = await response.json()
+        alert(`코스 삭제에 실패했습니다: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Course delete error:', error)
+      alert(`코스 삭제에 실패했습니다: ${error.message}`)
     }
   }
 
