@@ -12,8 +12,11 @@ const bcrypt = require('bcryptjs');
 const { PDFDocument } = require('pdf-lib');
 const { exec } = require('child_process');
 const { promisify } = require('util');
+const videoRoutes = require('./routes/videos');
+
 
 const authRoutes = require('./routes/auth');
+app.use('/api/videos', videoRoutes);
 const { authenticate, requireAdmin, optionalAuth } = require('./middleware/auth');
 const { 
   fileMetadataValidation, 
@@ -36,6 +39,7 @@ const limiter = rateLimit({
   max: 100
 });
 app.use('/api/', limiter);
+
 
 // ============= UPDATED CORS CONFIGURATION =============
 // FIXED: Added 'ngrok-skip-browser-warning' to allowedHeaders
