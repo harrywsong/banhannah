@@ -14,6 +14,7 @@ export default function FileDetail() {
   const [showReviewForm, setShowReviewForm] = useState(false)
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' })
   const [editingReview, setEditingReview] = useState(null)
+  const [showViewer, setShowViewer] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -88,18 +89,14 @@ export default function FileDetail() {
   const handleViewInBrowser = () => {
     if (!file) return
     
-    // If fileUrl exists, open in new tab
+    // If fileUrl exists, show viewer in same page
     if (file.fileUrl) {
-      window.open(file.fileUrl, '_blank')
-    } else if (file.format === 'PDF' || file.format?.toLowerCase().includes('pdf')) {
-      // For PDFs, try to use browser's native viewer
-      alert(`브라우저에서 파일을 확인합니다.\n\n파일: ${file.title}\n형식: ${file.format}\n\n파일 URL이 설정되지 않았습니다. 관리자 패널에서 파일 URL을 설정해주세요.`)
+      setShowViewer(true)
+      // Increment access count when viewing in browser
+      incrementAccessCount()
     } else {
       alert(`브라우저에서 파일을 확인합니다.\n\n파일: ${file.title}\n형식: ${file.format}\n\n파일 URL이 설정되지 않았습니다. 관리자 패널에서 파일 URL을 설정해주세요.`)
     }
-    
-    // Increment access count when viewing in browser
-    incrementAccessCount()
   }
 
   const handleReviewSubmit = (e) => {
@@ -175,31 +172,54 @@ export default function FileDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* File Header */}
-            <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-              {/* File Preview */}
-              <div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
-                {file.previewImage ? (
-                  <img 
-                    src={file.previewImage} 
-                    alt={`${file.title} 미리보기`}
-                    className="w-full h-full object-cover"
+            {/* File Viewer (when viewing) */}
+            {showViewer && file.fileUrl && (
+              <div className="bg-white rounded-xl shadow-md mb-8">
+                <div className="flex items-center justify-between p-4 border-b">
+                  <h2 className="text-xl font-bold text-gray-900">{file.title}</h2>
+                  <button
+                    onClick={() => setShowViewer(false)}
+                    className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="w-full" style={{ height: 'calc(100vh - 300px)', minHeight: '600px' }}>
+                  <iframe
+                    src={file.fileUrl}
+                    className="w-full h-full border-0"
+                    title={`${file.title} 뷰어`}
                   />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="text-center text-white">
-                      <FileText className="h-24 w-24 mx-auto mb-2 opacity-50" />
-                      <p className="text-lg font-semibold">[파일 미리보기]</p>
-                      <p className="text-sm opacity-75">미리보기 이미지가 설정되지 않았습니다</p>
-                    </div>
-                  </div>
-                )}
-                <div className="absolute top-4 right-4">
-                  <div className="bg-white text-green-600 px-4 py-2 rounded-full font-semibold">
-                    무료
-                  </div>
                 </div>
               </div>
+            )}
+
+            {/* File Header */}
+            {!showViewer && (
+              <div className="bg-white rounded-xl shadow-md p-8 mb-8">
+                {/* File Preview */}
+                <div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
+                  {file.previewImage ? (
+                    <img 
+                      src={file.previewImage} 
+                      alt={`${file.title} 미리보기`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-center text-white">
+                        <FileText className="h-24 w-24 mx-auto mb-2 opacity-50" />
+                        <p className="text-lg font-semibold">[파일 미리보기]</p>
+                        <p className="text-sm opacity-75">미리보기 이미지가 설정되지 않았습니다</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute top-4 right-4">
+                    <div className="bg-white text-green-600 px-4 py-2 rounded-full font-semibold">
+                      무료
+                    </div>
+                  </div>
+                </div>
 
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 {file.title}
@@ -232,9 +252,11 @@ export default function FileDetail() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">파일 소개</h2>
                 <p className="text-gray-700 leading-relaxed">{file.fullDescription || file.description}</p>
               </div>
-            </div>
+              </div>
+            )}
 
             {/* Reviews Section */}
+            {!showViewer && (
             <div className="bg-white rounded-xl shadow-md p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -351,6 +373,7 @@ export default function FileDetail() {
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {/* Sidebar */}
