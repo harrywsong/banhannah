@@ -10,7 +10,7 @@ const app = express();
 const corsOptions = {
   origin: [
     'http://localhost:5173', // Vite dev server
-    'https://your-banhannah.netlify.app', // UPDATE THIS: Your Netlify URL
+    'https://banhannah.netlify.app', // Netlify URL
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
