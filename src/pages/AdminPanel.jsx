@@ -1533,83 +1533,24 @@ useEffect(() => {
                           placeholder="레슨 제목"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                         />
-                        <div>
+<div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            비디오 업로드
+                            비디오 URL (YouTube, Vimeo, Google Drive 등)
                           </label>
                           <input
-                            type="file"
-                            accept="video/*"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0]
-                              if (file) {
-                                if (file.size > 2 * 1024 * 1024 * 1024) {
-                                  alert('비디오 파일 크기는 2GB를 초과할 수 없습니다.')
-                                  e.target.value = ''
-                                  return
-                                }
-                                
-                                // Show upload progress
-                                setUploadProgress({
-                                  fileName: file.name,
-                                  progress: 0,
-                                  type: 'video'
-                                })
-                                
-                                try {
-                                  const formData = new FormData()
-                                  formData.append('video', file)
-                                  
-                                  const xhr = new XMLHttpRequest()
-                                  
-                                  xhr.upload.addEventListener('progress', (e) => {
-                                    if (e.lengthComputable) {
-                                      const percentComplete = Math.round((e.loaded / e.total) * 100)
-                                      setUploadProgress(prev => ({
-                                        ...prev,
-                                        progress: percentComplete
-                                      }))
-                                    }
-                                  })
-                                  
-                                  xhr.addEventListener('load', async () => {
-                                    if (xhr.status === 200) {
-                                      const data = JSON.parse(xhr.responseText)
-                                      setCurrentLessonForm({
-                                        ...currentLessonForm,
-                                        videoUrl: data.videoUrl
-                                      })
-                                      alert('비디오가 성공적으로 업로드되었습니다!')
-                                    } else {
-                                      const errorData = JSON.parse(xhr.responseText)
-                                      throw new Error(errorData.error || 'Upload failed')
-                                    }
-                                    setUploadProgress(null)
-                                  })
-                                  
-                                  xhr.addEventListener('error', () => {
-                                    console.error('Video upload error')
-                                    alert('비디오 업로드에 실패했습니다. 백엔드 서버가 실행 중인지 확인하세요.')
-                                    setUploadProgress(null)
-                                    e.target.value = ''
-                                  })
-                                  
-                                  xhr.open('POST', apiEndpoint('videos/upload'))
-                                  addAuthHeaders(xhr)
-                                  xhr.send(formData)
-                                  
-                                } catch (error) {
-                                  console.error('Video upload error:', error)
-                                  alert(`비디오 업로드에 실패했습니다: ${error.message}`)
-                                  setUploadProgress(null)
-                                  e.target.value = ''
-                                }
-                              }
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+                            type="url"
+                            value={currentLessonForm.videoUrl}
+                            onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, videoUrl: e.target.value })}
+                            placeholder="https://www.youtube.com/watch?v=... 또는 https://vimeo.com/..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                           />
+                          <p className="text-xs text-gray-500 mt-1">
+                            YouTube, Vimeo, Google Drive 등의 영상 URL을 입력하세요. 임베드 형식으로 자동 변환됩니다.
+                          </p>
                           {currentLessonForm.videoUrl && (
-                            <p className="text-xs text-green-600 mt-1">✓ 비디오 업로드 완료</p>
+                            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                              <p className="text-xs text-green-700">✓ 비디오 URL이 설정되었습니다</p>
+                            </div>
                           )}
                         </div>
                         <input

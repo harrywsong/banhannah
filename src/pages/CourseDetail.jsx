@@ -359,27 +359,73 @@ export default function CourseDetail() {
                 ))}
               </div>
 
-              {/* Video Player for Selected Lesson - Only if canAccess */}
-              {canAccess && selectedLesson && (
+{/* Video Player for Selected Lesson - Only if canAccess */}
+{canAccess && selectedLesson && (
                 <div className="mt-8 border-t pt-8">
                   <h3 className="text-xl font-bold text-gray-900 mb-4">{selectedLesson.title}</h3>
-                  <div className="aspect-video bg-black rounded-lg mb-4 flex items-center justify-center">
+                  <div className="aspect-video bg-black rounded-lg mb-4 overflow-hidden">
                     {selectedLesson.videoUrl ? (
-                      <video
-                        src={selectedLesson.videoUrl}
-                        controls
-                        className="w-full h-full rounded-lg"
-                      >
-                        비디오를 재생할 수 없습니다.
-                      </video>
+                      <iframe
+                        src={(() => {
+                          // Convert video URL to embed format
+                          const url = selectedLesson.videoUrl;
+                          
+                          // YouTube
+                          const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+                          if (youtubeMatch) {
+                            const videoId = youtubeMatch[1];
+                            return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&controls=1`;
+                          }
+                          
+                          // Vimeo
+                          const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+                          if (vimeoMatch) {
+                            const videoId = vimeoMatch[1];
+                            return `https://player.vimeo.com/video/${videoId}?title=0&byline=0&portrait=0`;
+                          }
+                          
+                          // Google Drive
+                          const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+                          if (driveMatch) {
+                            const fileId = driveMatch[1];
+                            return `https://drive.google.com/file/d/${fileId}/preview`;
+                          }
+                          
+                          // Already embed URL or unknown format
+                          return url;
+                        })()}
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title={selectedLesson.title}
+                      />
                     ) : (
-                      <div className="text-center text-white">
-                        <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
-                        <p className="text-lg font-semibold">[비디오 플레이어]</p>
-                        <p className="text-sm opacity-75">비디오 URL을 설정하면 여기에 표시됩니다</p>
+                      <div className="w-full h-full flex items-center justify-center text-white">
+                        <div className="text-center">
+                          <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
+                          <p className="text-lg font-semibold">비디오가 설정되지 않았습니다</p>
+                          <p className="text-sm opacity-75">관리자가 비디오 URL을 추가해야 합니다</p>
+                        </div>
                       </div>
                     )}
                   </div>
+                  
+                  {/* Video Platform Info */}
+                  {selectedLesson.videoUrl && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>안내:</strong> 이 비디오는 {(() => {
+                          const url = selectedLesson.videoUrl;
+                          if (url.includes('youtube.com') || url.includes('youtu.be')) return 'YouTube';
+                          if (url.includes('vimeo.com')) return 'Vimeo';
+                          if (url.includes('drive.google.com')) return 'Google Drive';
+                          return '외부 플랫폼';
+                        })()}에서 스트리밍됩니다. 다운로드가 제한되며 이 페이지에서만 시청 가능합니다.
+                      </p>
+                    </div>
+                  )}
+                  
                   {!progress[selectedLesson.id]?.completed && (
                     <button
                       onClick={() => handleMarkComplete(selectedLesson.id)}
