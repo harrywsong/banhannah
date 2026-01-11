@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield } from 'lucide-react'
 import AdminLogin from '../components/AdminLogin'
-import { apiEndpoint } from '../config/api'
+import { apiEndpoint, apiRequest } from '../config/api'
 
 export default function AdminPanel() {
   const [adminSession, setAdminSession] = useState(null)
@@ -84,7 +84,7 @@ export default function AdminPanel() {
     // Load files from backend API
     const loadFiles = async () => {
       try {
-        const response = await fetch(apiEndpoint('files/metadata'))
+        const response = await apiRequest(apiEndpoint('files/metadata'))
         if (response.ok) {
           const data = await response.json()
           setFiles(data.files || [])
@@ -109,7 +109,7 @@ export default function AdminPanel() {
     // Load courses from backend API
     const loadCourses = async () => {
       try {
-        const response = await fetch(apiEndpoint('courses/metadata'))
+        const response = await apiRequest(apiEndpoint('courses/metadata'))
         if (response.ok) {
           const data = await response.json()
           setOnlineCourses(data.courses || [])
@@ -228,27 +228,21 @@ export default function AdminPanel() {
       let response
       if (editingFile) {
         // Update existing file
-        response = await fetch(apiEndpoint(`files/metadata/${editingFile.id}`), {
+        response = await apiRequest(apiEndpoint(`files/metadata/${editingFile.id}`), {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(fileData)
         })
       } else {
         // Create new file
-        response = await fetch(apiEndpoint('files/metadata'), {
+        response = await apiRequest(apiEndpoint('files/metadata'), {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(fileData)
         })
       }
 
       if (response.ok) {
         // Reload files from backend
-        const filesResponse = await fetch(apiEndpoint('files/metadata'))
+        const filesResponse = await apiRequest(apiEndpoint('files/metadata'))
         if (filesResponse.ok) {
           const filesData = await filesResponse.json()
           setFiles(filesData.files || [])
@@ -284,13 +278,13 @@ export default function AdminPanel() {
     }
 
     try {
-      const response = await fetch(apiEndpoint(`files/metadata/${id}`), {
+      const response = await apiRequest(apiEndpoint(`files/metadata/${id}`), {
         method: 'DELETE'
       })
 
       if (response.ok) {
         // Reload files from backend
-        const filesResponse = await fetch(apiEndpoint('files/metadata'))
+        const filesResponse = await apiRequest(apiEndpoint('files/metadata'))
         if (filesResponse.ok) {
           const filesData = await filesResponse.json()
           setFiles(filesData.files || [])
@@ -335,27 +329,21 @@ export default function AdminPanel() {
       let response
       if (editingCourse) {
         // Update existing course
-        response = await fetch(apiEndpoint(`courses/metadata/${editingCourse.id}`), {
+        response = await apiRequest(apiEndpoint(`courses/metadata/${editingCourse.id}`), {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(courseData)
         })
       } else {
         // Create new course
-        response = await fetch(apiEndpoint('courses/metadata'), {
+        response = await apiRequest(apiEndpoint('courses/metadata'), {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(courseData)
         })
       }
 
       if (response.ok) {
         // Reload courses from backend
-        const coursesResponse = await fetch(apiEndpoint('courses/metadata'))
+        const coursesResponse = await apiRequest(apiEndpoint('courses/metadata'))
         if (coursesResponse.ok) {
           const coursesData = await coursesResponse.json()
           setOnlineCourses(coursesData.courses || [])
@@ -390,13 +378,13 @@ export default function AdminPanel() {
     }
 
     try {
-      const response = await fetch(apiEndpoint(`courses/metadata/${id}`), {
+      const response = await apiRequest(apiEndpoint(`courses/metadata/${id}`), {
         method: 'DELETE'
       })
 
       if (response.ok) {
         // Reload courses from backend
-        const coursesResponse = await fetch(apiEndpoint('courses/metadata'))
+        const coursesResponse = await apiRequest(apiEndpoint('courses/metadata'))
         if (coursesResponse.ok) {
           const coursesData = await coursesResponse.json()
           setOnlineCourses(coursesData.courses || [])
@@ -1155,7 +1143,7 @@ export default function AdminPanel() {
                                 const formData = new FormData()
                                 formData.append('file', file)
                                 
-                                const response = await fetch(apiEndpoint('files/upload'), {
+                                const response = await apiRequest(apiEndpoint('files/upload'), {
                                   method: 'POST',
                                   body: formData
                                 })

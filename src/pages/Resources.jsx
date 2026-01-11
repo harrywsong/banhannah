@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Search, Filter, FileText, ArrowRight, Lock, Video, PlayCircle, Download } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { apiEndpoint } from '../config/api'
+import { apiEndpoint, apiRequest } from '../config/api'
 
 export default function Resources() {
   const [activeTab, setActiveTab] = useState('files') // 'files' or 'classes'
@@ -16,7 +16,7 @@ export default function Resources() {
     // Load files from backend API
     const loadFiles = async () => {
       try {
-        const response = await fetch(apiEndpoint('files/metadata'))
+        const response = await apiRequest(apiEndpoint('files/metadata'))
         if (response.ok) {
           const data = await response.json()
           setFiles(data.files || [])
@@ -41,7 +41,7 @@ export default function Resources() {
     // Load online courses from backend API
     const loadCourses = async () => {
       try {
-        const response = await fetch(apiEndpoint('courses/metadata'))
+        const response = await apiRequest(apiEndpoint('courses/metadata'))
         if (response.ok) {
           const data = await response.json()
           setOnlineCourses(data.courses || [])

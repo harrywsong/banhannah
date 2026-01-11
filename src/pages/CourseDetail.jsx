@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { ArrowLeft, PlayCircle, Video, FileText, Download, Clock, Star, MessageCircle, X, Lock, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
-import { apiEndpoint } from '../config/api'
+import { apiEndpoint, apiRequest } from '../config/api'
 
 export default function CourseDetail() {
   const { id } = useParams()
@@ -25,7 +25,7 @@ export default function CourseDetail() {
     // Load course from backend API
     const loadCourse = async () => {
       try {
-        const response = await fetch(apiEndpoint(`courses/metadata/${id}`))
+        const response = await apiRequest(apiEndpoint(`courses/metadata/${id}`))
         if (response.ok) {
           const data = await response.json()
           const foundCourse = data.course

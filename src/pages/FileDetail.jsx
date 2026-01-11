@@ -25,7 +25,7 @@ export default function FileDetail() {
     // Load file from backend API
     const loadFile = async () => {
       try {
-        const response = await fetch(apiEndpoint(`files/metadata/${id}`))
+        const response = await apiRequest(apiEndpoint(`files/metadata/${id}`))
         if (response.ok) {
           const data = await response.json()
           setFile(data.file)
@@ -70,7 +70,7 @@ export default function FileDetail() {
     if (!file || !file.id) return
 
     try {
-      const response = await fetch(apiEndpoint(`files/metadata/${file.id}/increment`), {
+      const response = await apiRequest(apiEndpoint(`files/metadata/${file.id}/increment`), {
         method: 'POST'
       })
       if (response.ok) {
