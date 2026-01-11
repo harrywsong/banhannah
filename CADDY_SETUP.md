@@ -19,10 +19,8 @@ sudo nano /etc/caddy/Caddyfile
 
 Add this content (replace with your DuckDNS domain and email):
 
-```
-banhannah.duckdns.org {
+banhannah.duckdns.org:8443 {
     reverse_proxy localhost:3001
-    tls your-email@example.com
 }
 ```
 
@@ -40,32 +38,34 @@ sudo systemctl status caddy
 
 ```bash
 sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
+sudo ufw allow 8443/tcp
 ```
 
 ## Step 5: Update Router Port Forwarding
 
 Update your router:
 - Port 80 → Raspberry Pi IP:80
-- Port 443 → Raspberry Pi IP:443
+- Port 8443 → Raspberry Pi IP:8443
 
 (You can remove the 3001 port forwarding once Caddy is working)
+
+Note: Using port 8443 instead of 443 because Pi-hole is using port 443.
 
 ## Step 6: Update Netlify Environment Variable
 
 In Netlify, update `VITE_API_URL` to:
 ```
-https://banhannah.duckdns.org
+https://banhannah.duckdns.org:8443
 ```
 
-(Note: HTTPS, no port number - Caddy handles it)
+(Note: Using port 8443 because Pi-hole is using port 443)
 
 ## Step 7: Update Backend server.js
 
 Update the serverUrl in your backend (on Raspberry Pi):
 
 ```javascript
-const serverUrl = process.env.SERVER_URL || `https://banhannah.duckdns.org`;
+const serverUrl = process.env.SERVER_URL || `https://banhannah.duckdns.org:8443`;
 ```
 
 ## Step 8: Restart Backend
@@ -76,7 +76,7 @@ pm2 restart yewon-backend
 
 ## Step 9: Test
 
-Visit: https://banhannah.duckdns.org/api/health
+Visit: https://banhannah.duckdns.org:8443/api/health
 
 Should return JSON response.
 
