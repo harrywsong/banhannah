@@ -26,7 +26,8 @@ A modern, feature-rich educational platform built with React, Vite, and Tailwind
    - Go to Site settings → Environment variables
    - Add: `VITE_API_URL` = `http://YOUR_RASPBERRY_PI_IP:3001`
      - Or if using domain: `VITE_API_URL` = `https://yourdomain.com`
-   - Add: `SECRETS_SCAN_OMIT_KEYS` = `VITE_API_URL` (prevents build error - this URL is meant to be public)
+     - This tells Netlify to ignore `VITE_API_URL` during secrets scanning
+     - Without this, the build will fail because `VITE_API_URL` is embedded in the build output
    - Trigger a new deploy (Deploys → Trigger deploy → Deploy site)
 
 4. **Update CORS in backend** (see Backend section below)
