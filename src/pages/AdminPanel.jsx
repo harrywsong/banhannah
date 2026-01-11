@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield } from 'lucide-react'
 import AdminLogin from '../components/AdminLogin'
 import { apiEndpoint, apiRequest } from '../config/api'
+import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield } from 'lucide-react'
 
 export default function AdminPanel() {
   const [adminSession, setAdminSession] = useState(null)
@@ -16,6 +16,7 @@ export default function AdminPanel() {
   const [editingFile, setEditingFile] = useState(null)
   const [editingCourse, setEditingCourse] = useState(null)
   const [editingLesson, setEditingLesson] = useState(null)
+  const [uploadProgress, setUploadProgress] = useState(null) // { fileName: string, progress: number, type: 'file'|'video' }
   
   const [classFormData, setClassFormData] = useState({
     title: '',
@@ -134,6 +135,21 @@ export default function AdminPanel() {
     loadFiles()
     loadCourses()
   }, [adminSession])
+
+      // Prevent navigation during uploads
+useEffect(() => {
+  const handleBeforeUnload = (e) => {
+    if (uploadProgress) {
+      e.preventDefault()
+      e.returnValue = '파일 업로드 중입니다. 페이지를 떠나면 업로드가 취소됩니다.'
+      return e.returnValue
+    }
+  }
+  
+
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+}, [uploadProgress])
 
   const handleAdminLogin = (session) => {
     setAdminSession(session)
@@ -1138,46 +1154,66 @@ export default function AdminPanel() {
                                                     fileExtension === 'DOCX' ? 'DOCX' :
                                                     fileExtension === 'PPTX' ? 'PPTX' : fileFormData.format
                               
-                              // Upload file to backend
+                              // Show upload progress
+                              setUploadProgress({
+                                fileName: file.name,
+                                progress: 0,
+                                type: 'file'
+                              })
+                              
                               try {
                                 const formData = new FormData()
                                 formData.append('file', file)
                                 
-                                const response = await apiRequest(apiEndpoint('files/upload'), {
-                                  method: 'POST',
-                                  body: formData
+                                // Create XMLHttpRequest for progress tracking
+                                const xhr = new XMLHttpRequest()
+                                
+                                xhr.upload.addEventListener('progress', (e) => {
+                                  if (e.lengthComputable) {
+                                    const percentComplete = Math.round((e.loaded / e.total) * 100)
+                                    setUploadProgress(prev => ({
+                                      ...prev,
+                                      progress: percentComplete
+                                    }))
+                                  }
                                 })
                                 
-                                if (!response.ok) {
-                                  throw new Error('Upload failed')
-                                }
+                                xhr.addEventListener('load', async () => {
+                                  if (xhr.status === 200) {
+                                    const data = JSON.parse(xhr.responseText)
+                                    if (data.success) {
+                                      setFileFormData({
+                                        ...fileFormData,
+                                        format: detectedFormat,
+                                        size: `${fileSizeMB} MB`,
+                                        fileUrl: data.fileUrl,
+                                        pages: data.pages || fileFormData.pages,
+                                        previewImage: data.previewImage || fileFormData.previewImage
+                                      })
+                                      alert('파일이 성공적으로 업로드되었습니다!')
+                                    } else {
+                                      throw new Error(data.error || 'Upload failed')
+                                    }
+                                  } else {
+                                    throw new Error('Upload failed')
+                                  }
+                                  setUploadProgress(null)
+                                })
                                 
-                                const data = await response.json()
+                                xhr.addEventListener('error', () => {
+                                  console.error('File upload error')
+                                  alert('파일 업로드에 실패했습니다. 백엔드 서버가 실행 중인지 확인하세요.')
+                                  setUploadProgress(null)
+                                })
                                 
-                                if (data.success) {
-                                  // File uploaded successfully, use the returned fileUrl
-                                  setFileFormData({
-                                    ...fileFormData,
-                                    format: detectedFormat,
-                                    size: `${fileSizeMB} MB`,
-                                    fileUrl: data.fileUrl,
-                                    pages: data.pages || fileFormData.pages, // Use detected page count or keep existing
-                                    previewImage: data.previewImage || fileFormData.previewImage // Use generated preview or keep existing
-                                  })
-                                  alert('파일이 성공적으로 업로드되었습니다!')
-                                } else {
-                                  throw new Error(data.error || 'Upload failed')
-                                }
+                                xhr.open('POST', apiEndpoint('files/upload'))
+                                xhr.setRequestHeader('ngrok-skip-browser-warning', 'true')
+                                xhr.send(formData)
+                                
                               } catch (error) {
                                 console.error('File upload error:', error)
-                                alert(`파일 업로드에 실패했습니다: ${error.message}\n\n백엔드 서버가 실행 중인지 확인하세요.`)
-                                
-                                // Fallback: just set metadata without uploading
-                                setFileFormData({
-                                  ...fileFormData,
-                                  format: detectedFormat,
-                                  size: `${fileSizeMB} MB`
-                                })
+                                alert(`파일 업로드에 실패했습니다: ${error.message}`)
+                                setUploadProgress(null)
                               }
                             }
                           }}
@@ -1494,37 +1530,65 @@ export default function AdminPanel() {
                             onChange={async (e) => {
                               const file = e.target.files?.[0]
                               if (file) {
-                                // Check file size (2GB limit)
                                 if (file.size > 2 * 1024 * 1024 * 1024) {
                                   alert('비디오 파일 크기는 2GB를 초과할 수 없습니다.')
                                   e.target.value = ''
                                   return
                                 }
                                 
-                                // Upload video to backend
+                                // Show upload progress
+                                setUploadProgress({
+                                  fileName: file.name,
+                                  progress: 0,
+                                  type: 'video'
+                                })
+                                
                                 try {
                                   const formData = new FormData()
                                   formData.append('video', file)
                                   
-                                  const response = await apiRequest(apiEndpoint('videos/upload'), {
-                                    method: 'POST',
-                                    body: formData
+                                  const xhr = new XMLHttpRequest()
+                                  
+                                  xhr.upload.addEventListener('progress', (e) => {
+                                    if (e.lengthComputable) {
+                                      const percentComplete = Math.round((e.loaded / e.total) * 100)
+                                      setUploadProgress(prev => ({
+                                        ...prev,
+                                        progress: percentComplete
+                                      }))
+                                    }
                                   })
                                   
-                                  if (response.ok) {
-                                    const data = await response.json()
-                                    setCurrentLessonForm({
-                                      ...currentLessonForm,
-                                      videoUrl: data.videoUrl
-                                    })
-                                    alert('비디오가 성공적으로 업로드되었습니다!')
-                                  } else {
-                                    const errorData = await response.json()
-                                    throw new Error(errorData.error || 'Upload failed')
-                                  }
+                                  xhr.addEventListener('load', async () => {
+                                    if (xhr.status === 200) {
+                                      const data = JSON.parse(xhr.responseText)
+                                      setCurrentLessonForm({
+                                        ...currentLessonForm,
+                                        videoUrl: data.videoUrl
+                                      })
+                                      alert('비디오가 성공적으로 업로드되었습니다!')
+                                    } else {
+                                      const errorData = JSON.parse(xhr.responseText)
+                                      throw new Error(errorData.error || 'Upload failed')
+                                    }
+                                    setUploadProgress(null)
+                                  })
+                                  
+                                  xhr.addEventListener('error', () => {
+                                    console.error('Video upload error')
+                                    alert('비디오 업로드에 실패했습니다. 백엔드 서버가 실행 중인지 확인하세요.')
+                                    setUploadProgress(null)
+                                    e.target.value = ''
+                                  })
+                                  
+                                  xhr.open('POST', apiEndpoint('videos/upload'))
+                                  xhr.setRequestHeader('ngrok-skip-browser-warning', 'true')
+                                  xhr.send(formData)
+                                  
                                 } catch (error) {
                                   console.error('Video upload error:', error)
-                                  alert(`비디오 업로드에 실패했습니다: ${error.message}\n\n백엔드 서버가 실행 중인지 확인하세요.`)
+                                  alert(`비디오 업로드에 실패했습니다: ${error.message}`)
+                                  setUploadProgress(null)
                                   e.target.value = ''
                                 }
                               }
@@ -1621,6 +1685,40 @@ export default function AdminPanel() {
           </>
         )}
       </div>
+      {/* Upload Progress Modal */}
+    {uploadProgress && (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4">
+          <div className="text-center mb-6">
+            <Upload className="h-16 w-16 mx-auto text-primary-600 mb-4 animate-bounce" />
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              {uploadProgress.type === 'video' ? '비디오' : '파일'} 업로드 중
+            </h3>
+            <p className="text-gray-600 mb-1">{uploadProgress.fileName}</p>
+            <p className="text-sm text-gray-500">페이지를 떠나지 마세요</p>
+          </div>
+          
+          <div className="mb-4">
+            <div className="flex justify-between text-sm text-gray-600 mb-2">
+              <span>진행률</span>
+              <span className="font-bold text-primary-600">{uploadProgress.progress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-primary-500 to-primary-600 h-4 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${uploadProgress.progress}%` }}
+              />
+            </div>
+          </div>
+          
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p className="text-xs text-yellow-800 text-center">
+              ⚠️ 업로드가 완료될 때까지 이 페이지를 떠나거나 새로고침하지 마세요
+            </p>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   )
 }

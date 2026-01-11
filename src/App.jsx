@@ -24,30 +24,37 @@ function App() {
     <AuthProvider>
       <ReviewsProvider>
         <Router>
-        <div className="min-h-screen flex flex-col">
-          <Navbar />
-          <main className="flex-grow">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/resources" element={<Resources />} />
-              <Route path="/files/:id" element={<FileDetail />} />
-              <Route path="/courses/:id" element={<CourseDetail />} />
-              <Route path="/live-classes" element={<LiveClasses />} />
-              <Route path="/administrative" element={<AdminPanel />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/faqs" element={<FAQs />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/terms" element={<Terms />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </Router>
+          <Routes>
+            {/* Admin route without navbar/footer */}
+            <Route path="/administrative" element={<AdminPanel />} />
+            
+            {/* All other routes with navbar/footer */}
+            <Route path="*" element={
+              <div className="min-h-screen flex flex-col">
+                <Navbar />
+                <main className="flex-grow">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/resources" element={<Resources />} />
+                    <Route path="/files/:id" element={<FileDetail />} />
+                    <Route path="/courses/:id" element={<CourseDetail />} />
+                    <Route path="/live-classes" element={<LiveClasses />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/faqs" element={<FAQs />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/terms" element={<Terms />} />
+                  </Routes>
+                </main>
+                <Footer />
+              </div>
+            } />
+          </Routes>
+        </Router>
       </ReviewsProvider>
     </AuthProvider>
   )
