@@ -17,9 +17,13 @@ sudo apt install caddy
 sudo nano /etc/caddy/Caddyfile
 ```
 
-Add this content (replace with your DuckDNS domain and email):
+Add this content:
 
-banhannah.duckdns.org:8443 {
+{
+    auto_https disable_redirects
+}
+
+https://banhannah.duckdns.org:8443 {
     reverse_proxy localhost:3001
 }
 ```
@@ -37,19 +41,17 @@ sudo systemctl status caddy
 ## Step 4: Update Firewall (if using UFW)
 
 ```bash
-sudo ufw allow 80/tcp
 sudo ufw allow 8443/tcp
 ```
 
 ## Step 5: Update Router Port Forwarding
 
 Update your router:
-- Port 80 → Raspberry Pi IP:80
 - Port 8443 → Raspberry Pi IP:8443
 
 (You can remove the 3001 port forwarding once Caddy is working)
 
-Note: Using port 8443 instead of 443 because Pi-hole is using port 443.
+Note: Using port 8443 because Pi-hole is using ports 80 and 443.
 
 ## Step 6: Update Netlify Environment Variable
 

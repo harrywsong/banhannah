@@ -11,6 +11,7 @@ const corsOptions = {
   origin: [
     'http://localhost:5173', // Vite dev server
     'https://banhannah.netlify.app', // Netlify URL
+    'https://nichol-tunnellike-constrictively.ngrok-free.dev', // Add your ngrok URL
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -62,7 +63,7 @@ app.post('/api/files/upload', upload.single('file'), (req, res) => {
     }
     
     // Get your server's URL (you'll configure this)
-    const serverUrl = process.env.SERVER_URL || `https://banhannah.duckdns.org:8443`;
+    const serverUrl = process.env.SERVER_URL || `https://nichol-tunnellike-constrictively.ngrok-free.dev`;
     const fileUrl = `${serverUrl}/api/files/download/${req.file.filename}`;
     
     res.json({
