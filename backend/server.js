@@ -42,51 +42,56 @@ app.use((req, res, next) => {
   next();
 });
 
-// Increase body parser limits
+// ============= COMPLETE CORS CONFIGURATION FIX =============
+// REMOVE the duplicate express.json() on line 32-34 if it exists
+// Keep only ONE set of body parser setup
+
+// Increase body parser limits (KEEP THIS - it's already correct)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-// ========== END OF NEW SECTION ==========
 
-// Rate limiting
+// Rate limiting (KEEP THIS)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
 });
 app.use('/api/', limiter);
 
-
 // ============= UPDATED CORS CONFIGURATION =============
-// Around line 48-82 in backend/server.js
-
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
   'http://localhost:5173',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'http://localhost:5174'
 ];
 
+// Simplified CORS - allow all origins in development
 const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, Postman, curl, ngrok)
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, Postman, ngrok)
     if (!origin) return callback(null, true);
     
-    // Allow all origins in development for ngrok testing
-    if (process.env.NODE_ENV !== 'production') {
+    // Check if origin is in allowed list
+    if (allowedOrigins.some(allowed => origin.includes(allowed) || allowed.includes(origin))) {
       return callback(null, true);
     }
     
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // Allow localhost in any mode for development
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
     }
+    
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
-    'Content-Type', 
+    'Content-Type',
     'Authorization',
     'ngrok-skip-browser-warning',
     'X-Requested-With',
-    'Accept'
+    'Accept',
+    'Origin',
+    'User-Agent'
   ],
   exposedHeaders: ['Content-Type', 'Authorization'],
   preflightContinue: false,
@@ -95,7 +100,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Handle preflight requests explicitly
+// Explicitly handle all OPTIONS requests (preflight)
 app.options('*', cors(corsOptions));
 
 // Create necessary directories
