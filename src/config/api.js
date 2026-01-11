@@ -16,12 +16,12 @@ const getApiUrl = () => {
   }
   
   // Production: use your Raspberry Pi URL
-  // Update this to your Raspberry Pi's public URL
+  // Set VITE_API_URL environment variable in Netlify
   // Examples:
   // - http://your-raspberry-pi-ip:3001 (local network)
   // - http://yourname.duckdns.org:3001 (dynamic DNS)
   // - https://yourdomain.com (with domain)
-  return 'http://YOUR_RASPBERRY_PI_IP:3001';
+  return 'http://localhost:3001'; // Fallback - should use VITE_API_URL env var
 };
 
 export const API_URL = getApiUrl();

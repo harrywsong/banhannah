@@ -10,10 +10,7 @@ const app = express();
 const corsOptions = {
   origin: [
     'http://localhost:5173', // Vite dev server
-    'http://localhost:5174',
-    'https://your-username.github.io', // GitHub Pages (update this)
-    'https://your-site.netlify.app', // Netlify (update this)
-    // Add your production domains here
+    'https://your-site.netlify.app', // UPDATE THIS: Your Netlify URL
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
