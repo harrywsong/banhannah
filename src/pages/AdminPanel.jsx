@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import AdminLogin from '../components/AdminLogin'
-import { apiEndpoint, apiRequest } from '../config/api'
+import { apiEndpoint, apiRequest, addAuthHeaders } from '../config/api'  // ← ADD addAuthHeaders here
 import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield } from 'lucide-react'
+
 
 export default function AdminPanel() {
   
@@ -157,8 +158,19 @@ useEffect(() => {
   }
 
   const handleLogout = () => {
+    // Clear both adminSession and token
     localStorage.removeItem('adminSession')
+    localStorage.removeItem('token')
+    
+    // Also call backend logout endpoint to clear cookie
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    fetch(`${API_URL}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    }).catch(err => console.error('Logout error:', err))
+    
     setAdminSession(null)
+    console.log('✓ Admin logged out successfully')
   }
 
   // Class handlers

@@ -6,53 +6,72 @@ export default function AdminLogin({ onLogin }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // ========== REPLACE THIS ENTIRE FUNCTION ==========
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
     try {
-      // In production, this should use encrypted credentials and backend API
-      // For demo: Check against stored admin credentials
-      // TODO: In production, credentials should be encrypted and stored securely on backend
+      // Call backend API for authentication
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
       
-      const adminCredentials = JSON.parse(localStorage.getItem('adminCredentials') || 'null')
-      
-      // Default admin credentials (should be changed on first login)
-      // In production, these should be set via environment variables or secure admin setup
-      const defaultAdmin = {
-        email: 'admin@yewon.com',
-        password: 'admin123' // Should be changed immediately in production
-      }
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        credentials: 'include', // Important for cookies
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password
+        })
+      })
 
-      const validAdmin = adminCredentials || defaultAdmin
+      const data = await response.json()
 
-      if (credentials.email === validAdmin.email && credentials.password === validAdmin.password) {
+      if (response.ok && data.success) {
+        // Check if user is admin
+        if (data.user.role !== 'ADMIN') {
+          setError('관리자 권한이 필요합니다.')
+          setLoading(false)
+          return
+        }
+
+        // CRITICAL: Store token in localStorage FIRST
+        if (data.token) {
+          localStorage.setItem('token', data.token)
+          console.log('✓ Admin token stored successfully')
+        } else {
+          console.error('⚠️ WARNING: No token received from backend!')
+          setError('인증 토큰을 받지 못했습니다. 다시 시도해주세요.')
+          setLoading(false)
+          return
+        }
+
         // Store admin session
         const adminSession = {
-          email: credentials.email,
-          loggedInAt: new Date().toISOString(),
-          sessionId: `admin_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
+          loggedInAt: new Date().toISOString()
         }
         localStorage.setItem('adminSession', JSON.stringify(adminSession))
         
-        // If using default credentials, prompt to change password (for production)
-        if (!adminCredentials) {
-          // In production, force password change
-          console.warn('Using default admin credentials. Please change password immediately.')
-        }
-        
+        console.log('✓ Admin login successful:', adminSession)
         onLogin(adminSession)
       } else {
-        setError('이메일 또는 비밀번호가 올바르지 않습니다.')
+        setError(data.error || '이메일 또는 비밀번호가 올바르지 않습니다.')
       }
     } catch (err) {
-      setError('로그인 중 오류가 발생했습니다.')
+      setError('로그인 중 오류가 발생했습니다. 서버에 연결할 수 없습니다.')
       console.error('Admin login error:', err)
     } finally {
       setLoading(false)
     }
   }
+  // ========== END OF REPLACEMENT ==========
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
@@ -145,8 +164,8 @@ export default function AdminLogin({ onLogin }) {
         {/* Demo Credentials (Remove in production) */}
         <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
           <p className="text-xs text-yellow-300 text-center">
-            <strong>데모 모드:</strong> 기본 관리자 계정 (프로덕션에서 변경 필요)<br />
-            이메일: admin@yewon.com / 비밀번호: admin123
+            <strong>데모 모드:</strong> 백엔드 인증 사용<br />
+            기본 관리자 계정을 backend/.env에서 설정하세요
           </p>
         </div>
       </div>

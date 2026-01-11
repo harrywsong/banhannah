@@ -1,3 +1,4 @@
+// src/config/api.js
 // API Configuration with improved security
 
 // Get API URL from environment variable
@@ -18,7 +19,22 @@ export const apiEndpoint = (path) => {
   return `${API_URL}/api/${cleanPath}`;
 };
 
-// Helper function to make API requests with authentication
+// ========== THIS IS THE NEW FUNCTION THAT WAS MISSING ==========
+// Helper to add authentication headers to XMLHttpRequest (for file uploads)
+export const addAuthHeaders = (xhr) => {
+  const token = localStorage.getItem('token');
+  
+  // Add standard headers
+  xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
+  
+  // Add Authorization header if token exists
+  if (token) {
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+  }
+};
+// ========== END OF NEW FUNCTION ==========
+
+// Helper function to make API requests with authentication (for fetch)
 export const apiRequest = async (url, options = {}) => {
   // Get token from localStorage
   const token = localStorage.getItem('token');
@@ -55,7 +71,8 @@ export const apiRequest = async (url, options = {}) => {
     if (response.status === 401) {
       localStorage.removeItem('token');
       // Only redirect if not already on login page
-      if (!window.location.pathname.includes('/login')) {
+      if (!window.location.pathname.includes('/login') && 
+          !window.location.pathname.includes('/administrative')) {
         window.location.href = '/login';
       }
     }
