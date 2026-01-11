@@ -998,8 +998,8 @@ export default function AdminPanel() {
                                     format: detectedFormat,
                                     size: `${fileSizeMB} MB`,
                                     fileUrl: data.fileUrl,
-                                    // pages field left empty - user must enter manually
-                                    previewImage: fileFormData.previewImage
+                                    pages: data.pages || fileFormData.pages, // Use detected page count or keep existing
+                                    previewImage: data.previewImage || fileFormData.previewImage // Use generated preview or keep existing
                                   })
                                   alert('파일이 성공적으로 업로드되었습니다!')
                                 } else {
