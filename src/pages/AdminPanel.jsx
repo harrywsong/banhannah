@@ -20,6 +20,14 @@ export default function AdminPanel() {
   const [editingLesson, setEditingLesson] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(null) // { fileName: string, progress: number, type: 'file'|'video' }
   const [videoSourceType, setVideoSourceType] = useState('upload') // 'upload' or 'url'
+  const [currentQuestion, setCurrentQuestion] = useState({
+    type: 'multiple-choice',
+    question: '',
+    options: ['', '', '', ''],
+    correctAnswer: 0,
+    matchingPairs: [{ left: '', right: '' }]
+  })
+  const [showQuestionForm, setShowQuestionForm] = useState(false)
   
   const [classFormData, setClassFormData] = useState({
     title: '',
@@ -58,11 +66,12 @@ export default function AdminPanel() {
   const [currentLessonForm, setCurrentLessonForm] = useState({
     title: '',
     description: '',
-    type: 'lesson', // 'lesson' or 'chapter'
+    type: 'lesson',
     videoUrl: '',
     textContent: '',
     duration: '',
-    files: []
+    files: [],
+    questions: [] // NEW: For interactive questions
   })
 
   // Check for admin session on mount
@@ -449,6 +458,79 @@ useEffect(() => {
     })
     setShowCourseForm(false)
     setEditingCourse(null)
+  }
+
+  const addQuestionToLesson = () => {
+    if (currentQuestion.type === 'multiple-choice') {
+      if (!currentQuestion.question.trim() || currentQuestion.options.some(opt => !opt.trim())) {
+        alert('질문과 모든 선택지를 입력해주세요.')
+        return
+      }
+    } else if (currentQuestion.type === 'matching') {
+      if (currentQuestion.matchingPairs.some(pair => !pair.left.trim() || !pair.right.trim())) {
+        alert('모든 매칭 항목을 입력해주세요.')
+        return
+      }
+    }
+  
+    const newQuestion = {
+      id: Date.now(),
+      ...currentQuestion
+    }
+  
+    setCurrentLessonForm({
+      ...currentLessonForm,
+      questions: [...(currentLessonForm.questions || []), newQuestion]
+    })
+  
+    setCurrentQuestion({
+      type: 'multiple-choice',
+      question: '',
+      options: ['', '', '', ''],
+      correctAnswer: 0,
+      matchingPairs: [{ left: '', right: '' }]
+    })
+    setShowQuestionForm(false)
+  }
+  
+  const removeQuestionFromLesson = (questionId) => {
+    setCurrentLessonForm({
+      ...currentLessonForm,
+      questions: currentLessonForm.questions.filter(q => q.id !== questionId)
+    })
+  }
+  
+  const addMatchingPair = () => {
+    setCurrentQuestion({
+      ...currentQuestion,
+      matchingPairs: [...currentQuestion.matchingPairs, { left: '', right: '' }]
+    })
+  }
+  
+  const removeMatchingPair = (index) => {
+    const newPairs = currentQuestion.matchingPairs.filter((_, i) => i !== index)
+    setCurrentQuestion({
+      ...currentQuestion,
+      matchingPairs: newPairs.length > 0 ? newPairs : [{ left: '', right: '' }]
+    })
+  }
+  
+  const updateMatchingPair = (index, side, value) => {
+    const newPairs = [...currentQuestion.matchingPairs]
+    newPairs[index][side] = value
+    setCurrentQuestion({
+      ...currentQuestion,
+      matchingPairs: newPairs
+    })
+  }
+  
+  const updateOption = (index, value) => {
+    const newOptions = [...currentQuestion.options]
+    newOptions[index] = value
+    setCurrentQuestion({
+      ...currentQuestion,
+      options: newOptions
+    })
   }
 
   const addLessonToCourse = () => {
@@ -1506,6 +1588,7 @@ useEffect(() => {
                     {lesson.videoUrl && <div className="truncate">🎥 {lesson.videoUrl.substring(0, 50)}...</div>}
                     {lesson.textContent && <div>📝 텍스트 콘텐츠 포함</div>}
                     {lesson.files && lesson.files.length > 0 && <div>📎 {lesson.files.length}개 파일</div>}
+                    {lesson.questions && lesson.questions.length > 0 && <div>❓ {lesson.questions.length}개 문제</div>}
                   </div>
                 )}
               </div>
@@ -1623,40 +1706,246 @@ useEffect(() => {
             />
           </div>
 
-          {/* Video Upload Section - Keep existing video upload code here */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-gray-700">
-                비디오 소스 (선택사항)
-              </label>
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setVideoSourceType('upload')}
-                  className={`px-3 py-1 text-xs rounded ${
-                    videoSourceType === 'upload'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  파일 업로드
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVideoSourceType('url')}
-                  className={`px-3 py-1 text-xs rounded ${
-                    videoSourceType === 'url'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  외부 URL
-                </button>
-              </div>
-            </div>
+{/* Video Upload Section */}
+<div className="space-y-4">
+  <div className="flex items-center justify-between">
+    <label className="block text-sm font-medium text-gray-700">
+      비디오 소스 (선택사항)
+    </label>
+    <div className="flex space-x-2">
+      <button
+        type="button"
+        onClick={() => setVideoSourceType('upload')}
+        className={`px-3 py-1 text-xs rounded ${
+          videoSourceType === 'upload'
+            ? 'bg-purple-600 text-white'
+            : 'bg-gray-200 text-gray-700'
+        }`}
+      >
+        파일 업로드
+      </button>
+      <button
+        type="button"
+        onClick={() => setVideoSourceType('url')}
+        className={`px-3 py-1 text-xs rounded ${
+          videoSourceType === 'url'
+            ? 'bg-purple-600 text-white'
+            : 'bg-gray-200 text-gray-700'
+        }`}
+      >
+        외부 URL
+      </button>
+    </div>
+  </div>
 
-            {/* Keep existing video upload/URL code */}
+  {videoSourceType === 'upload' ? (
+    <div>
+      <label className="block w-full">
+        <span className="sr-only">비디오 파일 선택</span>
+        <input
+          type="file"
+          accept="video/*"
+          onChange={handleLessonVideoChange}
+          className="block w-full text-sm text-gray-500
+            file:mr-4 file:py-2 file:px-4
+            file:rounded-lg file:border-0
+            file:text-sm file:font-semibold
+            file:bg-purple-50 file:text-purple-700
+            hover:file:bg-purple-100
+            cursor-pointer"
+        />
+      </label>
+      {uploadingLessonVideo && (
+        <div className="mt-2 text-sm text-purple-600">
+          업로드 중... {videoUploadProgress}%
+        </div>
+      )}
+      {currentLessonForm.videoUrl && videoSourceType === 'upload' && (
+        <div className="mt-2 text-sm text-green-600">
+          ✓ 비디오 업로드 완료
+        </div>
+      )}
+    </div>
+  ) : (
+    <div>
+      <input
+        type="url"
+        value={currentLessonForm.videoUrl}
+        onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, videoUrl: e.target.value })}
+        placeholder="YouTube, Vimeo, Google Drive 등의 비디오 URL"
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+      />
+      <p className="mt-1 text-xs text-gray-500">
+        예: https://www.youtube.com/watch?v=... 또는 https://vimeo.com/...
+      </p>
+    </div>
+  )}
+</div>
+
+{/* Interactive Questions Section */}
+<div className="border-t pt-4">
+  <div className="flex items-center justify-between mb-3">
+    <label className="block text-sm font-medium text-gray-700">
+      인터랙티브 문제 (선택사항)
+    </label>
+    <button
+      type="button"
+      onClick={() => setShowQuestionForm(!showQuestionForm)}
+      className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+    >
+      {showQuestionForm ? '취소' : '문제 추가'}
+    </button>
+  </div>
+
+  {/* Question List */}
+  {currentLessonForm.questions && currentLessonForm.questions.length > 0 && (
+    <div className="space-y-2 mb-3">
+      {currentLessonForm.questions.map((q, idx) => (
+        <div key={q.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <div className="flex items-start justify-between">
+            <div className="flex-grow">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                  {q.type === 'multiple-choice' ? '객관식' : '매칭'}
+                </span>
+                <span className="text-sm font-medium text-gray-700">문제 {idx + 1}</span>
+              </div>
+              <p className="text-sm text-gray-600 truncate">{q.question || '매칭 문제'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => removeQuestionFromLesson(q.id)}
+              className="text-red-600 hover:text-red-700 ml-2"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {/* Question Form */}
+  {showQuestionForm && (
+    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-3">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">문제 유형</label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setCurrentQuestion({ ...currentQuestion, type: 'multiple-choice' })}
+            className={`flex-1 px-3 py-2 rounded-lg border-2 transition-colors ${
+              currentQuestion.type === 'multiple-choice'
+                ? 'border-blue-500 bg-white text-blue-700'
+                : 'border-gray-300 text-gray-600 hover:border-gray-400'
+            }`}
+          >
+            객관식
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentQuestion({ ...currentQuestion, type: 'matching' })}
+            className={`flex-1 px-3 py-2 rounded-lg border-2 transition-colors ${
+              currentQuestion.type === 'matching'
+                ? 'border-blue-500 bg-white text-blue-700'
+                : 'border-gray-300 text-gray-600 hover:border-gray-400'
+            }`}
+          >
+            매칭
+          </button>
+        </div>
+      </div>
+
+      {currentQuestion.type === 'multiple-choice' ? (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">질문</label>
+            <input
+              type="text"
+              value={currentQuestion.question}
+              onChange={(e) => setCurrentQuestion({ ...currentQuestion, question: e.target.value })}
+              placeholder="질문을 입력하세요"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">선택지</label>
+            <div className="space-y-2">
+              {currentQuestion.options.map((option, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="correctAnswer"
+                    checked={currentQuestion.correctAnswer === idx}
+                    onChange={() => setCurrentQuestion({ ...currentQuestion, correctAnswer: idx })}
+                    className="text-blue-600"
+                  />
+                  <input
+                    type="text"
+                    value={option}
+                    onChange={(e) => updateOption(idx, e.target.value)}
+                    placeholder={`선택지 ${idx + 1}`}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">라디오 버튼으로 정답을 선택하세요</p>
+          </div>
+        </>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">매칭 항목</label>
+          <div className="space-y-2">
+            {currentQuestion.matchingPairs.map((pair, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={pair.left}
+                  onChange={(e) => updateMatchingPair(idx, 'left', e.target.value)}
+                  placeholder="왼쪽 항목"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-gray-400">↔</span>
+                <input
+                  type="text"
+                  value={pair.right}
+                  onChange={(e) => updateMatchingPair(idx, 'right', e.target.value)}
+                  placeholder="오른쪽 항목"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+                {currentQuestion.matchingPairs.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeMatchingPair(idx)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={addMatchingPair}
+            className="mt-2 text-sm text-blue-600 hover:text-blue-700"
+          >
+            + 매칭 항목 추가
+          </button>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={addQuestionToLesson}
+        className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+      >
+        문제 추가
+      </button>
+    </div>
+  )}
+</div>
         </>
       )}
 

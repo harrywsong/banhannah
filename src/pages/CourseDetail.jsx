@@ -23,6 +23,9 @@ export default function CourseDetail() {
   const [progress, setProgress] = useState({})
   const [expandedChapters, setExpandedChapters] = useState({})
   const [showSidebar, setShowSidebar] = useState(true)
+  const [questionAnswers, setQuestionAnswers] = useState({})
+const [questionResults, setQuestionResults] = useState({})
+const [matchingAnswers, setMatchingAnswers] = useState({})
 
   // Helper function to check purchase status
   const checkPurchaseStatus = (courseData) => {
@@ -285,6 +288,122 @@ export default function CourseDetail() {
 
   // Group lessons by chapters
   const groupLessonsByChapters = () => {
+
+    // Calculate content statistics
+  const getContentStats = () => {
+    if (!course?.lessons) return {
+      chapters: 0,
+      lessons: 0,
+      videos: 0,
+      files: 0,
+      exercises: 0
+    }
+
+    let stats = {
+      chapters: 0,
+      lessons: 0,
+      videos: 0,
+      files: 0,
+      exercises: 0
+    }
+
+    course.lessons.forEach(lesson => {
+      if (lesson.type === 'chapter') {
+        stats.chapters++
+      } else {
+        stats.lessons++
+        
+        // Count videos
+        if (lesson.videoUrl) {
+          stats.videos++
+        }
+        
+        // Count files
+        if (lesson.files && lesson.files.length > 0) {
+          stats.files += lesson.files.length
+        }
+        
+        // Count exercises (questions)
+        if (lesson.questions && lesson.questions.length > 0) {
+          stats.exercises += lesson.questions.length
+        }
+      }
+    })
+
+    return stats
+  }
+
+    // Interactive Question Handlers
+  const handleMultipleChoiceAnswer = (questionId, selectedOption) => {
+    setQuestionAnswers({
+      ...questionAnswers,
+      [questionId]: selectedOption
+    })
+  }
+
+  const checkMultipleChoiceAnswer = (question) => {
+    const userAnswer = questionAnswers[question.id]
+    const isCorrect = userAnswer === question.correctAnswer
+    
+    setQuestionResults({
+      ...questionResults,
+      [question.id]: {
+        answered: true,
+        correct: isCorrect,
+        userAnswer,
+        correctAnswer: question.correctAnswer
+      }
+    })
+  }
+
+  const handleMatchingAnswer = (questionId, leftIndex, rightValue) => {
+    setMatchingAnswers({
+      ...matchingAnswers,
+      [questionId]: {
+        ...(matchingAnswers[questionId] || {}),
+        [leftIndex]: rightValue
+      }
+    })
+  }
+
+  const checkMatchingAnswer = (question) => {
+    const userAnswers = matchingAnswers[question.id] || {}
+    let correctCount = 0
+    
+    question.matchingPairs.forEach((pair, index) => {
+      if (userAnswers[index] === pair.right) {
+        correctCount++
+      }
+    })
+    
+    const isCorrect = correctCount === question.matchingPairs.length
+    
+    setQuestionResults({
+      ...questionResults,
+      [question.id]: {
+        answered: true,
+        correct: isCorrect,
+        correctCount,
+        totalCount: question.matchingPairs.length,
+        userAnswers
+      }
+    })
+  }
+
+  const resetQuestion = (questionId) => {
+    const newAnswers = { ...questionAnswers }
+    delete newAnswers[questionId]
+    setQuestionAnswers(newAnswers)
+    
+    const newMatching = { ...matchingAnswers }
+    delete newMatching[questionId]
+    setMatchingAnswers(newMatching)
+    
+    const newResults = { ...questionResults }
+    delete newResults[questionId]
+    setQuestionResults(newResults)
+  }
+
     if (!course?.lessons) return []
     
     const groups = []
@@ -451,10 +570,43 @@ export default function CourseDetail() {
                 <p className="text-xl text-gray-600 mb-6">{course.description}</p>
 
                 <div className="flex flex-wrap items-center gap-6 mb-6 text-gray-600">
-                  <div className="flex items-center space-x-2">
-                    <Video className="h-5 w-5" />
-                    <span>{course.lessons?.filter(l => l.type !== 'chapter').length || 0}개 레슨</span>
-                  </div>
+                {(() => {
+  const stats = getContentStats()
+  return (
+    <>
+      {stats.chapters > 0 && (
+        <div className="flex items-center space-x-2">
+          <BookOpen className="h-5 w-5 text-blue-600" />
+          <span>{stats.chapters}개 챕터</span>
+        </div>
+      )}
+      {stats.lessons > 0 && (
+        <div className="flex items-center space-x-2">
+          <FileText className="h-5 w-5 text-purple-600" />
+          <span>{stats.lessons}개 레슨</span>
+        </div>
+      )}
+      {stats.videos > 0 && (
+        <div className="flex items-center space-x-2">
+          <Video className="h-5 w-5 text-red-600" />
+          <span>{stats.videos}개 비디오</span>
+        </div>
+      )}
+      {stats.files > 0 && (
+        <div className="flex items-center space-x-2">
+          <Download className="h-5 w-5 text-green-600" />
+          <span>{stats.files}개 파일</span>
+        </div>
+      )}
+      {stats.exercises > 0 && (
+        <div className="flex items-center space-x-2">
+          <FileQuestion className="h-5 w-5 text-orange-600" />
+          <span>{stats.exercises}개 문제</span>
+        </div>
+      )}
+    </>
+  )
+})()}
                   {course.students && <div><span>{course.students.toLocaleString()}명 수강</span></div>}
                   {averageRating > 0 && (
                     <div className="flex items-center space-x-2">
