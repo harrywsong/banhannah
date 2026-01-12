@@ -35,7 +35,9 @@ const videoStorage = multer.diskStorage({
 
 const videoUpload = multer({
   storage: videoStorage,
-  limits: { fileSize: parseInt(process.env.MAX_VIDEO_SIZE) || 2147483648 }, // 2GB default
+  limits: { 
+    fileSize: parseInt(process.env.MAX_VIDEO_SIZE) || 2147483648, // 2GB default
+  },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /mp4|mov|avi|mkv|webm/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -50,6 +52,10 @@ const videoUpload = multer({
 
 router.post('/upload', authenticate, requireAdmin, videoUpload.single('video'), async (req, res) => {
   try {
+    // Set a very long timeout for this specific route (2 hours)
+    req.setTimeout(7200000); // 2 hours
+    res.setTimeout(7200000);
+    
     if (!req.file) {
       return res.status(400).json({ error: 'No video uploaded' });
     }

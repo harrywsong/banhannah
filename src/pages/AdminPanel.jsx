@@ -1634,10 +1634,15 @@ useEffect(() => {
                         ...currentLessonForm,
                         videoUrl: data.hlsUrl
                       });
+                      
+                      // Show success with conversion status
                       alert(
-                        '비디오가 성공적으로 업로드되고 HLS 형식으로 변환되었습니다!\n\n' +
+                        '비디오가 성공적으로 업로드되었습니다!\n\n' +
                         `비디오 ID: ${data.videoId}\n` +
-                        '이제 레슨에 추가할 수 있습니다.'
+                        `상태: ${data.status}\n\n` +
+                        'HLS 변환이 백그라운드에서 진행 중입니다.\n' +
+                        '변환이 완료되면 비디오를 재생할 수 있습니다.\n' +
+                        '(큰 파일의 경우 몇 분 정도 걸릴 수 있습니다)'
                       );
                     } else {
                       throw new Error(data.error || 'Upload failed');
@@ -1652,10 +1657,27 @@ useEffect(() => {
                 
                 xhr.addEventListener('error', () => {
                   console.error('Video upload error');
-                  alert('비디오 업로드에 실패했습니다. 백엔드 서버가 실행 중인지 확인하세요.');
+                  alert('비디오 업로드에 실패했습니다.\n\n' +
+                       '가능한 원인:\n' +
+                       '1. 백엔드 서버가 실행 중이 아닙니다\n' +
+                       '2. 파일이 너무 큽니다 (최대 2GB)\n' +
+                       '3. 네트워크 연결이 불안정합니다\n\n' +
+                       '서버 로그를 확인하세요.');
                   setUploadProgress(null);
                   e.target.value = '';
                 });
+                
+                xhr.addEventListener('timeout', () => {
+                  console.error('Video upload timeout');
+                  alert('비디오 업로드 시간이 초과되었습니다.\n\n' +
+                       '파일이 너무 크거나 네트워크가 느립니다.\n' +
+                       '더 작은 파일로 시도하거나 네트워크 연결을 확인하세요.');
+                  setUploadProgress(null);
+                  e.target.value = '';
+                });
+                
+                // Set timeout for very large files (30 minutes)
+                xhr.timeout = 1800000; // 30 minutes
                 
                 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
                 xhr.open('POST', `${API_URL}/api/videos/upload`);
