@@ -65,16 +65,15 @@ export default function AdminPanel() {
     lessons: []
   })
   
-  const [currentLessonForm, setCurrentLessonForm] = useState({
-    title: '',
-    description: '',
-    type: 'lesson',
-    videoUrl: '',
-    textContent: '',
-    duration: '',
-    files: [],
-    questions: [] // NEW: For interactive questions
-  })
+const [currentLessonForm, setCurrentLessonForm] = useState({
+  title: '',
+  description: '',
+  type: 'lesson',
+  chapterNumber: '',      // NEW: For chapter numbering (1, 2, 3)
+  lessonNumber: '',       // NEW: For lesson numbering (1.1, 1.2)
+  content: [],           // NEW: Array of content blocks
+  duration: ''
+})
 
   // Check for admin session on mount
   useEffect(() => {
