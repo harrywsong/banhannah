@@ -35,13 +35,13 @@ export default function HLSVideoPlayer({ videoId, onError }) {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           console.error('Token fetch failed:', errorData);
           
-          // Don't throw error for "not associated" - try to play anyway
           if (response.status === 404 || errorData.error?.includes('not associated')) {
-            console.warn('Video not in course yet, attempting direct access...');
-            setToken('fallback'); // SET A FALLBACK TOKEN instead of null
-            setLoading(false); // STOP LOADING
+            console.warn('Video not in course yet');
+            setError(errorData.error || 'Video not associated with course');
+            setLoading(false);
             return;
           }
+          
           
           throw new Error(errorData.error || 'Failed to get video access token');
         }
