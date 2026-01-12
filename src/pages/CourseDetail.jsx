@@ -24,8 +24,79 @@ export default function CourseDetail() {
   const [expandedChapters, setExpandedChapters] = useState({})
   const [showSidebar, setShowSidebar] = useState(true)
   const [questionAnswers, setQuestionAnswers] = useState({})
-const [questionResults, setQuestionResults] = useState({})
-const [matchingAnswers, setMatchingAnswers] = useState({})
+  const [questionResults, setQuestionResults] = useState({})
+  const [matchingAnswers, setMatchingAnswers] = useState({})
+
+  // Interactive Question Handlers
+  const handleMultipleChoiceAnswer = (questionId, selectedOption) => {
+    setQuestionAnswers({
+      ...questionAnswers,
+      [questionId]: selectedOption
+    })
+  }
+
+  const checkMultipleChoiceAnswer = (question, blockId) => {
+    const userAnswer = questionAnswers[blockId]
+    const isCorrect = userAnswer === question.correctAnswer
+    
+    setQuestionResults({
+      ...questionResults,
+      [blockId]: {
+        answered: true,
+        correct: isCorrect,
+        userAnswer,
+        correctAnswer: question.correctAnswer
+      }
+    })
+  }
+
+  const handleMatchingAnswer = (questionId, leftIndex, rightValue) => {
+    setMatchingAnswers({
+      ...matchingAnswers,
+      [questionId]: {
+        ...(matchingAnswers[questionId] || {}),
+        [leftIndex]: rightValue
+      }
+    })
+  }
+
+  const checkMatchingAnswer = (question, blockId) => {
+    const userAnswers = matchingAnswers[blockId] || {}
+    let correctCount = 0
+    
+    question.matchingPairs.forEach((pair, index) => {
+      if (userAnswers[index] === pair.right) {
+        correctCount++
+      }
+    })
+    
+    const isCorrect = correctCount === question.matchingPairs.length
+    
+    setQuestionResults({
+      ...questionResults,
+      [blockId]: {
+        answered: true,
+        correct: isCorrect,
+        correctCount,
+        totalCount: question.matchingPairs.length,
+        userAnswers
+      }
+    })
+  }
+
+  const resetQuestion = (questionId) => {
+    const newAnswers = { ...questionAnswers }
+    delete newAnswers[questionId]
+    setQuestionAnswers(newAnswers)
+    
+    const newMatching = { ...matchingAnswers }
+    delete newMatching[questionId]
+    setMatchingAnswers(newMatching)
+    
+    const newResults = { ...questionResults }
+    delete newResults[questionId]
+    setQuestionResults(newResults)
+  }
 
   // Helper function to check purchase status
   const checkPurchaseStatus = (courseData) => {
@@ -333,76 +404,6 @@ const [matchingAnswers, setMatchingAnswers] = useState({})
     return stats
   }
 
-    // Interactive Question Handlers
-  const handleMultipleChoiceAnswer = (questionId, selectedOption) => {
-    setQuestionAnswers({
-      ...questionAnswers,
-      [questionId]: selectedOption
-    })
-  }
-
-  const checkMultipleChoiceAnswer = (question, blockId) => {
-    const userAnswer = questionAnswers[blockId]
-    const isCorrect = userAnswer === question.correctAnswer
-    
-    setQuestionResults({
-      ...questionResults,
-      [blockId]: {
-        answered: true,
-        correct: isCorrect,
-        userAnswer,
-        correctAnswer: question.correctAnswer
-      }
-    })
-  }
-
-  const handleMatchingAnswer = (questionId, leftIndex, rightValue) => {
-    setMatchingAnswers({
-      ...matchingAnswers,
-      [questionId]: {
-        ...(matchingAnswers[questionId] || {}),
-        [leftIndex]: rightValue
-      }
-    })
-  }
-
-  const checkMatchingAnswer = (question, blockId) => {
-    const userAnswers = matchingAnswers[blockId] || {}
-    let correctCount = 0
-    
-    question.matchingPairs.forEach((pair, index) => {
-      if (userAnswers[index] === pair.right) {
-        correctCount++
-      }
-    })
-    
-    const isCorrect = correctCount === question.matchingPairs.length
-    
-    setQuestionResults({
-      ...questionResults,
-      [blockId]: {
-        answered: true,
-        correct: isCorrect,
-        correctCount,
-        totalCount: question.matchingPairs.length,
-        userAnswers
-      }
-    })
-  }
-
-  const resetQuestion = (questionId) => {
-    const newAnswers = { ...questionAnswers }
-    delete newAnswers[questionId]
-    setQuestionAnswers(newAnswers)
-    
-    const newMatching = { ...matchingAnswers }
-    delete newMatching[questionId]
-    setMatchingAnswers(newMatching)
-    
-    const newResults = { ...questionResults }
-    delete newResults[questionId]
-    setQuestionResults(newResults)
-  }
 
     if (!course?.lessons) return []
     
