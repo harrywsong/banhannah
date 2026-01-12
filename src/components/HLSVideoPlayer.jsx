@@ -30,7 +30,7 @@ export default function HLSVideoPlayer({ videoId, onError }) {
           },
           credentials: 'include'
         });
-
+  
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           console.error('Token fetch failed:', errorData);
@@ -38,41 +38,49 @@ export default function HLSVideoPlayer({ videoId, onError }) {
           // Don't throw error for "not associated" - try to play anyway
           if (response.status === 404 || errorData.error?.includes('not associated')) {
             console.warn('Video not in course yet, attempting direct access...');
-            return null; // Will trigger direct HLS access attempt
+            setToken('fallback'); // SET A FALLBACK TOKEN instead of null
+            setLoading(false); // STOP LOADING
+            return;
           }
           
           throw new Error(errorData.error || 'Failed to get video access token');
         }
         
-
         const data = await response.json();
         setToken(data.token);
         
         // Refresh token before it expires
-        const refreshTime = (data.expiresIn - 60) * 1000; // Refresh 1 minute before expiry
+        const refreshTime = (data.expiresIn - 60) * 1000;
         setTimeout(() => {
-          fetchToken(); // Recursive call to refresh token
+          fetchToken();
         }, refreshTime);
-
       } catch (err) {
         console.error('Token fetch error:', err);
         setError(err.message);
+        setLoading(false); // CRITICAL: Stop loading on error
         if (onError) onError(err);
       }
     };
-
+  
     if (videoId) {
       fetchToken();
     }
   }, [videoId, onError]);
+  
 
   // Initialize HLS player
   useEffect(() => {
-    if (!token || !videoRef.current) return;
-
+    if (!token || !videoRef.current) {
+      // If token is still null after fetch attempt, show error
+      if (token === null && !loading) {
+        setError('Unable to load video token');
+      }
+      return;
+    }
+    
     const video = videoRef.current;
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
+    const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;  
 
     // Check if HLS is natively supported
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
