@@ -32,9 +32,18 @@ export default function HLSVideoPlayer({ videoId, onError }) {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('Token fetch failed:', errorData);
+          
+          // Don't throw error for "not associated" - try to play anyway
+          if (response.status === 404 || errorData.error?.includes('not associated')) {
+            console.warn('Video not in course yet, attempting direct access...');
+            return null; // Will trigger direct HLS access attempt
+          }
+          
           throw new Error(errorData.error || 'Failed to get video access token');
         }
+        
 
         const data = await response.json();
         setToken(data.token);

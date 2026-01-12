@@ -385,48 +385,60 @@ export default function CourseDetail() {
   const groupLessonsByChapters = () => {
 
     // Calculate content statistics
-  const getContentStats = () => {
-    if (!course?.lessons) return {
-      chapters: 0,
-      lessons: 0,
-      videos: 0,
-      files: 0,
-      exercises: 0
-    }
-
-    let stats = {
-      chapters: 0,
-      lessons: 0,
-      videos: 0,
-      files: 0,
-      exercises: 0
-    }
-
-    course.lessons.forEach(lesson => {
-      if (lesson.type === 'chapter') {
-        stats.chapters++
-      } else {
-        stats.lessons++
-        
-        // Count videos
-        if (lesson.videoUrl) {
-          stats.videos++
-        }
-        
-        // Count files
-        if (lesson.files && lesson.files.length > 0) {
-          stats.files += lesson.files.length
-        }
-        
-        // Count exercises (questions)
-        if (lesson.questions && lesson.questions.length > 0) {
-          stats.exercises += lesson.questions.length
-        }
+    const getContentStats = () => {
+      if (!course?.lessons) return {
+        chapters: 0,
+        lessons: 0,
+        videos: 0,
+        files: 0,
+        exercises: 0
       }
-    })
 
-    return stats
-  }
+      let stats = {
+        chapters: 0,
+        lessons: 0,
+        videos: 0,
+        files: 0,
+        exercises: 0
+      }
+
+      course.lessons.forEach(lesson => {
+        if (lesson.type === 'chapter') {
+          stats.chapters++
+        } else {
+          stats.lessons++
+          
+          // Count content blocks (NEW SYSTEM)
+          if (lesson.content && Array.isArray(lesson.content)) {
+            lesson.content.forEach(block => {
+              if (block.type === 'video' && block.data?.url) {
+                stats.videos++
+              } else if (block.type === 'file' && block.data?.url) {
+                stats.files++
+              } else if (block.type === 'question') {
+                stats.exercises++
+              }
+            })
+          }
+          
+          // Legacy system support
+          if (lesson.videoUrl) {
+            stats.videos++
+          }
+          
+          if (lesson.files && lesson.files.length > 0) {
+            stats.files += lesson.files.length
+          }
+          
+          if (lesson.questions && lesson.questions.length > 0) {
+            stats.exercises += lesson.questions.length
+          }
+        }
+      })
+
+      return stats
+    }
+
 
 
     if (!course?.lessons) return []
@@ -740,13 +752,14 @@ export default function CourseDetail() {
             <div className="aspect-video bg-black">
             {hlsMatch ? (
   <HLSVideoPlayer 
-    videoId={hlsMatch[1]}
+    videoId={hlsMatch}
+    autoPlay={false}
     onError={(err) => {
       console.error('Video error:', err);
-      // Don't show alert for "not associated" errors - just log them
-      // The video will still attempt to play if the HLS files exist
+      // Don't show alert for errors - just log them
     }}
   />
+
 ) : (
                 (() => {
                   const url = block.data.url;
@@ -1047,47 +1060,7 @@ if (block.type === 'text' && block.data.content) {
     )}
   </>
 )}
-
-                {/* Text Content */}
-                {selectedLesson.textContent && (
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-primary-600" />
-                      강의 내용
-                    </h3>
-                    <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
-                      {selectedLesson.textContent}
-                    </div>
-                  </div>
-                )}
-
-                {/* Files */}
-                {selectedLesson.files && selectedLesson.files.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-md p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <Download className="h-5 w-5 text-primary-600" />
-                      첨부 파일
-                    </h3>
-                    <div className="space-y-2">
-                      {selectedLesson.files.map((file, fileIndex) => (
-                        <button
-                          key={fileIndex}
-                          onClick={() => handleDownloadLessonFile(file)}
-                          className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-gray-400 group-hover:text-primary-600" />
-                            <span className="font-medium text-gray-900">{file.name || file.title}</span>
-                          </div>
-                          <Download className="h-4 w-4 text-gray-400 group-hover:text-primary-600" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
+  </div>)}
             {/* Reviews Section */}
             {canAccess && (
               <div className="bg-white rounded-xl shadow-md p-8 mt-8">
