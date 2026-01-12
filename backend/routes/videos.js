@@ -146,9 +146,7 @@ router.post('/token/:videoId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
-    // Find which course this video belongs to
-    // This requires you to store video-to-course mapping in your database
-    // For now, we'll check all courses and their lessons
+    // Try to find which course this video belongs to
     const courses = await prisma.course.findMany();
     
     let courseId = null;
@@ -157,18 +155,46 @@ router.post('/token/:videoId', authenticate, async (req, res) => {
     for (const course of courses) {
       if (course.lessons && Array.isArray(course.lessons)) {
         for (const lesson of course.lessons) {
+          // Check if lesson has content blocks with this video
+          if (lesson.content && Array.isArray(lesson.content)) {
+            for (const block of lesson.content) {
+              if (block.type === 'video' && block.data && block.data.url && block.data.url.includes(videoId)) {
+                courseId = course.id;
+                lessonFound = true;
+                break;
+              }
+            }
+          }
+          // Also check legacy videoUrl field
           if (lesson.videoUrl && lesson.videoUrl.includes(videoId)) {
             courseId = course.id;
             lessonFound = true;
             break;
           }
+          if (lessonFound) break;
         }
       }
       if (lessonFound) break;
     }
 
+    // If no course found, generate a basic access token anyway
+    // (this allows viewing uploaded videos even before they're assigned to courses)
     if (!courseId) {
-      return res.status(404).json({ error: 'Video not associated with any course' });
+      const token = jwt.sign(
+        {
+          userId,
+          videoId,
+          isFree: true
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+
+      return res.json({
+        success: true,
+        token,
+        expiresIn: 3600
+      });
     }
 
     const course = courses.find(c => c.id === courseId);

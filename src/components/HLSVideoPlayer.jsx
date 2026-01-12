@@ -191,8 +191,13 @@ export default function HLSVideoPlayer({ videoId, onError }) {
     return (
       <div className="w-full aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
         <div className="text-center text-white p-8">
-          <p className="text-red-400 mb-4">비디오를 로드할 수 없습니다</p>
+          <p className="text-red-400 mb-2">비디오를 로드할 수 없습니다</p>
           <p className="text-sm text-gray-400">{error}</p>
+          {error.includes('not associated') && (
+            <p className="text-xs text-gray-500 mt-2">
+              이 비디오는 아직 코스에 연결되지 않았습니다.
+            </p>
+          )}
         </div>
       </div>
     );

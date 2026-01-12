@@ -1,10 +1,10 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, PlayCircle, Video, FileText, Download, Clock, Star, MessageCircle, X, Lock, CheckCircle, ChevronRight, ChevronDown, RotateCcw, BookOpen, FileQuestion } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
 import { apiEndpoint, apiRequest } from '../config/api'
 import HLSVideoPlayer from '../components/HLSVideoPlayer'
+import { ArrowLeft, PlayCircle, Video, FileText, Download, Clock, Star, MessageCircle, X, Lock, CheckCircle, ChevronRight, ChevronDown, RotateCcw, BookOpen, FileQuestion } from 'lucide-react'
 
 export default function CourseDetail() {
   const { id } = useParams()
@@ -703,241 +703,296 @@ const [matchingAnswers, setMatchingAnswers] = useState({})
                 </div>
 
 {/* Lesson Content Blocks */}
-{selectedLesson.content && selectedLesson.content.length > 0 && (
-                  <div className="space-y-6">
-                    {selectedLesson.content.sort((a, b) => a.order - b.order).map((block) => {
-                      // Video Block
-                      if (block.type === 'video' && block.data.url) {
-                        const hlsMatch = block.data.url.match(/\/api\/videos\/hls\/([^\/]+)/);
-                        
-                        return (
-                          <div key={block.id} className="bg-white rounded-xl shadow-md overflow-hidden">
-                            <div className="aspect-video bg-black">
-                              {hlsMatch ? (
-                                <HLSVideoPlayer 
-                                  videoId={hlsMatch[1]}
-                                  onError={(err) => {
-                                    console.error('Video error:', err);
-                                    alert('비디오를 로드하는 중 오류가 발생했습니다: ' + err.message);
-                                  }}
-                                />
-                              ) : (
-                                (() => {
-                                  const url = block.data.url;
-                                  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-                                  if (youtubeMatch) {
-                                    return (
-                                      <iframe
-                                        src={`https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?rel=0&modestbranding=1&controls=1`}
-                                        className="w-full h-full"
-                                        frameBorder="0"
-                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                        allowFullScreen
-                                        title="Video"
-                                      />
-                                    );
-                                  }
-                                  
-                                  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-                                  if (vimeoMatch) {
-                                    return (
-                                      <iframe
-                                        src={`https://player.vimeo.com/video/${vimeoMatch[1]}?title=0&byline=0&portrait=0`}
-                                        className="w-full h-full"
-                                        frameBorder="0"
-                                        allow="autoplay; fullscreen; picture-in-picture"
-                                        allowFullScreen
-                                        title="Video"
-                                      />
-                                    );
-                                  }
-                                  
-                                  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-                                  if (driveMatch) {
-                                    return (
-                                      <iframe
-                                        src={`https://drive.google.com/file/d/${driveMatch[1]}/preview`}
-                                        className="w-full h-full"
-                                        frameBorder="0"
-                                        allow="autoplay"
-                                        title="Video"
-                                      />
-                                    );
-                                  }
-                                  
-                                  return (
-                                    <div className="w-full h-full flex items-center justify-center text-white">
-                                      <div className="text-center">
-                                        <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
-                                        <p className="text-lg font-semibold">지원되지 않는 비디오 형식입니다</p>
-                                      </div>
-                                    </div>
-                                  );
-                                })()
-                              )}
-                            </div>
-                          </div>
-                        );
-                      }
-                      
-                      // Text Block
-                      if (block.type === 'text' && block.data.content) {
-                        return (
-                          <div key={block.id} className="bg-white rounded-xl shadow-md p-6">
-                            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                              <FileText className="h-5 w-5 text-primary-600" />
-                              강의 내용
-                            </h3>
-                            <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
-                              {block.data.content}
-                            </div>
-                          </div>
-                        );
-                      }
-                      
-                      // File Block
-                      if (block.type === 'file' && block.data.name) {
-                        return (
-                          <div key={block.id} className="bg-white rounded-xl shadow-md p-6">
-                            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                              <Download className="h-5 w-5 text-primary-600" />
-                              첨부 파일
-                            </h3>
-                            <button
-                              onClick={() => handleDownloadLessonFile(block.data)}
-                              className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors group"
-                            >
-                              <div className="flex items-center gap-3">
-                                <FileText className="h-5 w-5 text-gray-400 group-hover:text-primary-600" />
-                                <span className="font-medium text-gray-900">{block.data.name}</span>
-                              </div>
-                              <Download className="h-4 w-4 text-gray-400 group-hover:text-primary-600" />
-                            </button>
-                          </div>
-                        );
-                      }
-                      
-                      // Question Block
-                      if (block.type === 'question') {
-                        return (
-                          <div key={block.id} className="bg-white rounded-xl shadow-md p-6">
-                            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                              <FileQuestion className="h-5 w-5 text-primary-600" />
-                              연습 문제
-                            </h3>
-                            
-                            {block.data.questionType === 'multiple-choice' && (
-                              <div>
-                                <p className="font-semibold text-gray-900 mb-4">{block.data.question}</p>
-                                <div className="space-y-2 mb-4">
-                                  {block.data.options.map((option, i) => (
-                                    <button
-                                      key={i}
-                                      onClick={() => handleMultipleChoiceAnswer(block.id, i)}
-                                      disabled={questionResults[block.id]?.answered}
-                                      className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
-                                        questionResults[block.id]?.answered
-                                          ? i === block.data.correctAnswer
-                                            ? 'border-green-500 bg-green-50'
-                                            : i === questionAnswers[block.id]
-                                            ? 'border-red-500 bg-red-50'
-                                            : 'border-gray-200 bg-gray-50'
-                                          : questionAnswers[block.id] === i
-                                          ? 'border-primary-500 bg-primary-50'
-                                          : 'border-gray-300 hover:border-gray-400'
-                                      }`}
-                                    >
-                                      {option}
-                                    </button>
-                                  ))}
-                                </div>
-                                
-                                {!questionResults[block.id]?.answered ? (
-                                  <button
-                                    onClick={() => checkMultipleChoiceAnswer(block.data, block.id)}
-                                    disabled={questionAnswers[block.id] === undefined}
-                                    className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                  >
-                                    정답 확인
-                                  </button>
-                                ) : (
-                                  <div>
-                                    <div className={`p-4 rounded-lg mb-2 ${
-                                      questionResults[block.id].correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                    }`}>
-                                      {questionResults[block.id].correct ? '✓ 정답입니다!' : '✗ 오답입니다.'}
-                                    </div>
-                                    <button
-                                      onClick={() => resetQuestion(block.id)}
-                                      className="text-primary-600 hover:text-primary-700 font-medium"
-                                    >
-                                      다시 풀기
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            
-                            {block.data.questionType === 'matching' && (
-                              <div>
-                                <p className="font-semibold text-gray-900 mb-4">항목을 올바르게 연결하세요</p>
-                                <div className="space-y-3 mb-4">
-                                  {block.data.matchingPairs.map((pair, i) => (
-                                    <div key={i} className="flex items-center gap-4">
-                                      <div className="flex-1 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                        {pair.left}
-                                      </div>
-                                      <span className="text-gray-400">↔</span>
-                                      <select
-                                        value={matchingAnswers[block.id]?.[i] || ''}
-                                        onChange={(e) => handleMatchingAnswer(block.id, i, e.target.value)}
-                                        disabled={questionResults[block.id]?.answered}
-                                        className="flex-1 p-3 border-2 border-gray-300 rounded-lg"
-                                      >
-                                        <option value="">선택하세요</option>
-                                        {block.data.matchingPairs.map((p, j) => (
-                                          <option key={j} value={p.right}>{p.right}</option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                  ))}
-                                </div>
-                                
-                                {!questionResults[block.id]?.answered ? (
-                                  <button
-                                    onClick={() => checkMatchingAnswer(block.data, block.id)}
-                                    className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
-                                  >
-                                    정답 확인
-                                  </button>
-                                ) : (
-                                  <div>
-                                    <div className={`p-4 rounded-lg mb-2 ${
-                                      questionResults[block.id].correct ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                      {questionResults[block.id].correct 
-                                        ? '✓ 모두 정답입니다!' 
-                                        : `${questionResults[block.id].correctCount}/${questionResults[block.id].totalCount} 정답`
-                                      }
-                                    </div>
-                                    <button
-                                      onClick={() => resetQuestion(block.id)}
-                                      className="text-primary-600 hover:text-primary-700 font-medium"
-                                    >
-                                      다시 풀기
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                      
-                      return null;
-                    })}
+{selectedLesson.content && selectedLesson.content.length > 0 ? (
+  <div className="space-y-6">
+    {selectedLesson.content.sort((a, b) => a.order - b.order).map((block) => {
+      // Video Block
+      if (block.type === 'video' && block.data.url) {
+        const hlsMatch = block.data.url.match(/\/api\/videos\/hls\/([^\/]+)/);
+        
+        return (
+          <div key={block.id} className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="aspect-video bg-black">
+            {hlsMatch ? (
+  <HLSVideoPlayer 
+    videoId={hlsMatch[1]}
+    onError={(err) => {
+      console.error('Video error:', err);
+      // Don't show alert for "not associated" errors - just log them
+      // The video will still attempt to play if the HLS files exist
+    }}
+  />
+) : (
+                (() => {
+                  const url = block.data.url;
+                  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+                  if (youtubeMatch) {
+                    return (
+                      <iframe
+                        src={`https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?rel=0&modestbranding=1&controls=1`}
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title="Video"
+                      />
+                    );
+                  }
+                  
+                  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+                  if (vimeoMatch) {
+                    return (
+                      <iframe
+                        src={`https://player.vimeo.com/video/${vimeoMatch[1]}?title=0&byline=0&portrait=0`}
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                        title="Video"
+                      />
+                    );
+                  }
+                  
+                  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+                  if (driveMatch) {
+                    return (
+                      <iframe
+                        src={`https://drive.google.com/file/d/${driveMatch[1]}/preview`}
+                        className="w-full h-full"
+                        frameBorder="0"
+                        allow="autoplay"
+                        title="Video"
+                      />
+                    );
+                  }
+                  
+                  return (
+                    <div className="w-full h-full flex items-center justify-center text-white">
+                      <div className="text-center">
+                        <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
+                        <p className="text-lg font-semibold">지원되지 않는 비디오 형식입니다</p>
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          </div>
+        );
+      }
+      
+      // Text Block
+      if (block.type === 'text' && block.data.content) {
+        return (
+          <div key={block.id} className="bg-white rounded-xl shadow-md p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary-600" />
+              강의 내용
+            </h3>
+            <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
+              {block.data.content}
+            </div>
+          </div>
+        );
+      }
+      
+      // File Block
+      if (block.type === 'file' && block.data.name) {
+        return (
+          <div key={block.id} className="bg-white rounded-xl shadow-md p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Download className="h-5 w-5 text-primary-600" />
+              첨부 파일
+            </h3>
+            <button
+              onClick={() => {
+                if (block.data.url) {
+                  window.open(block.data.url, '_blank');
+                } else {
+                  alert(`파일 다운로드: ${block.data.name}\n\n(URL이 설정되지 않았습니다)`);
+                }
+              }}
+              className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-gray-400 group-hover:text-primary-600" />
+                <span className="font-medium text-gray-900">{block.data.name}</span>
+              </div>
+              <Download className="h-4 w-4 text-gray-400 group-hover:text-primary-600" />
+            </button>
+          </div>
+        );
+      }
+      
+      // Question Block
+      if (block.type === 'question') {
+        return (
+          <div key={block.id} className="bg-white rounded-xl shadow-md p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FileQuestion className="h-5 w-5 text-primary-600" />
+              연습 문제
+            </h3>
+            
+            {block.data.questionType === 'multiple-choice' && (
+              <div>
+                <p className="font-semibold text-gray-900 mb-4">{block.data.question}</p>
+                <div className="space-y-2 mb-4">
+                  {block.data.options.map((option, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleMultipleChoiceAnswer(block.id, i)}
+                      disabled={questionResults[block.id]?.answered}
+                      className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
+                        questionResults[block.id]?.answered
+                          ? i === block.data.correctAnswer
+                            ? 'border-green-500 bg-green-50'
+                            : i === questionAnswers[block.id]
+                            ? 'border-red-500 bg-red-50'
+                            : 'border-gray-200 bg-gray-50'
+                          : questionAnswers[block.id] === i
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+                
+                {!questionResults[block.id]?.answered ? (
+                  <button
+                    onClick={() => checkMultipleChoiceAnswer(block.data, block.id)}
+                    disabled={questionAnswers[block.id] === undefined}
+                    className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    정답 확인
+                  </button>
+                ) : (
+                  <div>
+                    <div className={`p-4 rounded-lg mb-2 ${
+                      questionResults[block.id].correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {questionResults[block.id].correct ? '✓ 정답입니다!' : '✗ 오답입니다.'}
+                    </div>
+                    <button
+                      onClick={() => resetQuestion(block.id)}
+                      className="text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      다시 풀기
+                    </button>
                   </div>
                 )}
+              </div>
+            )}
+            
+            {block.data.questionType === 'matching' && (
+              <div>
+                <p className="font-semibold text-gray-900 mb-4">항목을 올바르게 연결하세요</p>
+                <div className="space-y-3 mb-4">
+                  {block.data.matchingPairs.map((pair, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      <div className="flex-1 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        {pair.left}
+                      </div>
+                      <span className="text-gray-400">↔</span>
+                      <select
+                        value={matchingAnswers[block.id]?.[i] || ''}
+                        onChange={(e) => handleMatchingAnswer(block.id, i, e.target.value)}
+                        disabled={questionResults[block.id]?.answered}
+                        className="flex-1 p-3 border-2 border-gray-300 rounded-lg"
+                      >
+                        <option value="">선택하세요</option>
+                        {block.data.matchingPairs.map((p, j) => (
+                          <option key={j} value={p.right}>{p.right}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                
+                {!questionResults[block.id]?.answered ? (
+                  <button
+                    onClick={() => checkMatchingAnswer(block.data, block.id)}
+                    className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+                  >
+                    정답 확인
+                  </button>
+                ) : (
+                  <div>
+                    <div className={`p-4 rounded-lg mb-2 ${
+                      questionResults[block.id].correct ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {questionResults[block.id].correct 
+                        ? '✓ 모두 정답입니다!' 
+                        : `${questionResults[block.id].correctCount}/${questionResults[block.id].totalCount} 정답`
+                      }
+                    </div>
+                    <button
+                      onClick={() => resetQuestion(block.id)}
+                      className="text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      다시 풀기
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      }
+      
+      return null;
+    })}
+  </div>
+) : (
+  <div className="bg-white rounded-xl shadow-md p-8 text-center text-gray-500">
+    <FileText className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+    <p className="text-lg">이 레슨에는 아직 콘텐츠가 없습니다.</p>
+  </div>
+)}
+
+{/* Legacy content support - remove after migration */}
+{(!selectedLesson.content || selectedLesson.content.length === 0) && (
+  <>
+    {/* Text Content */}
+    {selectedLesson.textContent && (
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary-600" />
+          강의 내용
+        </h3>
+        <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
+          {selectedLesson.textContent}
+        </div>
+      </div>
+    )}
+
+    {/* Files */}
+    {selectedLesson.files && selectedLesson.files.length > 0 && (
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Download className="h-5 w-5 text-primary-600" />
+          첨부 파일
+        </h3>
+        <div className="space-y-2">
+          {selectedLesson.files.map((file, fileIndex) => (
+            <button
+              key={fileIndex}
+              onClick={() => handleDownloadLessonFile(file)}
+              className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-gray-400 group-hover:text-primary-600" />
+                <span className="font-medium text-gray-900">{file.name || file.title}</span>
+              </div>
+              <Download className="h-4 w-4 text-gray-400 group-hover:text-primary-600" />
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+  </>
+)}
 
                 {/* Text Content */}
                 {selectedLesson.textContent && (

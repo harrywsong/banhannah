@@ -31,6 +31,7 @@ export default function AdminPanel() {
   })
   const [showQuestionForm, setShowQuestionForm] = useState(false)
   
+  
   const [classFormData, setClassFormData] = useState({
     title: '',
     description: '',
@@ -453,12 +454,14 @@ useEffect(() => {
     })
     setCurrentLessonForm({
       title: '',
-      videoUrl: '',
+      description: '',
+      type: 'lesson',
       duration: '',
-      files: []
+      content: []
     })
     setShowCourseForm(false)
     setEditingCourse(null)
+    setEditingLesson(null)
   }
 
   const addQuestionToLesson = () => {
@@ -539,12 +542,19 @@ useEffect(() => {
       alert('레슨 제목을 입력하세요')
       return
     }
+    
+    // Ensure content array exists and has proper order
+    const content = (currentLessonForm.content || []).map((block, index) => ({
+      ...block,
+      order: index
+    }));
+    
     if (editingLesson) {
       // Update existing lesson
       setCourseFormData({
         ...courseFormData,
         lessons: courseFormData.lessons.map(l => 
-          l.id === editingLesson.id ? { ...currentLessonForm, id: editingLesson.id } : l
+          l.id === editingLesson.id ? { ...currentLessonForm, id: editingLesson.id, content } : l
         )
       })
       setEditingLesson(null)
@@ -552,18 +562,22 @@ useEffect(() => {
       // Add new lesson
       const newLesson = {
         id: Date.now(),
-        ...currentLessonForm
+        ...currentLessonForm,
+        content
       }
       setCourseFormData({
         ...courseFormData,
         lessons: [...courseFormData.lessons, newLesson]
       })
     }
+    
+    // Reset form
     setCurrentLessonForm({
       title: '',
-      videoUrl: '',
+      description: '',
+      type: 'lesson',
       duration: '',
-      files: []
+      content: []
     })
   }
 
@@ -571,9 +585,10 @@ useEffect(() => {
     setEditingLesson(lesson)
     setCurrentLessonForm({
       title: lesson.title || '',
-      videoUrl: lesson.videoUrl || '',
+      description: lesson.description || '',
+      type: lesson.type || 'lesson',
       duration: lesson.duration || '',
-      files: lesson.files || []
+      content: lesson.content || []
     })
   }
 
@@ -1627,398 +1642,703 @@ useEffect(() => {
     
     {/* Lesson List */}
     <div className="border border-gray-300 rounded-lg p-4 space-y-3 mb-3 max-h-96 overflow-y-auto bg-gray-50">
-      {courseFormData.lessons && courseFormData.lessons.length > 0 ? (
-        courseFormData.lessons.map((lesson, index) => (
-          <div key={lesson.id} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-purple-300 transition-colors">
-            <div className="flex items-start justify-between">
-              <div className="flex-grow">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-600 text-xs font-bold">
-                    {index + 1}
-                  </span>
-                  <span className="font-semibold text-gray-900">{lesson.title}</span>
-                  {lesson.type === 'chapter' && (
-                    <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">챕터</span>
+    {courseFormData.lessons && courseFormData.lessons.length > 0 ? (
+  courseFormData.lessons.map((lesson, index) => (
+    <div key={lesson.id} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-purple-300 transition-colors">
+      <div className="flex items-start justify-between">
+        <div className="flex-grow">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-600 text-xs font-bold">
+              {index + 1}
+            </span>
+            <span className="font-semibold text-gray-900">{lesson.title}</span>
+            {lesson.type === 'chapter' && (
+              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">챕터</span>
+            )}
+          </div>
+          {lesson.description && (
+            <p className="text-sm text-gray-600 ml-8 mb-2">{lesson.description}</p>
+          )}
+          {lesson.type !== 'chapter' && (
+            <div className="ml-8 space-y-1 text-xs text-gray-500">
+              {lesson.duration && <div>⏱️ {lesson.duration}</div>}
+              {lesson.content && lesson.content.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {lesson.content.filter(b => b.type === 'video').length > 0 && (
+                    <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded">
+                      🎥 {lesson.content.filter(b => b.type === 'video').length}
+                    </span>
+                  )}
+                  {lesson.content.filter(b => b.type === 'text').length > 0 && (
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                      📝 {lesson.content.filter(b => b.type === 'text').length}
+                    </span>
+                  )}
+                  {lesson.content.filter(b => b.type === 'file').length > 0 && (
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                      📎 {lesson.content.filter(b => b.type === 'file').length}
+                    </span>
+                  )}
+                  {lesson.content.filter(b => b.type === 'question').length > 0 && (
+                    <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded">
+                      ❓ {lesson.content.filter(b => b.type === 'question').length}
+                    </span>
                   )}
                 </div>
-                {lesson.description && (
-                  <p className="text-sm text-gray-600 ml-8 mb-2">{lesson.description}</p>
-                )}
-                {lesson.type !== 'chapter' && (
-                  <div className="ml-8 space-y-1 text-xs text-gray-500">
-                    {lesson.duration && <div>⏱️ {lesson.duration}</div>}
-                    {lesson.videoUrl && <div className="truncate">🎥 {lesson.videoUrl.substring(0, 50)}...</div>}
-                    {lesson.textContent && <div>📝 텍스트 콘텐츠 포함</div>}
-                    {lesson.files && lesson.files.length > 0 && <div>📎 {lesson.files.length}개 파일</div>}
-                    {lesson.questions && lesson.questions.length > 0 && <div>❓ {lesson.questions.length}개 문제</div>}
-                  </div>
-                )}
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center space-x-2 ml-4">
+          <button
+            type="button"
+            onClick={() => handleLessonEdit(lesson)}
+            className="text-blue-600 hover:text-blue-700 p-1"
+            title="수정"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => removeLessonFromCourse(lesson.id)}
+            className="text-red-600 hover:text-red-700 p-1"
+            title="삭제"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  ))
+) : (
+  <p className="text-gray-500 text-sm text-center py-4">레슨/챕터가 없습니다. 아래에서 추가하세요.</p>
+)}
+    </div>
+
+{/* Add/Edit Lesson Form */}
+<div className="border-2 border-dashed border-gray-300 rounded-lg p-4 space-y-3 bg-white">
+  <div className="flex items-center justify-between mb-2">
+    <h4 className="font-semibold text-gray-700">
+      {editingLesson ? '레슨/챕터 수정' : '레슨/챕터 추가'}
+    </h4>
+    {editingLesson && (
+      <button
+        type="button"
+        onClick={handleLessonCancel}
+        className="text-gray-500 hover:text-gray-700 text-sm flex items-center gap-1"
+      >
+        <X className="h-4 w-4" /> 취소
+      </button>
+    )}
+  </div>
+
+  {/* Lesson Type Selector */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">타입</label>
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={() => setCurrentLessonForm({ ...currentLessonForm, type: 'lesson', content: [] })}
+        className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+          (currentLessonForm.type || 'lesson') === 'lesson'
+            ? 'border-purple-500 bg-purple-50 text-purple-700'
+            : 'border-gray-300 text-gray-600 hover:border-gray-400'
+        }`}
+      >
+        레슨 (콘텐츠)
+      </button>
+      <button
+        type="button"
+        onClick={() => setCurrentLessonForm({ ...currentLessonForm, type: 'chapter', content: [] })}
+        className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+          currentLessonForm.type === 'chapter'
+            ? 'border-blue-500 bg-blue-50 text-blue-700'
+            : 'border-gray-300 text-gray-600 hover:border-gray-400'
+        }`}
+      >
+        챕터 (구분자)
+      </button>
+    </div>
+  </div>
+
+  {/* Title */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      제목 *
+    </label>
+    <input
+      type="text"
+      value={currentLessonForm.title}
+      onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, title: e.target.value })}
+      placeholder={currentLessonForm.type === 'chapter' ? '챕터 제목 (예: 1장 - 기초)' : '레슨 제목'}
+      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+      required
+    />
+  </div>
+
+  {/* Description */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      설명 (선택사항)
+    </label>
+    <textarea
+      value={currentLessonForm.description || ''}
+      onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, description: e.target.value })}
+      placeholder="레슨 또는 챕터에 대한 설명..."
+      rows="2"
+      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+    />
+  </div>
+
+  {/* Content Builder (only for lessons, not chapters) */}
+  {currentLessonForm.type !== 'chapter' && (
+    <div className="border-t pt-4 mt-4">
+      <div className="flex items-center justify-between mb-3">
+        <label className="block text-sm font-medium text-gray-700">
+          레슨 콘텐츠 블록
+        </label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const newContent = [...(currentLessonForm.content || [])];
+              newContent.push({
+                id: Date.now(),
+                type: 'video',
+                order: newContent.length,
+                data: { url: '' }
+              });
+              setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+            }}
+            className="text-xs px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            + 비디오
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const newContent = [...(currentLessonForm.content || [])];
+              newContent.push({
+                id: Date.now(),
+                type: 'text',
+                order: newContent.length,
+                data: { content: '' }
+              });
+              setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+            }}
+            className="text-xs px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            + 텍스트
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const newContent = [...(currentLessonForm.content || [])];
+              newContent.push({
+                id: Date.now(),
+                type: 'file',
+                order: newContent.length,
+                data: { name: '', url: '' }
+              });
+              setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+            }}
+            className="text-xs px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            + 파일
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const newContent = [...(currentLessonForm.content || [])];
+              newContent.push({
+                id: Date.now(),
+                type: 'question',
+                order: newContent.length,
+                data: {
+                  questionType: 'multiple-choice',
+                  question: '',
+                  options: ['', '', '', ''],
+                  correctAnswer: 0
+                }
+              });
+              setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+            }}
+            className="text-xs px-3 py-1 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+          >
+            + 문제
+          </button>
+        </div>
+      </div>
+
+      {/* Content Blocks List */}
+      <div className="space-y-3 max-h-96 overflow-y-auto">
+        {(currentLessonForm.content || []).map((block, blockIndex) => (
+          <div key={block.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold px-2 py-1 rounded" style={{
+                  backgroundColor: block.type === 'video' ? '#fef2f2' : 
+                                  block.type === 'text' ? '#eff6ff' :
+                                  block.type === 'file' ? '#f0fdf4' : '#fff7ed',
+                  color: block.type === 'video' ? '#991b1b' :
+                         block.type === 'text' ? '#1e40af' :
+                         block.type === 'file' ? '#166534' : '#9a3412'
+                }}>
+                  {block.type === 'video' ? '비디오' :
+                   block.type === 'text' ? '텍스트' :
+                   block.type === 'file' ? '파일' : '문제'}
+                </span>
+                <span className="text-xs text-gray-500">#{blockIndex + 1}</span>
               </div>
-              <div className="flex items-center space-x-2 ml-4">
+              <div className="flex items-center gap-2">
+                {blockIndex > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newContent = [...currentLessonForm.content];
+                      [newContent[blockIndex - 1], newContent[blockIndex]] = 
+                      [newContent[blockIndex], newContent[blockIndex - 1]];
+                      newContent.forEach((c, i) => c.order = i);
+                      setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-xs"
+                    title="위로 이동"
+                  >
+                    ↑
+                  </button>
+                )}
+                {blockIndex < currentLessonForm.content.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newContent = [...currentLessonForm.content];
+                      [newContent[blockIndex], newContent[blockIndex + 1]] = 
+                      [newContent[blockIndex + 1], newContent[blockIndex]];
+                      newContent.forEach((c, i) => c.order = i);
+                      setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-xs"
+                    title="아래로 이동"
+                  >
+                    ↓
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => handleLessonEdit(lesson)}
-                  className="text-blue-600 hover:text-blue-700 p-1"
-                  title="수정"
-                >
-                  <Edit className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeLessonFromCourse(lesson.id)}
-                  className="text-red-600 hover:text-red-700 p-1"
+                  onClick={() => {
+                    const newContent = currentLessonForm.content.filter((_, i) => i !== blockIndex);
+                    newContent.forEach((c, i) => c.order = i);
+                    setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                  }}
+                  className="text-red-600 hover:text-red-700"
                   title="삭제"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
-          </div>
-        ))
-      ) : (
-        <p className="text-gray-500 text-sm text-center py-4">레슨/챕터가 없습니다. 아래에서 추가하세요.</p>
-      )}
-    </div>
 
-    {/* Add/Edit Lesson Form */}
-    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 space-y-3 bg-white">
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="font-semibold text-gray-700">
-          {editingLesson ? '레슨/챕터 수정' : '레슨/챕터 추가'}
-        </h4>
-        {editingLesson && (
-          <button
-            type="button"
-            onClick={handleLessonCancel}
-            className="text-gray-500 hover:text-gray-700 text-sm flex items-center gap-1"
-          >
-            <X className="h-4 w-4" /> 취소
-          </button>
-        )}
-      </div>
-
-      {/* Lesson Type Selector */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">타입</label>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setCurrentLessonForm({ ...currentLessonForm, type: 'lesson' })}
-            className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-              (currentLessonForm.type || 'lesson') === 'lesson'
-                ? 'border-purple-500 bg-purple-50 text-purple-700'
-                : 'border-gray-300 text-gray-600 hover:border-gray-400'
-            }`}
-          >
-            레슨 (콘텐츠)
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentLessonForm({ ...currentLessonForm, type: 'chapter' })}
-            className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-              currentLessonForm.type === 'chapter'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-300 text-gray-600 hover:border-gray-400'
-            }`}
-          >
-            챕터 (구분자)
-          </button>
-        </div>
-      </div>
-
-      {/* Title */}
-      <input
-        type="text"
-        value={currentLessonForm.title}
-        onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, title: e.target.value })}
-        placeholder={currentLessonForm.type === 'chapter' ? '챕터 제목 (예: 1장 - 기초)' : '레슨 제목'}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-      />
-
-      {/* Description */}
-      <textarea
-        value={currentLessonForm.description || ''}
-        onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, description: e.target.value })}
-        placeholder="설명 (선택사항)"
-        rows="2"
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-      />
-
-      {/* Content fields (only show for lessons, not chapters) */}
-      {currentLessonForm.type !== 'chapter' && (
-        <>
-          {/* Duration */}
-          <input
-            type="text"
-            value={currentLessonForm.duration}
-            onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, duration: e.target.value })}
-            placeholder="소요시간 (예: 15분)"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-          />
-
-          {/* Text Content */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">텍스트 콘텐츠 (선택사항)</label>
-            <textarea
-              value={currentLessonForm.textContent || ''}
-              onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, textContent: e.target.value })}
-              placeholder="레슨에 대한 텍스트 설명, 지침, 또는 강의 내용을 여기에 작성하세요..."
-              rows="4"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-
-{/* Video Upload Section */}
-<div className="space-y-4">
-  <div className="flex items-center justify-between">
-    <label className="block text-sm font-medium text-gray-700">
-      비디오 소스 (선택사항)
-    </label>
-    <div className="flex space-x-2">
-      <button
-        type="button"
-        onClick={() => setVideoSourceType('upload')}
-        className={`px-3 py-1 text-xs rounded ${
-          videoSourceType === 'upload'
-            ? 'bg-purple-600 text-white'
-            : 'bg-gray-200 text-gray-700'
-        }`}
-      >
-        파일 업로드
-      </button>
-      <button
-        type="button"
-        onClick={() => setVideoSourceType('url')}
-        className={`px-3 py-1 text-xs rounded ${
-          videoSourceType === 'url'
-            ? 'bg-purple-600 text-white'
-            : 'bg-gray-200 text-gray-700'
-        }`}
-      >
-        외부 URL
-      </button>
-    </div>
-  </div>
-
-  {videoSourceType === 'upload' ? (
-    <div>
-      <label className="block w-full">
-        <span className="sr-only">비디오 파일 선택</span>
-        <input
-          type="file"
-          accept="video/*"
-          onChange={handleLessonVideoChange}
-          className="block w-full text-sm text-gray-500
-            file:mr-4 file:py-2 file:px-4
-            file:rounded-lg file:border-0
-            file:text-sm file:font-semibold
-            file:bg-purple-50 file:text-purple-700
-            hover:file:bg-purple-100
-            cursor-pointer"
-        />
-      </label>
-      {uploadingLessonVideo && (
-        <div className="mt-2 text-sm text-purple-600">
-          업로드 중... {videoUploadProgress}%
-        </div>
-      )}
-      {currentLessonForm.videoUrl && videoSourceType === 'upload' && (
-        <div className="mt-2 text-sm text-green-600">
-          ✓ 비디오 업로드 완료
-        </div>
-      )}
-    </div>
-  ) : (
-    <div>
-      <input
-        type="url"
-        value={currentLessonForm.videoUrl}
-        onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, videoUrl: e.target.value })}
-        placeholder="YouTube, Vimeo, Google Drive 등의 비디오 URL"
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-      />
-      <p className="mt-1 text-xs text-gray-500">
-        예: https://www.youtube.com/watch?v=... 또는 https://vimeo.com/...
-      </p>
-    </div>
-  )}
-</div>
-
-{/* Interactive Questions Section */}
-<div className="border-t pt-4">
-  <div className="flex items-center justify-between mb-3">
-    <label className="block text-sm font-medium text-gray-700">
-      인터랙티브 문제 (선택사항)
-    </label>
-    <button
-      type="button"
-      onClick={() => setShowQuestionForm(!showQuestionForm)}
-      className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-    >
-      {showQuestionForm ? '취소' : '문제 추가'}
-    </button>
-  </div>
-
-  {/* Question List */}
-  {currentLessonForm.questions && currentLessonForm.questions.length > 0 && (
-    <div className="space-y-2 mb-3">
-      {currentLessonForm.questions.map((q, idx) => (
-        <div key={q.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-          <div className="flex items-start justify-between">
-            <div className="flex-grow">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
-                  {q.type === 'multiple-choice' ? '객관식' : '매칭'}
-                </span>
-                <span className="text-sm font-medium text-gray-700">문제 {idx + 1}</span>
-              </div>
-              <p className="text-sm text-gray-600 truncate">{q.question || '매칭 문제'}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => removeQuestionFromLesson(q.id)}
-              className="text-red-600 hover:text-red-700 ml-2"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-
-  {/* Question Form */}
-  {showQuestionForm && (
-    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-3">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">문제 유형</label>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setCurrentQuestion({ ...currentQuestion, type: 'multiple-choice' })}
-            className={`flex-1 px-3 py-2 rounded-lg border-2 transition-colors ${
-              currentQuestion.type === 'multiple-choice'
-                ? 'border-blue-500 bg-white text-blue-700'
-                : 'border-gray-300 text-gray-600 hover:border-gray-400'
-            }`}
-          >
-            객관식
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentQuestion({ ...currentQuestion, type: 'matching' })}
-            className={`flex-1 px-3 py-2 rounded-lg border-2 transition-colors ${
-              currentQuestion.type === 'matching'
-                ? 'border-blue-500 bg-white text-blue-700'
-                : 'border-gray-300 text-gray-600 hover:border-gray-400'
-            }`}
-          >
-            매칭
-          </button>
-        </div>
-      </div>
-
-      {currentQuestion.type === 'multiple-choice' ? (
-        <>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">질문</label>
-            <input
-              type="text"
-              value={currentQuestion.question}
-              onChange={(e) => setCurrentQuestion({ ...currentQuestion, question: e.target.value })}
-              placeholder="질문을 입력하세요"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">선택지</label>
-            <div className="space-y-2">
-              {currentQuestion.options.map((option, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="correctAnswer"
-                    checked={currentQuestion.correctAnswer === idx}
-                    onChange={() => setCurrentQuestion({ ...currentQuestion, correctAnswer: idx })}
-                    className="text-blue-600"
-                  />
-                  <input
-                    type="text"
-                    value={option}
-                    onChange={(e) => updateOption(idx, e.target.value)}
-                    placeholder={`선택지 ${idx + 1}`}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
+            {/* Video Block Editor */}
+            {block.type === 'video' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-gray-700">비디오 소스</label>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVideoSourceType('upload');
+                        const newContent = [...currentLessonForm.content];
+                        newContent[blockIndex] = { ...block, videoSourceType: 'upload' };
+                        setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                      }}
+                      className={`text-xs px-2 py-1 rounded ${
+                        (block.videoSourceType || videoSourceType) === 'upload'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      업로드
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVideoSourceType('url');
+                        const newContent = [...currentLessonForm.content];
+                        newContent[blockIndex] = { ...block, videoSourceType: 'url' };
+                        setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                      }}
+                      className={`text-xs px-2 py-1 rounded ${
+                        (block.videoSourceType || videoSourceType) === 'url'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      외부 URL
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">라디오 버튼으로 정답을 선택하세요</p>
-          </div>
-        </>
-      ) : (
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">매칭 항목</label>
-          <div className="space-y-2">
-            {currentQuestion.matchingPairs.map((pair, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={pair.left}
-                  onChange={(e) => updateMatchingPair(idx, 'left', e.target.value)}
-                  placeholder="왼쪽 항목"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="text-gray-400">↔</span>
-                <input
-                  type="text"
-                  value={pair.right}
-                  onChange={(e) => updateMatchingPair(idx, 'right', e.target.value)}
-                  placeholder="오른쪽 항목"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                {currentQuestion.matchingPairs.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeMatchingPair(idx)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+
+                {(block.videoSourceType || videoSourceType) === 'upload' ? (
+                  <div>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+
+                        try {
+                          setUploadingLessonVideo(true);
+                          setVideoUploadProgress(0);
+
+                          const formData = new FormData();
+                          formData.append('video', file);
+
+                          const xhr = new XMLHttpRequest();
+
+                          xhr.upload.addEventListener('progress', (e) => {
+                            if (e.lengthComputable) {
+                              const percentComplete = Math.round((e.loaded / e.total) * 100);
+                              setVideoUploadProgress(percentComplete);
+                            }
+                          });
+
+                          xhr.addEventListener('load', async () => {
+                            if (xhr.status === 200) {
+                              const data = JSON.parse(xhr.responseText);
+                              if (data.success) {
+                                const newContent = [...currentLessonForm.content];
+                                newContent[blockIndex] = {
+                                  ...block,
+                                  data: { url: data.hlsUrl || data.videoUrl }
+                                };
+                                setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                                setUploadingLessonVideo(false);
+                                setVideoUploadProgress(0);
+                                alert('비디오가 성공적으로 업로드되었습니다!');
+                              }
+                            }
+                          });
+
+                          xhr.addEventListener('error', () => {
+                            alert('비디오 업로드에 실패했습니다.');
+                            setUploadingLessonVideo(false);
+                            setVideoUploadProgress(0);
+                          });
+
+                          xhr.open('POST', apiEndpoint('videos/upload'));
+                          addAuthHeaders(xhr);
+                          xhr.send(formData);
+                        } catch (error) {
+                          console.error('Video upload error:', error);
+                          alert(`비디오 업로드에 실패했습니다: ${error.message}`);
+                          setUploadingLessonVideo(false);
+                          setVideoUploadProgress(0);
+                        }
+                      }}
+                      className="block w-full text-xs text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer"
+                    />
+                    {uploadingLessonVideo && (
+                      <div className="mt-2 text-xs text-purple-600">
+                        업로드 중... {videoUploadProgress}%
+                      </div>
+                    )}
+                    {block.data.url && (block.videoSourceType || videoSourceType) === 'upload' && (
+                      <div className="mt-1 text-xs text-green-600">
+                        ✓ 비디오 업로드 완료
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="url"
+                      value={block.data.url || ''}
+                      onChange={(e) => {
+                        const newContent = [...currentLessonForm.content];
+                        newContent[blockIndex] = {
+                          ...block,
+                          data: { ...block.data, url: e.target.value }
+                        };
+                        setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                      }}
+                      placeholder="YouTube, Vimeo, Google Drive 등의 비디오 URL"
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      예: https://www.youtube.com/watch?v=...
+                    </p>
+                  </div>
                 )}
               </div>
-            ))}
+            )}
+
+            {/* Text Block Editor */}
+            {block.type === 'text' && (
+              <textarea
+                value={block.data.content || ''}
+                onChange={(e) => {
+                  const newContent = [...currentLessonForm.content];
+                  newContent[blockIndex] = {
+                    ...block,
+                    data: { ...block.data, content: e.target.value }
+                  };
+                  setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                }}
+                placeholder="텍스트 콘텐츠를 입력하세요..."
+                rows="4"
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+              />
+            )}
+
+            {/* File Block Editor */}
+            {block.type === 'file' && (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={block.data.name || ''}
+                  onChange={(e) => {
+                    const newContent = [...currentLessonForm.content];
+                    newContent[blockIndex] = {
+                      ...block,
+                      data: { ...block.data, name: e.target.value }
+                    };
+                    setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                  }}
+                  placeholder="파일 이름"
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500"
+                />
+                <input
+                  type="url"
+                  value={block.data.url || ''}
+                  onChange={(e) => {
+                    const newContent = [...currentLessonForm.content];
+                    newContent[blockIndex] = {
+                      ...block,
+                      data: { ...block.data, url: e.target.value }
+                    };
+                    setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                  }}
+                  placeholder="파일 다운로드 URL"
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            )}
+
+            {/* Question Block Editor */}
+            {block.type === 'question' && (
+              <div className="space-y-2">
+                <div className="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newContent = [...currentLessonForm.content];
+                      newContent[blockIndex] = {
+                        ...block,
+                        data: {
+                          questionType: 'multiple-choice',
+                          question: '',
+                          options: ['', '', '', ''],
+                          correctAnswer: 0
+                        }
+                      };
+                      setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                    }}
+                    className={`text-xs px-2 py-1 rounded ${
+                      block.data.questionType === 'multiple-choice'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    객관식
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newContent = [...currentLessonForm.content];
+                      newContent[blockIndex] = {
+                        ...block,
+                        data: {
+                          questionType: 'matching',
+                          matchingPairs: [{ left: '', right: '' }]
+                        }
+                      };
+                      setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                    }}
+                    className={`text-xs px-2 py-1 rounded ${
+                      block.data.questionType === 'matching'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    매칭
+                  </button>
+                </div>
+
+                {block.data.questionType === 'multiple-choice' ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={block.data.question || ''}
+                      onChange={(e) => {
+                        const newContent = [...currentLessonForm.content];
+                        newContent[blockIndex] = {
+                          ...block,
+                          data: { ...block.data, question: e.target.value }
+                        };
+                        setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                      }}
+                      placeholder="질문을 입력하세요"
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
+                    />
+                    {(block.data.options || ['', '', '', '']).map((option, optionIndex) => (
+                      <div key={optionIndex} className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name={`correct-${block.id}`}
+                          checked={block.data.correctAnswer === optionIndex}
+                          onChange={() => {
+                            const newContent = [...currentLessonForm.content];
+                            newContent[blockIndex] = {
+                              ...block,
+                              data: { ...block.data, correctAnswer: optionIndex }
+                            };
+                            setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                          }}
+                          className="text-orange-600"
+                        />
+                        <input
+                          type="text"
+                          value={option}
+                          onChange={(e) => {
+                            const newContent = [...currentLessonForm.content];
+                            const newOptions = [...(block.data.options || ['', '', '', ''])];
+                            newOptions[optionIndex] = e.target.value;
+                            newContent[blockIndex] = {
+                              ...block,
+                              data: { ...block.data, options: newOptions }
+                            };
+                            setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                          }}
+                          placeholder={`선택지 ${optionIndex + 1}`}
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
+                        />
+                      </div>
+                    ))}
+                    <p className="text-xs text-gray-500">라디오 버튼으로 정답을 선택하세요</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {(block.data.matchingPairs || [{ left: '', right: '' }]).map((pair, pairIndex) => (
+                      <div key={pairIndex} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={pair.left}
+                          onChange={(e) => {
+                            const newContent = [...currentLessonForm.content];
+                            const newPairs = [...(block.data.matchingPairs || [{ left: '', right: '' }])];
+                            newPairs[pairIndex] = { ...pair, left: e.target.value };
+                            newContent[blockIndex] = {
+                              ...block,
+                              data: { ...block.data, matchingPairs: newPairs }
+                            };
+                            setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                          }}
+                          placeholder="왼쪽 항목"
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
+                        />
+                        <span className="text-gray-400">↔</span>
+                        <input
+                          type="text"
+                          value={pair.right}
+                          onChange={(e) => {
+                            const newContent = [...currentLessonForm.content];
+                            const newPairs = [...(block.data.matchingPairs || [{ left: '', right: '' }])];
+                            newPairs[pairIndex] = { ...pair, right: e.target.value };
+                            newContent[blockIndex] = {
+                              ...block,
+                              data: { ...block.data, matchingPairs: newPairs }
+                            };
+                            setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                          }}
+                          placeholder="오른쪽 항목"
+                          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
+                        />
+                        {pairIndex > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newContent = [...currentLessonForm.content];
+                              const newPairs = block.data.matchingPairs.filter((_, i) => i !== pairIndex);
+                              newContent[blockIndex] = {
+                                ...block,
+                                data: { ...block.data, matchingPairs: newPairs.length > 0 ? newPairs : [{ left: '', right: '' }] }
+                              };
+                              setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newContent = [...currentLessonForm.content];
+                        const newPairs = [...(block.data.matchingPairs || []), { left: '', right: '' }];
+                        newContent[blockIndex] = {
+                          ...block,
+                          data: { ...block.data, matchingPairs: newPairs }
+                        };
+                        setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                      }}
+                      className="text-xs text-orange-600 hover:text-orange-700"
+                    >
+                      + 매칭 항목 추가
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={addMatchingPair}
-            className="mt-2 text-sm text-blue-600 hover:text-blue-700"
-          >
-            + 매칭 항목 추가
-          </button>
+        ))}
+      </div>
+
+      {currentLessonForm.content?.length === 0 && (
+        <div className="text-center py-8 text-gray-500 text-sm">
+          위의 버튼을 클릭하여 콘텐츠 블록을 추가하세요
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={addQuestionToLesson}
-        className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-      >
-        문제 추가
-      </button>
+      {/* Duration field */}
+      <div className="mt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          소요시간 (선택사항)
+        </label>
+        <input
+          type="text"
+          value={currentLessonForm.duration || ''}
+          onChange={(e) => setCurrentLessonForm({ ...currentLessonForm, duration: e.target.value })}
+          placeholder="예: 15분"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+        />
+      </div>
     </div>
   )}
-</div>
-        </>
-      )}
 
-      <button
-        type="button"
-        onClick={addLessonToCourse}
-        className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium"
-      >
-        {editingLesson ? '레슨/챕터 수정' : '레슨/챕터 추가'}
-      </button>
-    </div>
+  {/* Add/Update Lesson Button */}
+  <button
+    type="button"
+    onClick={addLessonToCourse}
+    disabled={!currentLessonForm.title}
+    className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+  >
+    {editingLesson ? '레슨/챕터 수정' : '레슨/챕터 추가'}
+  </button>
+</div>
   </div>
 
   {/* Submit Buttons */}
