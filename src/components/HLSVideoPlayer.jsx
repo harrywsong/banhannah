@@ -120,16 +120,20 @@ export default function HLSVideoPlayer({ videoId, onError }) {
       };
     }
 
+// src/components/HLSVideoPlayer.jsx
+
     if (Hls.isSupported()) {
-      // FIX: Add xhrSetup to inject the ngrok bypass header
       const hls = new Hls({
         xhrSetup: function (xhr, url) {
           xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
         },
+        enableWorker: true,
       });
-      
+
       hlsRef.current = hls;
-    
+
+      const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
+      
       hls.loadSource(videoUrl);
       hls.attachMedia(video);
     
