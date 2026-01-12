@@ -23,8 +23,14 @@ function App() {
   return (
     <AuthProvider>
       <ReviewsProvider>
-        <Router>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
           <Routes>
+
             {/* Admin route without navbar/footer */}
             <Route path="/administrative" element={<AdminPanel />} />
             

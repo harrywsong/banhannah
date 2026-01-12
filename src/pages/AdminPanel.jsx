@@ -622,6 +622,17 @@ useEffect(() => {
 
       const formData = new FormData()
       formData.append('video', file)
+      
+      // Add course ID if editing an existing course
+      if (editingCourse && editingCourse.id) {
+        formData.append('courseId', editingCourse.id)
+      }
+      
+      // Add lesson ID if editing an existing lesson
+      if (editingLesson && editingLesson.id) {
+        formData.append('lessonId', editingLesson.id)
+      }
+
 
       const xhr = new XMLHttpRequest()
 
@@ -2074,23 +2085,39 @@ useEffect(() => {
               </div>
             )}
 
-            {/* Text Block Editor */}
-            {block.type === 'text' && (
-              <textarea
-                value={block.data.content || ''}
-                onChange={(e) => {
-                  const newContent = [...currentLessonForm.content];
-                  newContent[blockIndex] = {
-                    ...block,
-                    data: { ...block.data, content: e.target.value }
-                  };
-                  setCurrentLessonForm({ ...currentLessonForm, content: newContent });
-                }}
-                placeholder="텍스트 콘텐츠를 입력하세요..."
-                rows="4"
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              />
-            )}
+{/* Text Block Editor */}
+{block.type === 'text' && (
+  <div className="space-y-2">
+    <input
+      type="text"
+      value={block.data.title || ''}
+      onChange={(e) => {
+        const newContent = [...currentLessonForm.content];
+        newContent[blockIndex] = {
+          ...block,
+          data: { ...block.data, title: e.target.value }
+        };
+        setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+      }}
+      placeholder="섹션 제목 (예: 강의 내용, 학습 목표 등)"
+      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 font-medium"
+    />
+    <textarea
+      value={block.data.content || ''}
+      onChange={(e) => {
+        const newContent = [...currentLessonForm.content];
+        newContent[blockIndex] = {
+          ...block,
+          data: { ...block.data, content: e.target.value }
+        };
+        setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+      }}
+      placeholder="텍스트 콘텐츠를 입력하세요..."
+      rows="4"
+      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+    />
+  </div>
+)}
 
             {/* File Block Editor */}
             {block.type === 'file' && (

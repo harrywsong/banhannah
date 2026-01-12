@@ -60,6 +60,10 @@ router.post('/upload', authenticate, requireAdmin, videoUpload.single('video'), 
       return res.status(400).json({ error: 'No video uploaded' });
     }
 
+    // Get course ID and lesson ID from request body (optional but helps track videos)
+    const { courseId, lessonId } = req.body;
+
+
     const videoPath = req.file.path;
     const videoId = path.basename(req.file.filename, path.extname(req.file.filename));
     const hlsOutputDir = path.join(hlsDir, videoId);
@@ -73,10 +77,13 @@ router.post('/upload', authenticate, requireAdmin, videoUpload.single('video'), 
     res.json({
       success: true,
       videoId,
+      courseId, // Return courseId back so frontend knows which course this video belongs to
+      lessonId,
       message: 'Video uploaded, conversion in progress...',
       hlsUrl: `/api/videos/hls/${videoId}/index.m3u8`,
       status: 'processing'
     });
+
 
     // Convert to HLS in background (don't await)
     (async () => {
@@ -152,9 +159,11 @@ router.post('/token/:videoId', authenticate, async (req, res) => {
     let courseId = null;
     let lessonFound = false;
     
+    // Check all courses to find where this video is used
     for (const course of courses) {
       if (course.lessons && Array.isArray(course.lessons)) {
         for (const lesson of course.lessons) {
+
           // Check if lesson has content blocks with this video
           if (lesson.content && Array.isArray(lesson.content)) {
             for (const block of lesson.content) {
