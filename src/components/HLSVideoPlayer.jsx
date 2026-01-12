@@ -121,7 +121,13 @@ export default function HLSVideoPlayer({ videoId, onError }) {
     }
 
     if (Hls.isSupported()) {
-      const hls = new Hls();
+      // FIX: Add xhrSetup to inject the ngrok bypass header
+      const hls = new Hls({
+        xhrSetup: function (xhr, url) {
+          xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
+        },
+      });
+      
       hlsRef.current = hls;
     
       hls.loadSource(videoUrl);
