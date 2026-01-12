@@ -88,13 +88,14 @@ const corsOptions = {
   allowedHeaders: [
     'Content-Type',
     'Authorization',
-    'ngrok-skip-browser-warning',
+    'ngrok-skip-browser-warning', // This is already here
     'X-Requested-With',
     'Accept',
     'Origin',
     'User-Agent'
   ],
-  exposedHeaders: ['Content-Type', 'Authorization'],
+  // UPDATE THIS LINE:
+  exposedHeaders: ['Content-Type', 'Authorization', 'Content-Length', 'Content-Range'],
   preflightContinue: false,
   optionsSuccessStatus: 204
 };
