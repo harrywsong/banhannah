@@ -1,9 +1,14 @@
 // src/components/HLSVideoPlayer.jsx
 import { useEffect, useRef, useState } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Loader } from 'lucide-react';
+import Hls from 'hls.js';
+
 
 export default function HLSVideoPlayer({ videoId, onError }) {
   const videoRef = useRef(null);
+  const hlsRef = useRef(null);
+  const refreshTimerRef = useRef(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -12,197 +17,186 @@ export default function HLSVideoPlayer({ videoId, onError }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [token, setToken] = useState(null);
-  const hlsRef = useRef(null);
 
-  // Fetch access token
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+  /* ---------------- TOKEN FETCH ---------------- */
+
   useEffect(() => {
+    if (!videoId) return;
+
+    let cancelled = false;
+
     const fetchToken = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         const authToken = localStorage.getItem('token');
-        
-        const response = await fetch(`${API_URL}/api/videos/token/${videoId}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true'
-          },
-          credentials: 'include'
-        });
-  
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-          console.error('Token fetch failed:', errorData);
-          
-          if (response.status === 404 || errorData.error?.includes('not associated')) {
-            console.warn('Video not in course yet');
-            setError(errorData.error || 'Video not associated with course');
-            setLoading(false);
-            return;
+
+        const response = await fetch(
+          `${API_URL}/api/videos/token/${videoId}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
+            credentials: 'include',
           }
-          
-          
-          throw new Error(errorData.error || 'Failed to get video access token');
+        );
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+
+          if (!cancelled) {
+            setError(err.error || 'Failed to get video access token');
+            setLoading(false);
+          }
+
+          throw new Error(err.error || 'Token request failed');
         }
-        
+
         const data = await response.json();
+        if (cancelled) return;
+
         setToken(data.token);
-        
-        // Refresh token before it expires
-        const refreshTime = (data.expiresIn - 60) * 1000;
-        setTimeout(() => {
-          fetchToken();
-        }, refreshTime);
+
+        // refresh 60s before expiry
+        const refreshTime = Math.max((data.expiresIn - 60) * 1000, 0);
+
+        refreshTimerRef.current = setTimeout(fetchToken, refreshTime);
       } catch (err) {
-        console.error('Token fetch error:', err);
-        setError(err.message);
-        setLoading(false); // CRITICAL: Stop loading on error
-        if (onError) onError(err);
+        if (!cancelled) {
+          setError(err.message);
+          setLoading(false);
+          onError?.(err);
+        }
       }
     };
-  
-    if (videoId) {
-      fetchToken();
-    }
-  }, [videoId, onError]);
-  
 
-  // Initialize HLS player
-  useEffect(() => {
-    if (!token || !videoRef.current) {
-      // If token is still null after fetch attempt, show error
-      if (token === null && !loading) {
-        setError('Unable to load video token');
+    fetchToken();
+
+    return () => {
+      cancelled = true;
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
       }
-      return;
-    }
-    
+    };
+  }, [videoId, API_URL, onError]);
+
+  /* ---------------- HLS INIT ---------------- */
+
+  useEffect(() => {
+    if (!token || !videoRef.current) return;
+
     const video = videoRef.current;
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;  
+    const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
 
-    // Check if HLS is natively supported
+    setLoading(true);
+    setError(null);
+
+    // Cleanup previous HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    // Native HLS (Safari / iOS)
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native HLS support (Safari)
       video.src = videoUrl;
-      setLoading(false);
-    } else if (window.Hls && window.Hls.isSupported()) {
-      // Use hls.js for browsers that don't support HLS natively
-      const hls = new window.Hls({
-        xhrSetup: (xhr) => {
-          // Add token to segment requests
-          xhr.withCredentials = false;
-        }
-      });
 
-      hls.loadSource(videoUrl);
-      hls.attachMedia(video);
-
-      hls.on(window.Hls.Events.MANIFEST_PARSED, () => {
-        console.log('HLS manifest loaded');
+      const onLoaded = () => setLoading(false);
+      const onVideoError = () => {
         setLoading(false);
-      });
+        setError('Failed to load video');
+        onError?.(new Error('Native HLS failed'));
+      };
 
-      hls.on(window.Hls.Events.ERROR, (event, data) => {
-        console.error('HLS error:', data);
-        if (data.fatal) {
-          switch (data.type) {
-            case window.Hls.ErrorTypes.NETWORK_ERROR:
-              setError('Network error loading video');
-              hls.startLoad();
-              break;
-            case window.Hls.ErrorTypes.MEDIA_ERROR:
-              setError('Media error');
-              hls.recoverMediaError();
-              break;
-            default:
-              setError('Fatal error loading video');
-              hls.destroy();
-              break;
-          }
-          if (onError) onError(new Error(data.details));
-        }
-      });
-
-      hlsRef.current = hls;
+      video.addEventListener('loadedmetadata', onLoaded);
+      video.addEventListener('error', onVideoError);
 
       return () => {
-        if (hlsRef.current) {
-          hlsRef.current.destroy();
-        }
+        video.removeEventListener('loadedmetadata', onLoaded);
+        video.removeEventListener('error', onVideoError);
       };
-    } else {
-      setError('HLS not supported in this browser');
-      if (onError) onError(new Error('HLS not supported'));
     }
-  }, [token, videoId, onError]);
 
-  // Video event handlers
-  const handlePlayPause = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hlsRef.current = hls;
+    
+      hls.loadSource(videoUrl);
+      hls.attachMedia(video);
+    
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setLoading(false);
+      });
+    
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error('HLS error:', data);
+    
+        if (data.fatal) {
+          setLoading(false);
+          setError('Video playback error');
+          hls.destroy();
+          hlsRef.current = null;
+          onError?.(new Error(data.details || 'HLS fatal error'));
+        }
+      });
+    
+      return () => {
+        hls.destroy();
+        hlsRef.current = null;
+      };
     }
+    
+
+    setError('HLS not supported in this browser');
+    setLoading(false);
+    onError?.(new Error('HLS not supported'));
+  }, [token, videoId, API_URL, onError]);
+
+  /* ---------------- UI HANDLERS ---------------- */
+
+  const handlePlayPause = () => {
+    if (!videoRef.current) return;
+    isPlaying ? videoRef.current.pause() : videoRef.current.play();
   };
 
   const handleMuteToggle = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
+    if (!videoRef.current) return;
+    videoRef.current.muted = !isMuted;
+    setIsMuted(!isMuted);
   };
 
   const handleVolumeChange = (e) => {
-    const newVolume = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-      setVolume(newVolume);
-      setIsMuted(newVolume === 0);
-    }
+    const v = parseFloat(e.target.value);
+    if (videoRef.current) videoRef.current.volume = v;
+    setVolume(v);
+    setIsMuted(v === 0);
   };
 
   const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-    }
+    if (videoRef.current) setCurrentTime(videoRef.current.currentTime);
   };
 
   const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      setDuration(videoRef.current.duration);
-    }
+    if (videoRef.current) setDuration(videoRef.current.duration);
   };
 
   const handleSeek = (e) => {
-    const seekTime = parseFloat(e.target.value);
-    if (videoRef.current) {
-      videoRef.current.currentTime = seekTime;
-      setCurrentTime(seekTime);
-    }
+    if (videoRef.current) videoRef.current.currentTime = e.target.value;
   };
 
   const handleFullscreen = () => {
-    if (videoRef.current) {
-      if (videoRef.current.requestFullscreen) {
-        videoRef.current.requestFullscreen();
-      } else if (videoRef.current.webkitRequestFullscreen) {
-        videoRef.current.webkitRequestFullscreen();
-      } else if (videoRef.current.mozRequestFullScreen) {
-        videoRef.current.mozRequestFullScreen();
-      }
-    }
+    videoRef.current?.requestFullscreen?.();
   };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  const formatTime = (s) =>
+    `${Math.floor(s / 60)}:${Math.floor(s % 60)
+      .toString()
+      .padStart(2, '0')}`;
+
+  /* ---------------- RENDER ---------------- */
 
   if (error) {
     return (
@@ -210,11 +204,6 @@ export default function HLSVideoPlayer({ videoId, onError }) {
         <div className="text-center text-white p-8">
           <p className="text-red-400 mb-2">비디오를 로드할 수 없습니다</p>
           <p className="text-sm text-gray-400">{error}</p>
-          {error.includes('not associated') && (
-            <p className="text-xs text-gray-500 mt-2">
-              이 비디오는 아직 코스에 연결되지 않았습니다.
-            </p>
-          )}
         </div>
       </div>
     );
@@ -223,10 +212,7 @@ export default function HLSVideoPlayer({ videoId, onError }) {
   if (loading || !token) {
     return (
       <div className="w-full aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
-        <div className="text-center text-white">
-          <Loader className="h-12 w-12 mx-auto mb-4 animate-spin" />
-          <p className="text-sm text-gray-400">비디오 로딩 중...</p>
-        </div>
+        <Loader className="h-12 w-12 animate-spin text-white" />
       </div>
     );
   }
@@ -243,62 +229,32 @@ export default function HLSVideoPlayer({ videoId, onError }) {
         onClick={handlePlayPause}
       />
 
-      {/* Custom Controls */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        {/* Progress Bar */}
+      {/* Controls */}
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-4 opacity-0 group-hover:opacity-100">
         <input
           type="range"
           min="0"
-          max={duration || 0}
+          max={duration}
           value={currentTime}
           onChange={handleSeek}
-          className="w-full mb-4 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-primary-500"
+          className="w-full mb-4"
         />
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            {/* Play/Pause */}
-            <button
-              onClick={handlePlayPause}
-              className="text-white hover:text-primary-400 transition-colors"
-            >
-              {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+        <div className="flex justify-between items-center text-white">
+          <div className="flex items-center gap-4">
+            <button onClick={handlePlayPause}>
+              {isPlaying ? <Pause /> : <Play />}
             </button>
-
-            {/* Volume */}
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handleMuteToggle}
-                className="text-white hover:text-primary-400 transition-colors"
-              >
-                {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={volume}
-                onChange={handleVolumeChange}
-                className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-primary-500"
-              />
-            </div>
-
-            {/* Time */}
-            <span className="text-white text-sm">
+            <button onClick={handleMuteToggle}>
+              {isMuted ? <VolumeX /> : <Volume2 />}
+            </button>
+            <span className="text-sm">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
-
-          <div className="flex items-center space-x-4">
-            {/* Fullscreen */}
-            <button
-              onClick={handleFullscreen}
-              className="text-white hover:text-primary-400 transition-colors"
-            >
-              <Maximize className="h-5 w-5" />
-            </button>
-          </div>
+          <button onClick={handleFullscreen}>
+            <Maximize />
+          </button>
         </div>
       </div>
     </div>
