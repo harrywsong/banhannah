@@ -20,6 +20,8 @@ export default function AdminPanel() {
   const [editingLesson, setEditingLesson] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(null) // { fileName: string, progress: number, type: 'file'|'video' }
   const [videoSourceType, setVideoSourceType] = useState('upload') // 'upload' or 'url'
+  const [uploadingLessonVideo, setUploadingLessonVideo] = useState(false)  // ← ADD THIS LINE
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0)        // ← ADD THIS LINE
   const [currentQuestion, setCurrentQuestion] = useState({
     type: 'multiple-choice',
     question: '',
@@ -592,6 +594,67 @@ useEffect(() => {
         ...courseFormData,
         lessons: courseFormData.lessons.filter(l => l.id !== lessonId)
       })
+    }
+  }
+
+  // Video upload handler for lessons
+  const handleLessonVideoChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    try {
+      setUploadingLessonVideo(true)
+      setVideoUploadProgress(0)
+
+      const formData = new FormData()
+      formData.append('video', file)
+
+      const xhr = new XMLHttpRequest()
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100)
+          setVideoUploadProgress(percentComplete)
+        }
+      })
+
+      xhr.addEventListener('load', async () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText)
+          if (data.success) {
+            // Update lesson form with video URL
+            setCurrentLessonForm({
+              ...currentLessonForm,
+              videoUrl: data.hlsUrl || data.videoUrl
+            })
+
+            setUploadingLessonVideo(false)
+            setVideoUploadProgress(0)
+            alert('비디오가 성공적으로 업로드되었습니다!')
+          } else {
+            throw new Error(data.error || 'Upload failed')
+          }
+        } else {
+          throw new Error('Upload failed')
+        }
+      })
+
+      xhr.addEventListener('error', () => {
+        console.error('Video upload error')
+        alert('비디오 업로드에 실패했습니다.')
+        setUploadingLessonVideo(false)
+        setVideoUploadProgress(0)
+      })
+
+      xhr.open('POST', apiEndpoint('videos/upload'))
+      addAuthHeaders(xhr)
+      xhr.send(formData)
+
+    } catch (error) {
+      console.error('Video upload error:', error)
+      alert(`비디오 업로드에 실패했습니다: ${error.message}`)
+      setUploadingLessonVideo(false)
+      setVideoUploadProgress(0)
     }
   }
 
