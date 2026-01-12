@@ -752,7 +752,7 @@ export default function CourseDetail() {
             <div className="aspect-video bg-black">
             {hlsMatch ? (
   <HLSVideoPlayer 
-    videoId={hlsMatch}
+    videoId={hlsMatch[1]}
     autoPlay={false}
     onError={(err) => {
       console.error('Video error:', err);

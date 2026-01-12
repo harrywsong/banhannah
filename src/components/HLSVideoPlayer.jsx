@@ -21,7 +21,7 @@ export default function HLSVideoPlayer({ videoId, onError }) {
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         const authToken = localStorage.getItem('token');
         
-        const response = await fetch(`${API_URL}/api/videos/token/${videoId.replace('/api/videos/hls/', '')}`, {
+        const response = await fetch(`${API_URL}/api/videos/token/${videoId}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${authToken}`,
