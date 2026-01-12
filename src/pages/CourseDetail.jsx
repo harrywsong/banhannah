@@ -1,6 +1,6 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, PlayCircle, Video, FileText, Download, Clock, Star, MessageCircle, X, Lock, CheckCircle } from 'lucide-react'
+import { ArrowLeft, PlayCircle, Video, FileText, Download, Clock, Star, MessageCircle, X, Lock, CheckCircle, ChevronRight, ChevronDown, RotateCcw, BookOpen, FileQuestion } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
 import { apiEndpoint, apiRequest } from '../config/api'
@@ -8,6 +8,7 @@ import HLSVideoPlayer from '../components/HLSVideoPlayer'
 
 export default function CourseDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { getReviewsByItemId, addReview, updateReview, getUserReview } = useReviews()
   const [course, setCourse] = useState(null)
@@ -20,6 +21,8 @@ export default function CourseDetail() {
   const [purchaseExpired, setPurchaseExpired] = useState(false)
   const [canAccessContent, setCanAccessContent] = useState(false)
   const [progress, setProgress] = useState({})
+  const [expandedChapters, setExpandedChapters] = useState({})
+  const [showSidebar, setShowSidebar] = useState(true)
 
   // Helper function to check purchase status
   const checkPurchaseStatus = (courseData) => {
@@ -65,9 +68,20 @@ export default function CourseDetail() {
           if (foundCourse) {
             setCourse(foundCourse)
             
+            // Select first non-chapter lesson
             if (foundCourse.lessons && foundCourse.lessons.length > 0) {
-              setSelectedLesson(foundCourse.lessons[0])
+              const firstLesson = foundCourse.lessons.find(l => l.type !== 'chapter') || foundCourse.lessons[0]
+              setSelectedLesson(firstLesson)
             }
+            
+            // Auto-expand all chapters
+            const initialExpanded = {}
+            foundCourse.lessons?.forEach((lesson, index) => {
+              if (lesson.type === 'chapter') {
+                initialExpanded[lesson.id] = true
+              }
+            })
+            setExpandedChapters(initialExpanded)
             
             checkPurchaseStatus(foundCourse)
           }
@@ -77,10 +91,18 @@ export default function CourseDetail() {
           
           if (foundCourse) {
             setCourse(foundCourse)
-            
             if (foundCourse.lessons && foundCourse.lessons.length > 0) {
-              setSelectedLesson(foundCourse.lessons[0])
+              const firstLesson = foundCourse.lessons.find(l => l.type !== 'chapter') || foundCourse.lessons[0]
+              setSelectedLesson(firstLesson)
             }
+            
+            const initialExpanded = {}
+            foundCourse.lessons?.forEach((lesson) => {
+              if (lesson.type === 'chapter') {
+                initialExpanded[lesson.id] = true
+              }
+            })
+            setExpandedChapters(initialExpanded)
             
             checkPurchaseStatus(foundCourse)
           }
@@ -92,10 +114,18 @@ export default function CourseDetail() {
         
         if (foundCourse) {
           setCourse(foundCourse)
-          
           if (foundCourse.lessons && foundCourse.lessons.length > 0) {
-            setSelectedLesson(foundCourse.lessons[0])
+            const firstLesson = foundCourse.lessons.find(l => l.type !== 'chapter') || foundCourse.lessons[0]
+            setSelectedLesson(firstLesson)
           }
+          
+          const initialExpanded = {}
+          foundCourse.lessons?.forEach((lesson) => {
+            if (lesson.type === 'chapter') {
+              initialExpanded[lesson.id] = true
+            }
+          })
+          setExpandedChapters(initialExpanded)
           
           checkPurchaseStatus(foundCourse)
         }
@@ -159,7 +189,15 @@ export default function CourseDetail() {
   }
 
   const handleLessonSelect = (lesson) => {
-    setSelectedLesson(lesson)
+    if (lesson.type === 'chapter') {
+      // Toggle chapter expansion
+      setExpandedChapters(prev => ({
+        ...prev,
+        [lesson.id]: !prev[lesson.id]
+      }))
+    } else {
+      setSelectedLesson(lesson)
+    }
   }
 
   const handleMarkComplete = (lessonId) => {
@@ -167,6 +205,13 @@ export default function CourseDetail() {
       ...progress,
       [lessonId]: { completed: true, completedAt: new Date().toISOString() }
     }
+    setProgress(updatedProgress)
+    localStorage.setItem(`courseProgress_${user.id}_${id}`, JSON.stringify(updatedProgress))
+  }
+
+  const handleMarkIncomplete = (lessonId) => {
+    const updatedProgress = { ...progress }
+    delete updatedProgress[lessonId]
     setProgress(updatedProgress)
     localStorage.setItem(`courseProgress_${user.id}_${id}`, JSON.stringify(updatedProgress))
   }
@@ -229,6 +274,42 @@ export default function CourseDetail() {
     }
   }
 
+  // Calculate progress percentage
+  const calculateProgress = () => {
+    if (!course?.lessons) return 0
+    const completableLessons = course.lessons.filter(l => l.type !== 'chapter')
+    if (completableLessons.length === 0) return 0
+    const completed = completableLessons.filter(l => progress[l.id]?.completed).length
+    return Math.round((completed / completableLessons.length) * 100)
+  }
+
+  // Group lessons by chapters
+  const groupLessonsByChapters = () => {
+    if (!course?.lessons) return []
+    
+    const groups = []
+    let currentChapter = null
+    let currentLessons = []
+    
+    course.lessons.forEach((lesson, index) => {
+      if (lesson.type === 'chapter') {
+        if (currentChapter || currentLessons.length > 0) {
+          groups.push({ chapter: currentChapter, lessons: currentLessons })
+        }
+        currentChapter = lesson
+        currentLessons = []
+      } else {
+        currentLessons.push(lesson)
+      }
+    })
+    
+    if (currentChapter || currentLessons.length > 0) {
+      groups.push({ chapter: currentChapter, lessons: currentLessons })
+    }
+    
+    return groups
+  }
+
   if (!course) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -241,342 +322,449 @@ export default function CourseDetail() {
   const averageRating = reviews.length > 0
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : 0
+  const progressPercentage = calculateProgress()
+  const groupedLessons = groupLessonsByChapters()
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      {/* Header with Back Button */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link to="/resources" className="inline-flex items-center text-primary-600 hover:text-primary-700">
             <ArrowLeft className="h-5 w-5 mr-2" />
             온라인 코스 목록으로 돌아가기
           </Link>
+          {canAccess && (
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                진행률: <span className="font-semibold text-primary-600">{progressPercentage}%</span>
+              </div>
+              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-300"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-              <div className="relative h-64 rounded-lg mb-6 bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <Video className="h-24 w-24 mx-auto mb-2 opacity-50" />
-                  <p className="text-lg font-semibold">[클래스 이미지]</p>
-                  <p className="text-sm opacity-75">코스 이미지로 교체하세요</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Sidebar - Course Navigation */}
+          {canAccess && (
+            <div className={`lg:col-span-1 ${showSidebar ? 'block' : 'hidden lg:block'}`}>
+              <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                    <BookOpen className="h-5 w-5 text-primary-600" />
+                    코스 목차
+                  </h3>
                 </div>
-                <div className="absolute top-4 right-4">
-                  {course.type === 'paid' ? (
-                    <div className="bg-white text-orange-600 px-4 py-2 rounded-full font-semibold">유료</div>
-                  ) : (
-                    <div className="bg-white text-green-600 px-4 py-2 rounded-full font-semibold">무료</div>
-                  )}
-                </div>
-              </div>
 
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{course.title}</h1>
-              <p className="text-xl text-gray-600 mb-6">{course.description}</p>
-
-              <div className="flex flex-wrap items-center gap-6 mb-6 text-gray-600">
-                <div className="flex items-center space-x-2">
-                  <Video className="h-5 w-5" />
-                  <span>{course.lessons?.length || 0}개 레슨</span>
-                </div>
-                {course.students && <div><span>{course.students.toLocaleString()}명 수강</span></div>}
-              </div>
-
-              <div className="border-t pt-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">코스 소개</h2>
-                <p className="text-gray-700 leading-relaxed">{course.fullDescription || course.description}</p>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">레슨 목록</h2>
-              <div className="space-y-4">
-                {course.lessons?.map((lesson, index) => (
-                  <div
-                    key={lesson.id}
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                      selectedLesson?.id === lesson.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-primary-300'
-                    }`}
-                    onClick={() => {
-                      if (canAccess) {
-                        handleLessonSelect(lesson)
-                      } else {
-                        alert('코스를 구매하거나 로그인하여 레슨을 볼 수 있습니다.')
-                      }
-                    }}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4 flex-grow">
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold">{index + 1}</div>
-                        <div className="flex-grow">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">{lesson.title}</h3>
-                            {canAccess && progress[lesson.id]?.completed && <CheckCircle className="h-5 w-5 text-green-500" />}
+                <div className="space-y-2">
+                  {groupedLessons.map((group, groupIndex) => (
+                    <div key={groupIndex}>
+                      {/* Chapter Header */}
+                      {group.chapter && (
+                        <button
+                          onClick={() => handleLessonSelect(group.chapter)}
+                          className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-lg transition-colors mb-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            {expandedChapters[group.chapter.id] ? (
+                              <ChevronDown className="h-4 w-4 text-blue-600" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-blue-600" />
+                            )}
+                            <span className="font-semibold text-blue-900 text-left">{group.chapter.title}</span>
                           </div>
-                          {lesson.duration && (
-                            <div className="flex items-center space-x-1 text-sm text-gray-500 mb-2">
-                              <Clock className="h-4 w-4" />
-                              <span>{lesson.duration}</span>
-                            </div>
-                          )}
-                          {canAccess && lesson.files && lesson.files.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {lesson.files.map((file, fileIndex) => (
-                                <div
-                                  key={fileIndex}
-                                  className="flex items-center space-x-2 text-sm text-gray-600"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleDownloadLessonFile(file)
-                                  }}
-                                >
-                                  <FileText className="h-4 w-4" />
-                                  <span className="hover:text-primary-600">{file.name || file.title}</span>
-                                  <Download className="h-3 w-3" />
+                        </button>
+                      )}
+
+                      {/* Lessons under chapter */}
+                      {(!group.chapter || expandedChapters[group.chapter.id]) && (
+                        <div className={`space-y-1 ${group.chapter ? 'ml-4 border-l-2 border-blue-200 pl-2' : ''}`}>
+                          {group.lessons.map((lesson) => (
+                            <button
+                              key={lesson.id}
+                              onClick={() => handleLessonSelect(lesson)}
+                              className={`w-full text-left p-3 rounded-lg transition-all ${
+                                selectedLesson?.id === lesson.id
+                                  ? 'bg-primary-50 border-2 border-primary-500 shadow-sm'
+                                  : 'hover:bg-gray-50 border-2 border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className="flex-shrink-0 mt-1">
+                                  {progress[lesson.id]?.completed ? (
+                                    <CheckCircle className="h-5 w-5 text-green-500" />
+                                  ) : (
+                                    <div className="h-5 w-5 border-2 border-gray-300 rounded-full" />
+                                  )}
                                 </div>
-                              ))}
-                            </div>
-                          )}
+                                <div className="flex-grow min-w-0">
+                                  <div className="font-medium text-gray-900 text-sm line-clamp-2">
+                                    {lesson.title}
+                                  </div>
+                                  {lesson.duration && (
+                                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {lesson.duration}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {canAccess && selectedLesson && (
-                <div className="mt-8 border-t pt-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">{selectedLesson.title}</h3>
-                  <div className="aspect-video bg-black rounded-lg mb-4 overflow-hidden relative">
-                  {selectedLesson.videoUrl ? (
-  (() => {
-    // Check if it's an HLS video (your Raspberry Pi hosted)
-    const hlsMatch = selectedLesson.videoUrl.match(/\/api\/videos\/hls\/([^\/]+)/);
-    
-    if (hlsMatch) {
-      // Use HLS player for your hosted videos
-      const videoId = hlsMatch[1];
-      return (
-        <HLSVideoPlayer 
-          videoId={videoId}
-          onError={(err) => {
-            console.error('Video error:', err);
-            alert('비디오를 로드하는 중 오류가 발생했습니다: ' + err.message);
-          }}
-        />
-      );
-    } else {
-      // Use iframe for YouTube/Vimeo/Google Drive
-      const url = selectedLesson.videoUrl;
-      const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
-      if (youtubeMatch) {
-        return (
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?rel=0&modestbranding=1&controls=1`}
-            className="w-full h-full"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            title={selectedLesson.title}
-          />
-        );
-      }
-      
-      const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-      if (vimeoMatch) {
-        return (
-          <iframe
-            src={`https://player.vimeo.com/video/${vimeoMatch[1]}?title=0&byline=0&portrait=0`}
-            className="w-full h-full"
-            frameBorder="0"
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-            title={selectedLesson.title}
-          />
-        );
-      }
-      
-      const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-      if (driveMatch) {
-        return (
-          <iframe
-            src={`https://drive.google.com/file/d/${driveMatch[1]}/preview`}
-            className="w-full h-full"
-            frameBorder="0"
-            allow="autoplay"
-            title={selectedLesson.title}
-          />
-        );
-      }
-      
-      // Fallback for unknown URLs
-      return (
-        <div className="w-full h-full flex items-center justify-center text-white">
-          <div className="text-center">
-            <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
-            <p className="text-lg font-semibold">지원되지 않는 비디오 형식입니다</p>
-          </div>
-        </div>
-      );
-    }
-  })()
-) : (
-  <div className="w-full h-full flex items-center justify-center text-white">
-    <div className="text-center">
-      <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
-      <p className="text-lg font-semibold">비디오가 설정되지 않았습니다</p>
-    </div>
-  </div>
-)}
-                  </div>
-                  {!progress[selectedLesson.id]?.completed && (
-                    <button onClick={() => handleMarkComplete(selectedLesson.id)} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
-                      <CheckCircle className="h-5 w-5" />
-                      <span>레슨 완료로 표시</span>
-                    </button>
-                  )}
-                  {progress[selectedLesson.id]?.completed && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center space-x-2 text-green-700">
-                      <CheckCircle className="h-5 w-5" />
-                      <span>레슨을 완료했습니다!</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {!canAccess && course.type === 'paid' && user && !purchaseExpired && (
-              <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-                <div className="text-center py-12">
-                  <Lock className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">유료 코스입니다</h3>
-                  <p className="text-gray-600 mb-6">이 코스를 수강하려면 구매가 필요합니다.</p>
-                  <div className="text-3xl font-bold text-orange-600 mb-2">{course.price}</div>
-                  {course.accessDuration && <p className="text-sm text-gray-500 mb-6">구매 후 {course.accessDuration}일간 접근 가능</p>}
-                  <button onClick={handlePurchase} className="bg-primary-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors">지금 구매하기</button>
-                </div>
-              </div>
-            )}
-
-            {!canAccess && course.type === 'paid' && !user && (
-              <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-                <div className="text-center py-12">
-                  <Lock className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">로그인이 필요합니다</h3>
-                  <p className="text-gray-600 mb-6">이 코스를 수강하려면 로그인 후 구매해주세요.</p>
-                  <Link to="/login" className="inline-block bg-primary-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors">로그인하기</Link>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-white rounded-xl shadow-md p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">리뷰</h2>
-                  {reviews.length > 0 && (
-                    <div className="flex items-center space-x-2 mt-2">
-                      <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                      <span className="text-lg font-semibold text-gray-900">{averageRating}</span>
-                      <span className="text-gray-600">({reviews.length}개 리뷰)</span>
-                    </div>
-                  )}
-                </div>
-                {user && canAccess && (
-                  <button onClick={editingReview ? handleEditReview : () => setShowReviewForm(!showReviewForm)} className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2">
-                    <MessageCircle className="h-4 w-4" />
-                    <span>{editingReview ? '리뷰 수정' : '리뷰 작성'}</span>
-                  </button>
-                )}
-              </div>
-
-              {showReviewForm && (
-                <div className="mb-6 p-6 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-semibold text-gray-900">{editingReview ? '리뷰 수정' : '리뷰 작성'}</h3>
-                    <button onClick={() => setShowReviewForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
-                  </div>
-                  <form onSubmit={handleReviewSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
-                      <div className="flex space-x-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button key={star} type="button" onClick={() => setReviewForm({ ...reviewForm, rating: star })} className="focus:outline-none">
-                            <Star className={`h-8 w-8 ${star <= reviewForm.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">리뷰 내용</label>
-                      <textarea required rows="4" value={reviewForm.comment} onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="이 클래스에 대한 리뷰를 작성해주세요..." />
-                    </div>
-                    <button type="submit" className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700">{editingReview ? '리뷰 수정' : '리뷰 등록'}</button>
-                  </form>
-                </div>
-              )}
-
-              {reviews.length > 0 ? (
-                <div className="space-y-6">
-                  {reviews.map((review) => (
-                    <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-gray-900">{review.userName}</p>
-                          <p className="text-sm text-gray-500">{new Date(review.createdAt).toLocaleDateString('ko-KR')}</p>
-                        </div>
-                        <div className="flex text-yellow-400">
-                          {[...Array(5)].map((_, i) => <Star key={i} className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />)}
-                        </div>
-                      </div>
-                      <p className="text-gray-700">{review.comment}</p>
+                      )}
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!</div>
-              )}
-            </div>
-          </div>
-
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-md p-6 sticky top-24">
-              <div className="mb-6">
-                {course.type === 'paid' ? (
-                  <>
-                    <div className="text-3xl font-bold text-gray-900 mb-2">{course.price}</div>
-                    <p className="text-gray-600">일회성 구매</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-3xl font-bold text-green-600 mb-2">무료</div>
-                    <p className="text-gray-600">결제 불필요</p>
-                  </>
-                )}
               </div>
+            </div>
+          )}
 
-              {course.type === 'paid' && !isPurchased && (
-                <button onClick={handlePurchase} className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors mb-4">구매하기</button>
-              )}
-
-              {canAccess && (
-                <div className="border-t mt-6 pt-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">코스 정보:</h3>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex justify-between">
-                      <span>레슨:</span>
-                      <span className="font-semibold">{course.lessons?.length || 0}개</span>
-                    </div>
-                    {course.students && (
-                      <div className="flex justify-between">
-                        <span>수강생:</span>
-                        <span className="font-semibold">{course.students.toLocaleString()}명</span>
-                      </div>
+          {/* Main Content */}
+          <div className={canAccess ? 'lg:col-span-3' : 'lg:col-span-4'}>
+            {/* Course Overview (shown when no lesson selected or course not accessed) */}
+            {(!selectedLesson || !canAccess) && (
+              <div className="bg-white rounded-xl shadow-md p-8 mb-8">
+                <div className="relative h-64 rounded-lg mb-6 bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <Video className="h-24 w-24 mx-auto mb-2 opacity-50" />
+                    <p className="text-lg font-semibold">[코스 이미지]</p>
+                    <p className="text-sm opacity-75">코스 이미지로 교체하세요</p>
+                  </div>
+                  <div className="absolute top-4 right-4">
+                    {course.type === 'paid' ? (
+                      <div className="bg-white text-orange-600 px-4 py-2 rounded-full font-semibold">유료</div>
+                    ) : (
+                      <div className="bg-white text-green-600 px-4 py-2 rounded-full font-semibold">무료</div>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
+
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{course.title}</h1>
+                <p className="text-xl text-gray-600 mb-6">{course.description}</p>
+
+                <div className="flex flex-wrap items-center gap-6 mb-6 text-gray-600">
+                  <div className="flex items-center space-x-2">
+                    <Video className="h-5 w-5" />
+                    <span>{course.lessons?.filter(l => l.type !== 'chapter').length || 0}개 레슨</span>
+                  </div>
+                  {course.students && <div><span>{course.students.toLocaleString()}명 수강</span></div>}
+                  {averageRating > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                      <span>{averageRating} ({reviews.length})</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t pt-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">코스 소개</h2>
+                  <p className="text-gray-700 leading-relaxed">{course.fullDescription || course.description}</p>
+                </div>
+
+                {!canAccess && course.type === 'paid' && (
+                  <div className="mt-8 p-6 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl border-2 border-orange-200">
+                    <div className="flex items-start gap-4">
+                      <Lock className="h-8 w-8 text-orange-600 flex-shrink-0" />
+                      <div className="flex-grow">
+                        <h3 className="text-xl font-bold text-orange-900 mb-2">유료 코스입니다</h3>
+                        <p className="text-orange-800 mb-4">이 코스를 수강하려면 구매가 필요합니다.</p>
+                        <div className="flex items-center gap-6 mb-4">
+                          <div>
+                            <div className="text-3xl font-bold text-orange-600">{course.price}</div>
+                            {course.accessDuration && (
+                              <p className="text-sm text-orange-700 mt-1">구매 후 {course.accessDuration}일간 접근 가능</p>
+                            )}
+                          </div>
+                        </div>
+                        <button 
+                          onClick={handlePurchase}
+                          className="bg-primary-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-lg"
+                        >
+                          지금 구매하기
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Lesson Content (shown when lesson selected and access granted) */}
+            {canAccess && selectedLesson && selectedLesson.type !== 'chapter' && (
+              <div className="space-y-6">
+                {/* Lesson Header */}
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-grow">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedLesson.title}</h2>
+                      {selectedLesson.description && (
+                        <p className="text-gray-600 mb-4">{selectedLesson.description}</p>
+                      )}
+                      {selectedLesson.duration && (
+                        <div className="flex items-center text-gray-500 text-sm">
+                          <Clock className="h-4 w-4 mr-1" />
+                          <span>{selectedLesson.duration}</span>
+                        </div>
+                      )}
+                    </div>
+                    {progress[selectedLesson.id]?.completed ? (
+                      <button
+                        onClick={() => handleMarkIncomplete(selectedLesson.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                        title="완료 취소"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        <span className="hidden sm:inline">완료 취소</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleMarkComplete(selectedLesson.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        <span className="hidden sm:inline">완료 표시</span>
+                      </button>
+                    )}
+                  </div>
+                  
+                  {progress[selectedLesson.id]?.completed && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2 text-green-700">
+                      <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                      <span className="text-sm">
+                        이 레슨을 완료했습니다! 
+                        {progress[selectedLesson.id]?.completedAt && (
+                          <span className="text-green-600 ml-2">
+                            ({new Date(progress[selectedLesson.id].completedAt).toLocaleDateString('ko-KR')})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Video Player */}
+                {selectedLesson.videoUrl && (
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="aspect-video bg-black">
+                      {(() => {
+                        const hlsMatch = selectedLesson.videoUrl.match(/\/api\/videos\/hls\/([^\/]+)/);
+                        
+                        if (hlsMatch) {
+                          const videoId = hlsMatch[1];
+                          return (
+                            <HLSVideoPlayer 
+                              videoId={videoId}
+                              onError={(err) => {
+                                console.error('Video error:', err);
+                                alert('비디오를 로드하는 중 오류가 발생했습니다: ' + err.message);
+                              }}
+                            />
+                          );
+                        } else {
+                          const url = selectedLesson.videoUrl;
+                          const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+                          if (youtubeMatch) {
+                            return (
+                              <iframe
+                                src={`https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?rel=0&modestbranding=1&controls=1`}
+                                className="w-full h-full"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                title={selectedLesson.title}
+                              />
+                            );
+                          }
+                          
+                          const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+                          if (vimeoMatch) {
+                            return (
+                              <iframe
+                                src={`https://player.vimeo.com/video/${vimeoMatch[1]}?title=0&byline=0&portrait=0`}
+                                className="w-full h-full"
+                                frameBorder="0"
+                                allow="autoplay; fullscreen; picture-in-picture"
+                                allowFullScreen
+                                title={selectedLesson.title}
+                              />
+                            );
+                          }
+                          
+                          const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+                          if (driveMatch) {
+                            return (
+                              <iframe
+                                src={`https://drive.google.com/file/d/${driveMatch[1]}/preview`}
+                                className="w-full h-full"
+                                frameBorder="0"
+                                allow="autoplay"
+                                title={selectedLesson.title}
+                              />
+                            );
+                          }
+                          
+                          return (
+                            <div className="w-full h-full flex items-center justify-center text-white">
+                              <div className="text-center">
+                                <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
+                                <p className="text-lg font-semibold">지원되지 않는 비디오 형식입니다</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Text Content */}
+                {selectedLesson.textContent && (
+                  <div className="bg-white rounded-xl shadow-md p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-primary-600" />
+                      강의 내용
+                    </h3>
+                    <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
+                      {selectedLesson.textContent}
+                    </div>
+                  </div>
+                )}
+
+                {/* Files */}
+                {selectedLesson.files && selectedLesson.files.length > 0 && (
+                  <div className="bg-white rounded-xl shadow-md p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <Download className="h-5 w-5 text-primary-600" />
+                      첨부 파일
+                    </h3>
+                    <div className="space-y-2">
+                      {selectedLesson.files.map((file, fileIndex) => (
+                        <button
+                          key={fileIndex}
+                          onClick={() => handleDownloadLessonFile(file)}
+                          className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-gray-400 group-hover:text-primary-600" />
+                            <span className="font-medium text-gray-900">{file.name || file.title}</span>
+                          </div>
+                          <Download className="h-4 w-4 text-gray-400 group-hover:text-primary-600" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Reviews Section */}
+            {canAccess && (
+              <div className="bg-white rounded-xl shadow-md p-8 mt-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">리뷰</h2>
+                    {reviews.length > 0 && (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                        <span className="text-lg font-semibold text-gray-900">{averageRating}</span>
+                        <span className="text-gray-600">({reviews.length}개 리뷰)</span>
+                      </div>
+                    )}
+                  </div>
+                  {user && canAccess && (
+                    <button
+                      onClick={editingReview ? handleEditReview : () => setShowReviewForm(!showReviewForm)}
+                      className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <span>{editingReview ? '리뷰 수정' : '리뷰 작성'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {showReviewForm && (
+                  <div className="mb-6 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-semibold text-gray-900">{editingReview ? '리뷰 수정' : '리뷰 작성'}</h3>
+                      <button onClick={() => setShowReviewForm(false)} className="text-gray-400 hover:text-gray-600">
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <form onSubmit={handleReviewSubmit} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
+                        <div className="flex space-x-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                              className="focus:outline-none"
+                            >
+                              <Star
+                                className={`h-8 w-8 ${
+                                  star <= reviewForm.rating
+                                    ? 'text-yellow-400 fill-yellow-400'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">리뷰 내용</label>
+                        <textarea
+                          required
+                          rows="4"
+                          value={reviewForm.comment}
+                          onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          placeholder="이 코스에 대한 리뷰를 작성해주세요..."
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+                      >
+                        {editingReview ? '리뷰 수정' : '리뷰 등록'}
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {reviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <p className="font-semibold text-gray-900">{review.userName}</p>
+                            <p className="text-sm text-gray-500">{new Date(review.createdAt).toLocaleDateString('ko-KR')}</p>
+                          </div>
+                          <div className="flex text-yellow-400">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-gray-700">{review.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
