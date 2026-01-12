@@ -17,8 +17,10 @@ export default function HLSVideoPlayer({ videoId, onError }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [token, setToken] = useState(null);
-
+  const [retryCount, setRetryCount] = useState(0);
+  
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const MAX_RETRIES = 5;
 
   /* ---------------- TOKEN FETCH ---------------- */
 
@@ -87,12 +89,50 @@ export default function HLSVideoPlayer({ videoId, onError }) {
 
   useEffect(() => {
     if (!token || !videoRef.current) return;
-
+  
     const video = videoRef.current;
-    const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
-
-    setLoading(true);
-    setError(null);
+    
+    // First check if video conversion is complete
+    const checkStatus = async () => {
+      try {
+        const statusResponse = await fetch(`${API_URL}/api/videos/hls/${videoId}/status?token=${token}`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
+        
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          if (statusData.status === 'processing') {
+            setError('비디오 변환 중입니다. 잠시만 기다려주세요...');
+            setLoading(false);
+            
+            // Auto-retry after 5 seconds if not exceeded max retries
+            if (retryCount < MAX_RETRIES) {
+              setTimeout(() => {
+                setRetryCount(prev => prev + 1);
+              }, 5000);
+            } else {
+              setError('비디오 변환이 예상보다 오래 걸리고 있습니다. 나중에 다시 시도해주세요.');
+            }
+            return false;
+          } else if (statusData.status === 'failed') {
+            setError('비디오 변환에 실패했습니다.');
+            setLoading(false);
+            return false;
+          }
+        }
+        return true;
+      } catch (err) {
+        console.log('Status check failed, proceeding anyway:', err);
+        return true; // Proceed if status check fails
+      }
+    };
+  
+    checkStatus().then(canProceed => {
+      if (!canProceed) return;
+      
+      const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
+      setLoading(true);
+      setError(null);
 
     // Cleanup previous HLS instance
     if (hlsRef.current) {
@@ -126,8 +166,15 @@ export default function HLSVideoPlayer({ videoId, onError }) {
       const hls = new Hls({
         xhrSetup: function (xhr, url) {
           xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
+          // Ensure token is passed for segment requests
+          if (!url.includes('token=') && token) {
+            const separator = url.includes('?') ? '&' : '?';
+            xhr.open('GET', url + separator + 'token=' + token, true);
+          }
         },
         enableWorker: true,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
       });
 
       hlsRef.current = hls;
@@ -209,11 +256,20 @@ export default function HLSVideoPlayer({ videoId, onError }) {
   /* ---------------- RENDER ---------------- */
 
   if (error) {
+    const isProcessing = error.includes('변환 중');
     return (
       <div className="w-full aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
         <div className="text-center text-white p-8">
-          <p className="text-red-400 mb-2">비디오를 로드할 수 없습니다</p>
+          <p className={`${isProcessing ? 'text-yellow-400' : 'text-red-400'} mb-2`}>
+            {isProcessing ? '비디오 처리 중' : '비디오를 로드할 수 없습니다'}
+          </p>
           <p className="text-sm text-gray-400">{error}</p>
+          {isProcessing && (
+            <div className="mt-4">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+              <p className="text-xs text-gray-400 mt-2">비디오가 곧 준비됩니다</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -269,4 +325,4 @@ export default function HLSVideoPlayer({ videoId, onError }) {
       </div>
     </div>
   );
-}
+  })}
