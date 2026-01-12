@@ -14,7 +14,7 @@ export default function CourseDetail() {
   const [course, setCourse] = useState(null)
   const [reviews, setReviews] = useState([])
   const [showReviewForm, setShowReviewForm] = useState(false)
-  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' })
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '', isForEntireCourse: false, lessonId: null })
   const [editingReview, setEditingReview] = useState(null)
   const [selectedLesson, setSelectedLesson] = useState(null)
   const [isPurchased, setIsPurchased] = useState(false)
@@ -304,17 +304,38 @@ export default function CourseDetail() {
       alert('로그인이 필요합니다')
       return
     }
-
+  
     if (!canAccess && !editingReview) {
       alert('리뷰를 작성하려면 먼저 코스를 구매하거나 접근해야 합니다.')
       return
     }
-
+  
+    // Check for duplicate reviews
+    const targetId = reviewForm.isForEntireCourse ? `course-${id}` : `lesson-${reviewForm.lessonId || selectedLesson?.id}`;
+    const existingReview = reviews.find(r => 
+      r.userId === user.id && 
+      r.targetId === targetId &&
+      (!editingReview || r.id !== editingReview.id)
+    );
+  
+    if (existingReview) {
+      alert(reviewForm.isForEntireCourse ? 
+        '이미 전체 코스에 대한 리뷰를 작성하셨습니다.' : 
+        '이미 이 레슨에 대한 리뷰를 작성하셨습니다.');
+      return;
+    }
+  
+    const reviewTarget = reviewForm.isForEntireCourse ? 
+      '전체 코스' : 
+      (selectedLesson?.title || '레슨');
+  
     if (editingReview) {
       const updatedReview = updateReview(editingReview.id, {
         rating: reviewForm.rating,
         comment: reviewForm.comment,
-        userName: user.name
+        userName: user.name,
+        targetId: targetId,
+        targetName: reviewTarget
       })
       
       const updatedReviews = reviews.map(r => r.id === editingReview.id ? updatedReview : r)
@@ -330,12 +351,15 @@ export default function CourseDetail() {
         userId: user.id,
         userName: user.name,
         rating: reviewForm.rating,
-        comment: reviewForm.comment
+        comment: reviewForm.comment,
+        targetId: targetId,
+        targetName: reviewTarget,
+        lessonId: reviewForm.isForEntireCourse ? null : (reviewForm.lessonId || selectedLesson?.id)
       })
-
+  
       setReviews([newReview, ...reviews])
       setEditingReview(newReview)
-      setReviewForm({ rating: 5, comment: '' })
+      setReviewForm({ rating: 5, comment: '', isForEntireCourse: false, lessonId: null })
       setShowReviewForm(false)
       alert('리뷰가 등록되었습니다!')
     }
@@ -782,20 +806,20 @@ export default function CourseDetail() {
         );
       }
       
-      // Text Block
-      if (block.type === 'text' && block.data.content) {
-        return (
-          <div key={block.id} className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary-600" />
-              강의 내용
-            </h3>
-            <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {block.data.content}
-            </div>
-          </div>
-        );
-      }
+{/* Text Block */}
+if (block.type === 'text' && block.data.content) {
+  return (
+    <div key={block.id} className="bg-white rounded-xl shadow-md p-6">
+      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <FileText className="h-5 w-5 text-primary-600" />
+        {block.data.title || '강의 내용'}
+      </h3>
+      <div className="prose max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">
+        {block.data.content}
+      </div>
+    </div>
+  );
+}
       
       // File Block
       if (block.type === 'file' && block.data.name) {
@@ -887,57 +911,86 @@ export default function CourseDetail() {
             )}
             
             {block.data.questionType === 'matching' && (
-              <div>
-                <p className="font-semibold text-gray-900 mb-4">항목을 올바르게 연결하세요</p>
-                <div className="space-y-3 mb-4">
-                  {block.data.matchingPairs.map((pair, i) => (
-                    <div key={i} className="flex items-center gap-4">
-                      <div className="flex-1 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        {pair.left}
-                      </div>
-                      <span className="text-gray-400">↔</span>
-                      <select
-                        value={matchingAnswers[block.id]?.[i] || ''}
-                        onChange={(e) => handleMatchingAnswer(block.id, i, e.target.value)}
-                        disabled={questionResults[block.id]?.answered}
-                        className="flex-1 p-3 border-2 border-gray-300 rounded-lg"
-                      >
-                        <option value="">선택하세요</option>
-                        {block.data.matchingPairs.map((p, j) => (
-                          <option key={j} value={p.right}>{p.right}</option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
+  <div>
+    <p className="font-semibold text-gray-900 mb-4">항목을 올바르게 연결하세요</p>
+    <div className="space-y-3 mb-4">
+      {block.data.matchingPairs.map((pair, i) => {
+        const userAnswer = matchingAnswers[block.id]?.[i];
+        const isAnswered = questionResults[block.id]?.answered;
+        const isCorrect = isAnswered && userAnswer === pair.right;
+        const isIncorrect = isAnswered && userAnswer && userAnswer !== pair.right;
+        
+        return (
+          <div key={i} className="space-y-2">
+            <div className={`flex items-center gap-4 ${
+              isAnswered ? (isCorrect ? 'opacity-100' : 'opacity-90') : ''
+            }`}>
+              <div className="flex-1 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                {pair.left}
+              </div>
+              <span className="text-gray-400">↔</span>
+              <select
+                value={matchingAnswers[block.id]?.[i] || ''}
+                onChange={(e) => handleMatchingAnswer(block.id, i, e.target.value)}
+                disabled={questionResults[block.id]?.answered}
+                className={`flex-1 p-3 border-2 rounded-lg ${
+                  isCorrect ? 'border-green-500 bg-green-50' :
+                  isIncorrect ? 'border-red-500 bg-red-50' :
+                  'border-gray-300'
+                }`}
+              >
+                <option value="">선택하세요</option>
+                {block.data.matchingPairs.map((p, j) => (
+                  <option key={j} value={p.right}>{p.right}</option>
+                ))}
+              </select>
+              {isAnswered && (
+                <div className="flex-shrink-0">
+                  {isCorrect ? (
+                    <span className="text-green-600 font-bold">✓</span>
+                  ) : (
+                    <span className="text-red-600 font-bold">✗</span>
+                  )}
                 </div>
-                
-                {!questionResults[block.id]?.answered ? (
-                  <button
-                    onClick={() => checkMatchingAnswer(block.data, block.id)}
-                    className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
-                  >
-                    정답 확인
-                  </button>
-                ) : (
-                  <div>
-                    <div className={`p-4 rounded-lg mb-2 ${
-                      questionResults[block.id].correct ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {questionResults[block.id].correct 
-                        ? '✓ 모두 정답입니다!' 
-                        : `${questionResults[block.id].correctCount}/${questionResults[block.id].totalCount} 정답`
-                      }
-                    </div>
-                    <button
-                      onClick={() => resetQuestion(block.id)}
-                      className="text-primary-600 hover:text-primary-700 font-medium"
-                    >
-                      다시 풀기
-                    </button>
-                  </div>
-                )}
+              )}
+            </div>
+            {isAnswered && isIncorrect && (
+              <div className="text-sm text-gray-600 pl-4">
+                정답: <span className="font-semibold text-green-600">{pair.right}</span>
               </div>
             )}
+          </div>
+        );
+      })}
+    </div>
+    
+    {!questionResults[block.id]?.answered ? (
+      <button
+        onClick={() => checkMatchingAnswer(block.data, block.id)}
+        className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+      >
+        정답 확인
+      </button>
+    ) : (
+      <div>
+        <div className={`p-4 rounded-lg mb-2 ${
+          questionResults[block.id].correct ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {questionResults[block.id].correct 
+            ? '✓ 모두 정답입니다!' 
+            : `${questionResults[block.id].correctCount}/${questionResults[block.id].totalCount} 정답`
+          }
+        </div>
+        <button
+          onClick={() => resetQuestion(block.id)}
+          className="text-primary-600 hover:text-primary-700 font-medium"
+        >
+          다시 풀기
+        </button>
+      </div>
+    )}
+  </div>
+)}
           </div>
         );
       }
@@ -1059,16 +1112,32 @@ export default function CourseDetail() {
                     </button>
                   )}
                 </div>
-
                 {showReviewForm && (
-                  <div className="mb-6 p-6 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-semibold text-gray-900">{editingReview ? '리뷰 수정' : '리뷰 작성'}</h3>
-                      <button onClick={() => setShowReviewForm(false)} className="text-gray-400 hover:text-gray-600">
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-                    <form onSubmit={handleReviewSubmit} className="space-y-4">
+  <div className="mb-6 p-6 bg-gray-50 rounded-lg border border-gray-200">
+    <div className="flex justify-between items-center mb-4">
+      <h3 className="font-semibold text-gray-900">{editingReview ? '리뷰 수정' : '리뷰 작성'}</h3>
+      <button onClick={() => setShowReviewForm(false)} className="text-gray-400 hover:text-gray-600">
+        <X className="h-5 w-5" />
+      </button>
+    </div>
+    <form onSubmit={handleReviewSubmit} className="space-y-4">
+      {/* Review Target Selection */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={reviewForm.isForEntireCourse || false}
+            onChange={(e) => setReviewForm({ ...reviewForm, isForEntireCourse: e.target.checked, lessonId: e.target.checked ? null : selectedLesson?.id })}
+            className="h-4 w-4 text-primary-600 rounded"
+          />
+          <span className="font-medium text-gray-900">전체 코스에 대한 리뷰</span>
+        </label>
+        {!reviewForm.isForEntireCourse && selectedLesson && (
+          <p className="text-sm text-gray-600 mt-2 ml-6">
+            현재 레슨: <span className="font-semibold">{selectedLesson.title}</span>
+          </p>
+        )}
+      </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
                         <div className="flex space-x-2">
@@ -1113,22 +1182,29 @@ export default function CourseDetail() {
 
                 {reviews.length > 0 ? (
                   <div className="space-y-6">
-                    {reviews.map((review) => (
-                      <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <p className="font-semibold text-gray-900">{review.userName}</p>
-                            <p className="text-sm text-gray-500">{new Date(review.createdAt).toLocaleDateString('ko-KR')}</p>
-                          </div>
-                          <div className="flex text-yellow-400">
-                            {[...Array(5)].map((_, i) => (
-                              <Star key={i} className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
-                            ))}
-                          </div>
-                        </div>
-                        <p className="text-gray-700">{review.comment}</p>
-                      </div>
-                    ))}
+{reviews.map((review) => (
+  <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+    <div className="flex items-start justify-between mb-2">
+      <div>
+        <p className="font-semibold text-gray-900">{review.userName}</p>
+        <p className="text-sm text-gray-500">
+          {new Date(review.createdAt).toLocaleDateString('ko-KR')}
+          {review.targetName && (
+            <span className="ml-2 px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs">
+              {review.targetName}
+            </span>
+          )}
+        </p>
+      </div>
+      <div className="flex text-yellow-400">
+        {[...Array(5)].map((_, i) => (
+          <Star key={i} className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
+        ))}
+      </div>
+    </div>
+    <p className="text-gray-700">{review.comment}</p>
+  </div>
+))}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!</div>
