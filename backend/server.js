@@ -1,4 +1,9 @@
 require('dotenv').config();
+
+console.log('JWT_SECRET loaded?', !!process.env.JWT_SECRET);
+console.log('JWT_SECRET length:', process.env.JWT_SECRET?.length || 'NOT LOADED');
+console.log('Current working directory:', process.cwd());
+
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
