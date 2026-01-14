@@ -151,9 +151,13 @@ export default function HLSVideoPlayer({ videoId, onError }) {
     // First check if video conversion is complete
     const checkStatus = async () => {
       try {
-        const statusResponse = await fetch(`${API_URL}/api/videos/hls/${videoId}/status?token=${token}`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' }
+        const statusResponse = await fetch(`${API_URL}/api/videos/hls/${videoId}/status`, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true',
+            'Authorization': `Bearer ${token}`,
+          },
         });
+        
         
         if (statusResponse.ok) {
           const statusData = await statusResponse.json();
@@ -201,7 +205,8 @@ export default function HLSVideoPlayer({ videoId, onError }) {
       // Native HLS (Safari / iOS)
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         console.log('🍎 Using native HLS support');
-        video.src = videoUrl;
+        // Pass token via query param so segment requests are authorized
+        video.src = `${videoUrl}?token=${token}`;
 
         const onLoaded = () => {
           console.log('✅ Native HLS loaded');

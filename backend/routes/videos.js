@@ -631,22 +631,34 @@ router.get('/hls/:videoId/:segment', async (req, res) => {
   }
 });
 
-// ========== GET VIDEO STATUS ==========
 router.get('/hls/:videoId/status', async (req, res) => {
   try {
     const { videoId } = req.params;
-    const token = req.query.token;
-
+    
+    // Accept token from Authorization header OR query param
+    const authHeader = req.headers.authorization;
+    let token = null;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+    
+    // Fallback to query param
+    if (!token) {
+      token = req.query.token;
+    }
+    
     if (!token) {
       return res.status(401).json({ error: 'Access token required' });
     }
-
+    
     // Verify token
     try {
       jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
+
 
     const videoDir = path.join(hlsDir, videoId);
     const statusPath = path.join(videoDir, 'status.json');
