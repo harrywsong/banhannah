@@ -756,10 +756,9 @@ export default function CourseDetail() {
     autoPlay={false}
     onError={(err) => {
       console.error('Video error:', err);
-      // Don't show alert for errors - just log them
+      // Errors are handled within the player component
     }}
   />
-
 ) : (
                 (() => {
                   const url = block.data.url;

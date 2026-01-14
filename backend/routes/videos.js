@@ -346,9 +346,11 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
 router.get('/hls/:videoId/:segment', async (req, res) => {
   try {
     const { videoId, segment } = req.params;
-    const token = req.query.token;
+    // Check for token in both query and headers
+    const token = req.query.token || req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
+      console.log('Segment request missing token:', videoId, segment);
       return res.status(401).json({ error: 'Access token required' });
     }
 
@@ -401,6 +403,51 @@ router.get('/hls/:videoId/:segment', async (req, res) => {
   } catch (error) {
     console.error('HLS segment serve error:', error);
     res.status(500).json({ error: 'Failed to serve video segment' });
+  }
+});
+
+// ========== GET VIDEO STATUS ==========
+router.get('/hls/:videoId/status', async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    const token = req.query.token;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Access token required' });
+    }
+
+    // Verify token
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    const videoDir = path.join(hlsDir, videoId);
+    const statusPath = path.join(videoDir, 'status.json');
+    
+    if (!fs.existsSync(videoDir)) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+
+    // Check if status file exists
+    if (fs.existsSync(statusPath)) {
+      const status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+      return res.json(status);
+    }
+
+    // Check if m3u8 exists (conversion complete)
+    const playlistPath = path.join(videoDir, 'index.m3u8');
+    if (fs.existsSync(playlistPath)) {
+      return res.json({ status: 'completed' });
+    }
+
+    // Still processing
+    return res.json({ status: 'processing' });
+
+  } catch (error) {
+    console.error('Status check error:', error);
+    res.status(500).json({ error: 'Failed to check status' });
   }
 });
 
