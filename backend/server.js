@@ -58,54 +58,71 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// ============= UPDATED CORS CONFIGURATION =============
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+// ====================== IMPROVED & COMPLETE CORS CONFIGURATION ======================
+const allowedOrigins = [
   'http://localhost:5173',
-  'http://localhost:3000',
   'http://localhost:5174',
-  'https://nichol-tunnellike-constrictively.ngrok-free.dev'
-
+  'http://localhost:3000',
+  'https://nichol-tunnellike-constrictively.ngrok-free.dev',
+  'https://*.ngrok-free.dev',           // wildcard for any ngrok subdomain
+  'https://*.ngrok.io',                 // in case of other ngrok domains
 ];
 
-// Simplified CORS - allow all origins in development
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, Postman, ngrok)
-    if (!origin) return callback(null, true);
+// For development: allow all origins + credentials when using ngrok
+// In production: tighten this to specific domains only
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow non-browser clients
     
-    // Check if origin is in allowed list
-    if (allowedOrigins.some(allowed => origin.includes(allowed) || allowed.includes(origin))) {
+    // Always allow localhost and ngrok during development
+    if (
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      origin.includes('ngrok-free.dev') ||
+      origin.includes('ngrok.io')
+    ) {
       return callback(null, true);
     }
-    
-    // Allow localhost in any mode for development
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+
+    // For production: only allow listed origins
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    
-    callback(new Error('Not allowed by CORS'));
+
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type',
     'Authorization',
-    'ngrok-skip-browser-warning', // This is already here
+    'Range',                          // critical for video streaming
+    'ngrok-skip-browser-warning',
     'X-Requested-With',
     'Accept',
     'Origin',
-    'User-Agent'
+    'Cache-Control',
+    'If-None-Match'
   ],
-  // UPDATE THIS LINE:
-  exposedHeaders: ['Content-Type', 'Authorization', 'Content-Length', 'Content-Range'],
+  exposedHeaders: [
+    'Content-Length',
+    'Content-Range',
+    'Content-Type',
+    'Authorization',
+    'Accept-Ranges'
+  ],
   preflightContinue: false,
   optionsSuccessStatus: 204
-};
+}));
 
-app.use(cors(corsOptions));
-
-// Explicitly handle all OPTIONS requests (preflight)
-app.options('*', cors(corsOptions));
+// Explicitly handle OPTIONS preflight for EVERY route (very important for authenticated HLS)
+app.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); // or specific origin
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PATCH, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Range, ngrok-skip-browser-warning, Accept, Origin, X-Requested-With');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+  res.status(204).end();
+});
 
 // Create necessary directories
 const uploadsDir = path.join(__dirname, 'uploads');
