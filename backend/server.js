@@ -62,7 +62,9 @@ app.use('/api/', limiter);
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
   'http://localhost:5173',
   'http://localhost:3000',
-  'http://localhost:5174'
+  'http://localhost:5174',
+  'https://nichol-tunnellike-constrictively.ngrok-free.dev'
+
 ];
 
 // Simplified CORS - allow all origins in development
