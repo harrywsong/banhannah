@@ -179,15 +179,18 @@ useEffect(() => {
       }
     };
   
+    const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
+    
     checkStatus().then(canProceed => {
       if (!canProceed) return;
       
-      const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
+      console.log('✅ Status check passed, initializing video...');
       setLoading(true);
       setError(null);
 
     // Cleanup previous HLS instance
     if (hlsRef.current) {
+      console.log('🧹 Cleaning up previous HLS instance');
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
@@ -237,8 +240,10 @@ useEffect(() => {
 
       const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
       
-      hls.loadSource(videoUrl);
-      hls.attachMedia(video);
+      const fullVideoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
+      console.log('📥 Loading video source:', fullVideoUrl);
+      
+      hls.loadSource(fullVideoUrl);      hls.attachMedia(video);
     
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setLoading(false);
@@ -355,16 +360,8 @@ useEffect(() => {
         </div>
       )}
       
-      {/* Loading Spinner Overlay */}
-      {(loading || !token) && (
-        <div className="absolute inset-0 bg-gray-900 flex items-center justify-center z-10">
-          <Loader className="h-12 w-12 animate-spin text-white" />
-          <p className="text-white ml-4">Loading video...</p>
-        </div>
-      )}
-      
-      {/* Video Element - Always rendered */}
-      <video
+      {/* Video Element - MUST render first for ref */}
+        <video
         ref={videoRef}
         className="w-full h-full"
         controlsList="nodownload"
@@ -376,6 +373,14 @@ useEffect(() => {
         onPause={() => setIsPlaying(false)}
         onClick={handlePlayPause}
       />
+      
+      {/* Loading Spinner Overlay - renders on top */}
+      {(loading || !token) && (
+        <div className="absolute inset-0 bg-gray-900 flex items-center justify-center z-10 pointer-events-none">
+          <Loader className="h-12 w-12 animate-spin text-white" />
+          <p className="text-white ml-4">Loading video...</p>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
