@@ -5,6 +5,8 @@ import Hls from 'hls.js';
 
 
 export default function HLSVideoPlayer({ videoId, onError }) {
+  console.log('🎥 HLSVideoPlayer component mounted with videoId:', videoId);
+  
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
   const refreshTimerRef = useRef(null);
@@ -24,14 +26,20 @@ export default function HLSVideoPlayer({ videoId, onError }) {
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const MAX_RETRIES = 5;
 
-  /* ---------------- TOKEN FETCH ---------------- */
+/* ---------------- TOKEN FETCH ---------------- */
 
-  useEffect(() => {
-    if (!videoId) return;
+useEffect(() => {
+  console.log('🎬 TOKEN FETCH useEffect triggered, videoId:', videoId);
+  
+  if (!videoId) {
+    console.log('❌ No videoId provided, returning');
+    return;
+  }
 
-    let cancelled = false;
+  let cancelled = false;
 
-    const fetchToken = async () => {
+  const fetchToken = async () => {
+    console.log('📡 Fetching token for video:', videoId);
       try {
         const authToken = localStorage.getItem('token');
 

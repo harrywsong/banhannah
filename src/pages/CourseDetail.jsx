@@ -778,27 +778,35 @@ const groupLessonsByChapters = () => {
                   )}
                 </div>
 
-{/* Lesson Content Blocks */}
-{selectedLesson.content && selectedLesson.content.length > 0 ? (
-  <div className="space-y-6">
-    {selectedLesson.content.sort((a, b) => a.order - b.order).map((block) => {
-      // Video Block
-      if (block.type === 'video' && block.data.url) {
-        const hlsMatch = block.data.url.match(/\/api\/videos\/hls\/([^\/]+)/);
-        
-        return (
-          <div key={block.id} className="bg-white rounded-xl shadow-md overflow-hidden">
-            <div className="aspect-video bg-black">
-            {hlsMatch ? (
-  <HLSVideoPlayer 
-    videoId={hlsMatch[1]}
-    autoPlay={false}
-    onError={(err) => {
-      console.error('Video error:', err);
-      // Errors are handled within the player component
-    }}
-  />
-) : (
+            {/* Lesson Content Blocks */}
+            {selectedLesson.content && selectedLesson.content.length > 0 ? (
+              <div className="space-y-6">
+                {selectedLesson.content.sort((a, b) => a.order - b.order).map((block) => {
+                  console.log('🔍 Processing content block:', block.type, block); // DEBUG
+                  
+                  // Video Block
+                  if (block.type === 'video' && block.data.url) {
+                    const hlsMatch = block.data.url.match(/\/api\/videos\/hls\/([^\/]+)/);
+                    
+                    console.log('🎬 Video block found:', {
+                      url: block.data.url,
+                      videoId: block.data.videoId,
+                      hlsMatch: hlsMatch ? hlsMatch[1] : 'no match'
+                    }); // DEBUG
+                    
+                    return (
+                      <div key={block.id} className="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div className="aspect-video bg-black">
+                        {hlsMatch ? (
+              <HLSVideoPlayer 
+                videoId={hlsMatch[1]}
+                autoPlay={false}
+                onError={(err) => {
+                  console.error('Video error:', err);
+                  // Errors are handled within the player component
+                }}
+              />
+            ) : (
                 (() => {
                   const url = block.data.url;
                   const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
