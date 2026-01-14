@@ -153,43 +153,43 @@ router.post('/token/:videoId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Video not found' });
     }
 
-// Try to find which course this video belongs to
-const courses = await prisma.course.findMany();
-    
-let courseId = null;
-let lessonFound = false;
+    // Try to find which course this video belongs to
+    const courses = await prisma.course.findMany();
+        
+    let courseId = null;
+    let lessonFound = false;
 
-// Check all courses to find where this video is used
-for (const course of courses) {
-  if (course.lessons && Array.isArray(course.lessons)) {
-    for (const lesson of course.lessons) {
-      // Check if lesson has content blocks with this video (NEW SYSTEM)
-      if (lesson.content && Array.isArray(lesson.content)) {
-        for (const block of lesson.content) {
-          if (block.type === 'video' && block.data && block.data.url) {
-            // Check if the URL contains this videoId
-            if (block.data.url.includes(videoId) || 
-                (block.data.videoId && block.data.videoId === videoId)) {
-              courseId = course.id;
-              lessonFound = true;
-              console.log(`✓ Found video ${videoId} in course ${course.id}, lesson ${lesson.title}`);
-              break;
+    // Check all courses to find where this video is used
+    for (const course of courses) {
+      if (course.lessons && Array.isArray(course.lessons)) {
+        for (const lesson of course.lessons) {
+          // Check if lesson has content blocks with this video (NEW SYSTEM)
+          if (lesson.content && Array.isArray(lesson.content)) {
+            for (const block of lesson.content) {
+              if (block.type === 'video' && block.data && block.data.url) {
+                // Check if the URL contains this videoId
+                if (block.data.url.includes(videoId) || 
+                    (block.data.videoId && block.data.videoId === videoId)) {
+                  courseId = course.id;
+                  lessonFound = true;
+                  console.log(`✓ Found video ${videoId} in course ${course.id}, lesson ${lesson.title}`);
+                  break;
+                }
+              }
             }
           }
+          // Also check legacy videoUrl field
+          if (lesson.videoUrl && lesson.videoUrl.includes(videoId)) {
+            courseId = course.id;
+            lessonFound = true;
+            console.log(`✓ Found video ${videoId} (legacy) in course ${course.id}, lesson ${lesson.title}`);
+            break;
+          }
+          if (lessonFound) break;
         }
-      }
-      // Also check legacy videoUrl field
-      if (lesson.videoUrl && lesson.videoUrl.includes(videoId)) {
-        courseId = course.id;
-        lessonFound = true;
-        console.log(`✓ Found video ${videoId} (legacy) in course ${course.id}, lesson ${lesson.title}`);
-        break;
       }
       if (lessonFound) break;
     }
-  }
-  if (lessonFound) break;
-}
 
 // If no course found, still allow access for testing
     // (this allows viewing uploaded videos even before they're assigned to courses)

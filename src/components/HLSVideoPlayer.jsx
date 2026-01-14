@@ -5,7 +5,6 @@ import Hls from 'hls.js';
 
 
 export default function HLSVideoPlayer({ videoId, onError }) {
-  console.log('🎥 HLSVideoPlayer component mounted with videoId:', videoId);
   
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
@@ -29,7 +28,6 @@ export default function HLSVideoPlayer({ videoId, onError }) {
 /* ---------------- TOKEN FETCH ---------------- */
 
 useEffect(() => {
-  console.log('🎬 TOKEN FETCH useEffect triggered, videoId:', videoId);
   
   if (!videoId) {
     console.log('❌ No videoId provided, returning');
@@ -39,7 +37,6 @@ useEffect(() => {
   let cancelled = false;
 
   const fetchToken = async () => {
-    console.log('📡 Fetching token for video:', videoId);
       try {
         const authToken = localStorage.getItem('token');
 
