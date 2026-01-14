@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Loader } from 'lucide-react';
 import Hls from 'hls.js';
 
-
 export default function HLSVideoPlayer({ videoId, onError }) {
   
   const videoRef = useRef(null);
@@ -19,34 +18,35 @@ export default function HLSVideoPlayer({ videoId, onError }) {
   const [error, setError] = useState(null);
   const [token, setToken] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [accessInfo, setAccessInfo] = useState(null); // NEW: Store access information
-  const [showAccessWarning, setShowAccessWarning] = useState(false); // NEW: Show expiration warning
+  const [accessInfo, setAccessInfo] = useState(null);
+  const [showAccessWarning, setShowAccessWarning] = useState(false);
+  const [videoReady, setVideoReady] = useState(false); // NEW: Track when video element is ready
   
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const MAX_RETRIES = 5;
 
-/* ---------------- TOKEN FETCH ---------------- */
+  /* ---------------- TOKEN FETCH ---------------- */
 
-useEffect(() => {
-  console.log('🎬 HLSVideoPlayer mounted/updated:', {
-    videoId,
-    hasVideoRef: !!videoRef.current,
-    apiUrl: API_URL
-  });
-  
-  if (!videoId) {
-    console.log('❌ No videoId provided, returning');
-    return;
-  }
+  useEffect(() => {
+    console.log('🎬 HLSVideoPlayer mounted/updated:', {
+      videoId,
+      hasVideoRef: !!videoRef.current,
+      videoReady,
+      apiUrl: API_URL
+    });
+    
+    if (!videoId) {
+      console.log('❌ No videoId provided, returning');
+      return;
+    }
 
-  let cancelled = false;
+    let cancelled = false;
 
-  const fetchToken = async () => {
-    console.log('🔑 Fetching token for videoId:', videoId);
+    const fetchToken = async () => {
+      console.log('🔑 Fetching token for videoId:', videoId);
       try {
         const authToken = localStorage.getItem('token');
         console.log('🔑 Auth token:', authToken ? 'Found' : 'Not found');
-
 
         console.log('📡 Making token request to:', `${API_URL}/api/videos/token/${videoId}`);
         
@@ -98,14 +98,12 @@ useEffect(() => {
           // Show warning if access is expiring soon
           if (data.access.isExpiringSoon) {
             setShowAccessWarning(true);
-            // Auto-hide warning after 10 seconds
             setTimeout(() => setShowAccessWarning(false), 10000);
           }
         }
 
-        // refresh 60s before expiry
+        // Refresh 60s before expiry
         const refreshTime = Math.max((data.expiresIn - 60) * 1000, 0);
-
         refreshTimerRef.current = setTimeout(fetchToken, refreshTime);
       } catch (err) {
         console.error('❌ Token fetch exception:', err);
@@ -127,22 +125,28 @@ useEffect(() => {
     };
   }, [videoId, API_URL, onError]);
 
-/* ---------------- HLS INIT ---------------- */
+  /* ---------------- HLS INIT ---------------- */
 
-useEffect(() => {
-  console.log('🎞️ HLS Init useEffect triggered:', {
-    hasToken: !!token,
-    hasVideoRef: !!videoRef.current,
-    videoId
-  });
-  
-  if (!token || !videoRef.current) {
-    console.log('⏸️ HLS Init skipped - missing token or videoRef');
-    return;
-  }
+  useEffect(() => {
+    console.log('🎞️ HLS Init useEffect triggered:', {
+      hasToken: !!token,
+      hasVideoRef: !!videoRef.current,
+      videoReady,
+      videoId
+    });
+    
+    // CRITICAL: Wait for ALL conditions
+    if (!token || !videoRef.current || !videoReady) {
+      console.log('⏸️ HLS Init skipped - waiting for:', {
+        needsToken: !token,
+        needsVideoRef: !videoRef.current,
+        needsVideoReady: !videoReady
+      });
+      return;
+    }
 
-  const video = videoRef.current;
-  console.log('🎬 Starting HLS initialization for videoId:', videoId);
+    const video = videoRef.current;
+    console.log('🎬 Starting HLS initialization for videoId:', videoId);
     
     // First check if video conversion is complete
     const checkStatus = async () => {
@@ -157,7 +161,6 @@ useEffect(() => {
             setError('비디오 변환 중입니다. 잠시만 기다려주세요...');
             setLoading(false);
             
-            // Auto-retry after 5 seconds if not exceeded max retries
             if (retryCount < MAX_RETRIES) {
               setTimeout(() => {
                 setRetryCount(prev => prev + 1);
@@ -175,11 +178,11 @@ useEffect(() => {
         return true;
       } catch (err) {
         console.log('Status check failed, proceeding anyway:', err);
-        return true; // Proceed if status check fails
+        return true;
       }
     };
   
-    const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
+    const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8`;
     
     checkStatus().then(canProceed => {
       if (!canProceed) return;
@@ -188,90 +191,95 @@ useEffect(() => {
       setLoading(true);
       setError(null);
 
-    // Cleanup previous HLS instance
-    if (hlsRef.current) {
-      console.log('🧹 Cleaning up previous HLS instance');
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
+      // Cleanup previous HLS instance
+      if (hlsRef.current) {
+        console.log('🧹 Cleaning up previous HLS instance');
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
 
-    // Native HLS (Safari / iOS)
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = videoUrl;
+      // Native HLS (Safari / iOS)
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        console.log('🍎 Using native HLS support');
+        video.src = videoUrl;
 
-      const onLoaded = () => setLoading(false);
-      const onVideoError = () => {
-        setLoading(false);
-        setError('Failed to load video');
-        onError?.(new Error('Native HLS failed'));
-      };
-
-      video.addEventListener('loadedmetadata', onLoaded);
-      video.addEventListener('error', onVideoError);
-
-      return () => {
-        video.removeEventListener('loadedmetadata', onLoaded);
-        video.removeEventListener('error', onVideoError);
-      };
-    }
-
-// src/components/HLSVideoPlayer.jsx
-
-  if (Hls.isSupported()) {
-      console.log('🔧 Using HLS.js for video playback');
-      
-      const hls = new Hls({
-        debug: true, // Enable debugging to see what's happening
-        xhrSetup: function (xhr, url) {
-          console.log(`📡 HLS.js requesting: ${url}`);
-          xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
-          
-          // CRITICAL: Pass token in Authorization header for all requests
-          if (token) {
-            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-          }
-        },
-        enableWorker: true,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-      });
-
-      hlsRef.current = hls;
-
-      const videoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
-      
-      const fullVideoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8?token=${token}`;
-      console.log('📥 Loading video source:', fullVideoUrl);
-      
-      hls.loadSource(fullVideoUrl);      hls.attachMedia(video);
-    
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setLoading(false);
-      });
-    
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        console.error('HLS error:', data);
-    
-        if (data.fatal) {
+        const onLoaded = () => {
+          console.log('✅ Native HLS loaded');
           setLoading(false);
-          setError('Video playback error');
+        };
+        const onVideoError = () => {
+          console.error('❌ Native HLS error');
+          setLoading(false);
+          setError('Failed to load video');
+          onError?.(new Error('Native HLS failed'));
+        };
+
+        video.addEventListener('loadedmetadata', onLoaded);
+        video.addEventListener('error', onVideoError);
+
+        return () => {
+          video.removeEventListener('loadedmetadata', onLoaded);
+          video.removeEventListener('error', onVideoError);
+        };
+      }
+
+      // HLS.js for other browsers
+      if (Hls.isSupported()) {
+        console.log('🔧 Using HLS.js for video playback');
+        
+        const hls = new Hls({
+          debug: false,
+          xhrSetup: function (xhr, url) {
+            console.log(`📡 HLS.js requesting: ${url}`);
+            xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
+            
+            if (token) {
+              xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            }
+          },
+          enableWorker: true,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+        });
+
+        hlsRef.current = hls;
+
+        const fullVideoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8`;
+        console.log('📥 Loading video source:', fullVideoUrl);
+        
+        hls.loadSource(fullVideoUrl);
+        hls.attachMedia(video);
+      
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          console.log('✅ HLS manifest parsed successfully');
+          setLoading(false);
+        });
+      
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          console.error('❌ HLS error:', data);
+      
+          if (data.fatal) {
+            setLoading(false);
+            setError('Video playback error');
+            hls.destroy();
+            hlsRef.current = null;
+            onError?.(new Error(data.details || 'HLS fatal error'));
+          }
+        });
+      
+        return () => {
+          console.log('🧹 Cleaning up HLS.js instance');
           hls.destroy();
           hlsRef.current = null;
-          onError?.(new Error(data.details || 'HLS fatal error'));
-        }
-      });
-    
-      return () => {
-        hls.destroy();
-        hlsRef.current = null;
-      };
-    }
-    
+        };
+      }
 
-    setError('HLS not supported in this browser');
-    setLoading(false);
-    onError?.(new Error('HLS not supported'));
-  }, [token, videoId, API_URL, onError]);
+      console.error('❌ HLS not supported in this browser');
+      setError('HLS not supported in this browser');
+      setLoading(false);
+      onError?.(new Error('HLS not supported'));
+    });
+  }, [token, videoId, videoReady, API_URL, onError, retryCount]);
 
   /* ---------------- UI HANDLERS ---------------- */
 
@@ -298,7 +306,10 @@ useEffect(() => {
   };
 
   const handleLoadedMetadata = () => {
-    if (videoRef.current) setDuration(videoRef.current.duration);
+    if (videoRef.current) {
+      console.log('✅ Video metadata loaded');
+      setDuration(videoRef.current.duration);
+    }
   };
 
   const handleSeek = (e) => {
@@ -360,9 +371,16 @@ useEffect(() => {
         </div>
       )}
       
-      {/* Video Element - MUST render first for ref */}
-        <video
-        ref={videoRef}
+      {/* Video Element - CRITICAL: Use callback ref to track when element is ready */}
+      <video
+        ref={(el) => {
+          videoRef.current = el;
+          // Set videoReady state when element is attached
+          if (el && !videoReady) {
+            console.log('✅ Video element ref attached, setting videoReady=true');
+            setVideoReady(true);
+          }
+        }}
         className="w-full h-full"
         controlsList="nodownload"
         disablePictureInPicture={false}
@@ -374,7 +392,7 @@ useEffect(() => {
         onClick={handlePlayPause}
       />
       
-      {/* Loading Spinner Overlay - renders on top */}
+      {/* Loading Spinner Overlay */}
       {(loading || !token) && (
         <div className="absolute inset-0 bg-gray-900 flex items-center justify-center z-10 pointer-events-none">
           <Loader className="h-12 w-12 animate-spin text-white" />
@@ -412,6 +430,4 @@ useEffect(() => {
       </div>
     </div>
   );
-
-
-  })}
+}
