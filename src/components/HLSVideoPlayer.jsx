@@ -229,55 +229,56 @@ export default function HLSVideoPlayer({ videoId, onError }) {
       }
 
       // HLS.js for other browsers
-      if (Hls.isSupported()) {
-        console.log('🔧 Using HLS.js for video playback');
-        
-        const hls = new Hls({
-          debug: false,
-          xhrSetup: function (xhr, url) {
-            console.log(`📡 HLS.js requesting: ${url}`);
-            xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
-            
-            if (token) {
-              xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-            }
-          },
-          enableWorker: true,
-          maxBufferLength: 30,
-          maxMaxBufferLength: 60,
-        });
-
-        hlsRef.current = hls;
-
-        const fullVideoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8`;
-        console.log('📥 Loading video source:', fullVideoUrl);
-        
-        hls.loadSource(fullVideoUrl);
-        hls.attachMedia(video);
+if (Hls.isSupported()) {
+  console.log('🔧 Using HLS.js for video playback');
+  
+  const hls = new Hls({
+    debug: false,
+    xhrSetup: function (xhr, url) {
+      console.log(`📡 HLS.js requesting: ${url}`);
+      xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
       
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          console.log('✅ HLS manifest parsed successfully');
-          setLoading(false);
-        });
-      
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          console.error('❌ HLS error:', data);
-      
-          if (data.fatal) {
-            setLoading(false);
-            setError('Video playback error');
-            hls.destroy();
-            hlsRef.current = null;
-            onError?.(new Error(data.details || 'HLS fatal error'));
-          }
-        });
-      
-        return () => {
-          console.log('🧹 Cleaning up HLS.js instance');
-          hls.destroy();
-          hlsRef.current = null;
-        };
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       }
+    },
+    enableWorker: true,
+    maxBufferLength: 30,
+    maxMaxBufferLength: 60,
+  });
+
+  hlsRef.current = hls;
+
+  const fullVideoUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8`;
+  console.log('📥 Loading video source:', fullVideoUrl);
+  
+  hls.loadSource(fullVideoUrl);      // <— NO ?token=... here
+  hls.attachMedia(video);
+  
+  hls.on(Hls.Events.MANIFEST_PARSED, () => {
+    console.log('✅ HLS manifest parsed successfully');
+    setLoading(false);
+  });
+  
+  hls.on(Hls.Events.ERROR, (event, data) => {
+    console.error('❌ HLS error:', data);
+  
+    if (data.fatal) {
+      setLoading(false);
+      setError('Video playback error');
+      hls.destroy();
+      hlsRef.current = null;
+      onError?.(new Error(data.details || 'HLS fatal error'));
+    }
+  });
+  
+  return () => {
+    console.log('🧹 Cleaning up HLS.js instance');
+    hls.destroy();
+    hlsRef.current = null;
+  };
+}
+
 
       console.error('❌ HLS not supported in this browser');
       setError('HLS not supported in this browser');
