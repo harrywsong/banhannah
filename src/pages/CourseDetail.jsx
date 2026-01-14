@@ -782,8 +782,13 @@ const groupLessonsByChapters = () => {
 {selectedLesson.content && selectedLesson.content.length > 0 ? (
   <div className="space-y-6">
     {selectedLesson.content.sort((a, b) => a.order - b.order).map((block) => {
-      // Video Block
+            // Video Block
       if (block.type === 'video' && block.data?.url) {
+              console.log('🎥 Rendering video block:', {
+                blockId: block.id,
+                url: block.data.url,
+                videoId: block.data.videoId
+              });
         const hlsMatch = block.data.url.match(/\/api\/videos\/hls\/([^\/]+)/);
         
         return (

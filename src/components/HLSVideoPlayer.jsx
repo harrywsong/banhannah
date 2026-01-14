@@ -28,6 +28,11 @@ export default function HLSVideoPlayer({ videoId, onError }) {
 /* ---------------- TOKEN FETCH ---------------- */
 
 useEffect(() => {
+  console.log('🎬 HLSVideoPlayer mounted/updated:', {
+    videoId,
+    hasVideoRef: !!videoRef.current,
+    apiUrl: API_URL
+  });
   
   if (!videoId) {
     console.log('❌ No videoId provided, returning');
@@ -37,9 +42,14 @@ useEffect(() => {
   let cancelled = false;
 
   const fetchToken = async () => {
+    console.log('🔑 Fetching token for videoId:', videoId);
       try {
         const authToken = localStorage.getItem('token');
+        console.log('🔑 Auth token:', authToken ? 'Found' : 'Not found');
 
+
+        console.log('📡 Making token request to:', `${API_URL}/api/videos/token/${videoId}`);
+        
         const response = await fetch(
           `${API_URL}/api/videos/token/${videoId}`,
           {
@@ -55,6 +65,10 @@ useEffect(() => {
 
         if (!response.ok) {
           const err = await response.json().catch(() => ({}));
+          console.error('❌ Token request failed:', {
+            status: response.status,
+            error: err
+          });
 
           if (!cancelled) {
             setError(err.error || 'Failed to get video access token');
@@ -65,9 +79,17 @@ useEffect(() => {
         }
 
         const data = await response.json();
+        console.log('✅ Token response:', {
+          success: data.success,
+          hasToken: !!data.token,
+          access: data.access,
+          expiresIn: data.expiresIn
+        });
+        
         if (cancelled) return;
 
         setToken(data.token);
+        console.log('💾 Token saved to state');
         
         // Store access information
         if (data.access) {
@@ -86,6 +108,7 @@ useEffect(() => {
 
         refreshTimerRef.current = setTimeout(fetchToken, refreshTime);
       } catch (err) {
+        console.error('❌ Token fetch exception:', err);
         if (!cancelled) {
           setError(err.message);
           setLoading(false);
@@ -104,12 +127,22 @@ useEffect(() => {
     };
   }, [videoId, API_URL, onError]);
 
-  /* ---------------- HLS INIT ---------------- */
+/* ---------------- HLS INIT ---------------- */
 
-  useEffect(() => {
-    if (!token || !videoRef.current) return;
+useEffect(() => {
+  console.log('🎞️ HLS Init useEffect triggered:', {
+    hasToken: !!token,
+    hasVideoRef: !!videoRef.current,
+    videoId
+  });
   
-    const video = videoRef.current;
+  if (!token || !videoRef.current) {
+    console.log('⏸️ HLS Init skipped - missing token or videoRef');
+    return;
+  }
+
+  const video = videoRef.current;
+  console.log('🎬 Starting HLS initialization for videoId:', videoId);
     
     // First check if video conversion is complete
     const checkStatus = async () => {
@@ -298,14 +331,6 @@ useEffect(() => {
     );
   }
 
-  if (loading || !token) {
-    return (
-      <div className="w-full aspect-video bg-gray-900 rounded-lg flex items-center justify-center">
-        <Loader className="h-12 w-12 animate-spin text-white" />
-      </div>
-    );
-  }
-
   return (
     <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden group">
       {/* Access Warning Banner */}
@@ -330,12 +355,21 @@ useEffect(() => {
         </div>
       )}
       
+      {/* Loading Spinner Overlay */}
+      {(loading || !token) && (
+        <div className="absolute inset-0 bg-gray-900 flex items-center justify-center z-10">
+          <Loader className="h-12 w-12 animate-spin text-white" />
+          <p className="text-white ml-4">Loading video...</p>
+        </div>
+      )}
+      
+      {/* Video Element - Always rendered */}
       <video
         ref={videoRef}
         className="w-full h-full"
-        controlsList="nodownload" // Prevent download button in controls
-        disablePictureInPicture={false} // Allow PiP for better UX
-        onContextMenu={(e) => e.preventDefault()} // Prevent right-click
+        controlsList="nodownload"
+        disablePictureInPicture={false}
+        onContextMenu={(e) => e.preventDefault()}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onPlay={() => setIsPlaying(true)}
@@ -344,7 +378,7 @@ useEffect(() => {
       />
 
       {/* Controls */}
-      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-4 opacity-0 group-hover:opacity-100">
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
         <input
           type="range"
           min="0"
@@ -373,4 +407,6 @@ useEffect(() => {
       </div>
     </div>
   );
+
+
   })}
