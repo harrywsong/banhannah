@@ -176,21 +176,18 @@ export default function HLSVideoPlayer({ videoId, onError }) {
 
 // src/components/HLSVideoPlayer.jsx
 
-    if (Hls.isSupported()) {
+  if (Hls.isSupported()) {
+      console.log('🔧 Using HLS.js for video playback');
+      
       const hls = new Hls({
-        debug: false, // Set to true for debugging
+        debug: true, // Enable debugging to see what's happening
         xhrSetup: function (xhr, url) {
+          console.log(`📡 HLS.js requesting: ${url}`);
           xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
           
           // CRITICAL: Pass token in Authorization header for all requests
           if (token) {
             xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-          }
-          
-          // Also add token as query parameter for compatibility
-          if (!url.includes('token=') && token) {
-            const separator = url.includes('?') ? '&' : '?';
-            xhr.open('GET', url + separator + 'token=' + token, true);
           }
         },
         enableWorker: true,
