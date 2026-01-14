@@ -9,7 +9,7 @@ export default function HLSVideoPlayer({ videoId, onError }) {
   const refreshTimerRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true); // muted → better autoplay chance
+  const [isMuted, setIsMuted] = useState(true); // Start muted for better autoplay compatibility
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
@@ -20,7 +20,7 @@ export default function HLSVideoPlayer({ videoId, onError }) {
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  // ── Token fetching & auto-refresh ─────────────────────────────────────
+  // ── Fetch streaming token ────────────────────────────────────────────────
   useEffect(() => {
     if (!videoId) return;
 
@@ -51,7 +51,7 @@ export default function HLSVideoPlayer({ videoId, onError }) {
 
         const data = await res.json();
         if (!data.success || !data.token) {
-          throw new Error('Invalid token response from server');
+          throw new Error('Invalid token response');
         }
 
         if (cancelled) return;
@@ -59,14 +59,13 @@ export default function HLSVideoPlayer({ videoId, onError }) {
         console.log('Token received (first 40 chars):', data.token.substring(0, 40) + '...');
         setToken(data.token);
 
-        // Schedule refresh ~60s before expiry
+        // Auto refresh ~60 seconds before expiry
         const refreshMs = Math.max((data.expiresIn - 60) * 1000, 30000);
-        console.log(`Token will refresh in ~${Math.round(refreshMs / 1000 / 60)} minutes`);
+        console.log(`Token refresh scheduled in ~${Math.round(refreshMs / 1000 / 60)} minutes`);
         refreshTimerRef.current = setTimeout(fetchToken, refreshMs);
-
       } catch (err) {
         console.error('Token fetch failed:', err);
-        setError(err.message || 'Failed to get video access token');
+        setError(err.message || 'Failed to obtain video access token');
         setLoading(false);
         onError?.(err);
       }
@@ -80,16 +79,20 @@ export default function HLSVideoPlayer({ videoId, onError }) {
     };
   }, [videoId, API_URL, onError]);
 
-  // ── HLS Player Initialization ─────────────────────────────────────────
+  // ── HLS Player Initialization ──────────────────────────────────────────
   useEffect(() => {
     if (!token || !videoRef.current || !videoReady) {
-      console.log('HLS init waiting for:', { hasToken: !!token, hasVideoRef: !!videoRef.current, videoReady });
+      console.log('HLS init waiting for:', {
+        hasToken: !!token,
+        hasVideoRef: !!videoRef.current,
+        videoReady,
+      });
       return;
     }
 
     const video = videoRef.current;
 
-    // Clean up previous instance
+    // Cleanup previous instance
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -99,11 +102,9 @@ export default function HLSVideoPlayer({ videoId, onError }) {
     setError(null);
 
     const baseUrl = `${API_URL}/api/videos/hls/${videoId}/index.m3u8`;
-    const tokenParam = encodeURIComponent(token);
-    const videoUrlWithToken = `${baseUrl}?token=${tokenParam}`;
 
-    console.log('→ Using hls.js with query parameter token');
-    console.log('Loading HLS source:', videoUrlWithToken);
+    console.log('→ Using hls.js with Authorization Bearer header');
+    console.log('Loading HLS source:', baseUrl);
 
     if (!Hls.isSupported()) {
       setError('Your browser does not support HLS playback');
@@ -119,29 +120,30 @@ export default function HLSVideoPlayer({ videoId, onError }) {
       maxBufferLength: 60,
       xhrSetup(xhr) {
         xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
-        // We removed Authorization header → using ?token= instead
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       },
     });
 
     hlsRef.current = hls;
 
-    hls.loadSource(videoUrlWithToken);
+    hls.loadSource(baseUrl);
     hls.attachMedia(video);
 
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      console.log('→ Manifest loaded successfully - playback should start soon');
+      console.log('→ Manifest loaded successfully - playback ready');
       setLoading(false);
-      video.play().catch(e => console.log('Autoplay prevented:', e.message));
+      video.play().catch((e) => console.log('Autoplay blocked:', e.message));
     });
 
     hls.on(Hls.Events.ERROR, (event, data) => {
       console.error('HLS error:', data);
       if (data.fatal) {
+        let message = 'Video playback error';
+        if (data.details === 'manifestLoadError') {
+          message = 'Failed to load video playlist (check token / permissions)';
+        }
         setLoading(false);
-        let errMsg = 'Video playback failed';
-        if (data.details === 'manifestLoadError') errMsg = 'Cannot load video playlist (403/401?)';
-        if (data.details === 'networkError') errMsg = 'Network error while loading video segments';
-        setError(errMsg);
+        setError(message);
         hls.destroy();
         onError?.(new Error(data.details || 'Fatal HLS error'));
       }
@@ -156,10 +158,14 @@ export default function HLSVideoPlayer({ videoId, onError }) {
     };
   }, [token, videoId, videoReady, API_URL, onError]);
 
-  // ── UI Controls ───────────────────────────────────────────────────────
+  // ── UI Controls ────────────────────────────────────────────────────────
   const handlePlayPause = () => {
     if (!videoRef.current) return;
-    videoRef.current.paused ? videoRef.current.play().catch(() => {}) : videoRef.current.pause();
+    if (videoRef.current.paused) {
+      videoRef.current.play().catch(() => {});
+    } else {
+      videoRef.current.pause();
+    }
   };
 
   const handleMuteToggle = () => {
@@ -195,21 +201,21 @@ export default function HLSVideoPlayer({ videoId, onError }) {
     videoRef.current?.requestFullscreen?.().catch(() => {});
   };
 
-  const formatTime = (s) => {
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, '0')}`;
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   // ── Render ─────────────────────────────────────────────────────────────
   if (error) {
     return (
-      <div className="w-full aspect-video bg-gray-900 rounded-lg flex items-center justify-center text-white p-8 text-center">
+      <div className="w-full aspect-video bg-gray-900 rounded-lg flex items-center justify-center text-white p-6 text-center">
         <div>
           <p className="text-red-400 text-lg mb-3">Cannot play video</p>
           <p className="text-gray-300">{error}</p>
-          <p className="text-sm text-gray-500 mt-3">
-            (Check console for details - look for 403/401 errors)
+          <p className="text-sm text-gray-500 mt-4">
+            (Check console for details - look for 401/403 errors)
           </p>
         </div>
       </div>
@@ -257,8 +263,13 @@ export default function HLSVideoPlayer({ videoId, onError }) {
 
         <div className="flex items-center justify-between text-white">
           <div className="flex items-center gap-5">
-            <button onClick={handlePlayPause}>{isPlaying ? <Pause size={28} /> : <Play size={28} />}</button>
-            <button onClick={handleMuteToggle}>{isMuted ? <VolumeX size={22} /> : <Volume2 size={22} />}</button>
+            <button onClick={handlePlayPause}>
+              {isPlaying ? <Pause size={28} /> : <Play size={28} />}
+            </button>
+
+            <button onClick={handleMuteToggle}>
+              {isMuted ? <VolumeX size={22} /> : <Volume2 size={22} />}
+            </button>
 
             <input
               type="range"
