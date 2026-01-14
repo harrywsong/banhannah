@@ -404,7 +404,7 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
 
     // ========== ENHANCED SECURITY: CHECK REFERER/ORIGIN ==========
     const referer = req.get('Referer') || req.get('Origin');
-    const allowedDomains = (process.env.ALLOWED_DOMAINS || 'localhost,127.0.0.1').split(',').map(d => d.trim());
+    const allowedDomains = (process.env.ALLOWED_DOMAINS || process.env.ALLOWED_ORIGINS || 'localhost,127.0.0.1').split(',').map(d => d.trim());
     
     // In production, strictly enforce domain restrictions
     if (process.env.NODE_ENV === 'production') {
@@ -557,7 +557,7 @@ router.get('/hls/:videoId/:segment', async (req, res) => {
 
     // Check domain restriction in production
     const referer = req.get('Referer') || req.get('Origin');
-    const allowedDomains = (process.env.ALLOWED_DOMAINS || 'localhost,127.0.0.1').split(',').map(d => d.trim());
+    const allowedDomains = (process.env.ALLOWED_DOMAINS || process.env.ALLOWED_ORIGINS || 'localhost,127.0.0.1').split(',').map(d => d.trim());
     
     if (process.env.NODE_ENV === 'production' && referer) {
       try {
