@@ -342,10 +342,28 @@ router.post('/token/:videoId', authenticate, async (req, res) => {
 router.get('/hls/:videoId/index.m3u8', async (req, res) => {
   try {
     const { videoId } = req.params;
-    const token = req.query.token;
+    
+    // CRITICAL: Only accept token from Authorization header (NOT query params)
+    const authHeader = req.headers.authorization;
+    let token = null;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+    
+    // Fallback to query param ONLY in development mode
+    if (!token && process.env.NODE_ENV !== 'production') {
+      token = req.query.token;
+      console.log('⚠️ DEV MODE: Accepting token from query param');
+    }
 
     if (!token) {
-      return res.status(401).json({ error: 'Access token required' });
+      console.log('❌ Blocked: No valid token provided');
+      return res.status(401).json({ 
+        error: 'Access token required',
+        code: 'NO_TOKEN',
+        hint: 'Token must be provided in Authorization header as "Bearer <token>"'
+      });
     }
 
     // Verify token
@@ -354,18 +372,27 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
       if (err.name === 'TokenExpiredError') {
+        console.log('❌ Token expired for video:', videoId);
         return res.status(401).json({ 
           error: 'Token expired',
           code: 'TOKEN_EXPIRED',
           message: 'Your video access token has expired. Please refresh the page.'
         });
       }
-      return res.status(401).json({ error: 'Invalid token' });
+      console.log('❌ Invalid token for video:', videoId);
+      return res.status(401).json({ 
+        error: 'Invalid token',
+        code: 'INVALID_TOKEN'
+      });
     }
 
     // Check if token is for this video
     if (decoded.videoId !== videoId) {
-      return res.status(403).json({ error: 'Token not valid for this video' });
+      console.log('❌ Token mismatch:', decoded.videoId, 'vs', videoId);
+      return res.status(403).json({ 
+        error: 'Token not valid for this video',
+        code: 'TOKEN_MISMATCH'
+      });
     }
 
     // ========== ENHANCED SECURITY: CHECK REFERER/ORIGIN ==========
@@ -375,7 +402,7 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
     // In production, strictly enforce domain restrictions
     if (process.env.NODE_ENV === 'production') {
       if (!referer) {
-        console.log('Blocked: No referer header');
+        console.log('❌ Blocked: No referer header');
         return res.status(403).json({ 
           error: 'Direct video access not allowed',
           code: 'NO_REFERER'
@@ -390,15 +417,18 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
         );
         
         if (!isAllowed) {
-          console.log('Blocked domain:', refererHost, 'Allowed:', allowedDomains);
+          console.log('❌ Blocked domain:', refererHost, 'Allowed:', allowedDomains);
           return res.status(403).json({ 
             error: 'Domain not allowed',
             code: 'INVALID_DOMAIN'
           });
         }
       } catch (urlError) {
-        console.error('Error parsing referer URL:', urlError);
-        return res.status(403).json({ error: 'Invalid referer' });
+        console.error('❌ Error parsing referer URL:', urlError);
+        return res.status(403).json({ 
+          error: 'Invalid referer',
+          code: 'INVALID_REFERER'
+        });
       }
     }
 
@@ -408,6 +438,7 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
       const now = new Date();
       
       if (now > expiresAt) {
+        console.log('❌ Course access expired:', decoded.expiresAt);
         return res.status(403).json({ 
           error: 'Course access has expired',
           code: 'ACCESS_EXPIRED',
@@ -420,22 +451,49 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
     const playlistPath = path.join(__dirname, '../videos/hls', videoId, 'index.m3u8');
     
     if (!fs.existsSync(playlistPath)) {
-      return res.status(404).json({ error: 'Video not found' });
+      console.log('❌ Video file not found:', playlistPath);
+      return res.status(404).json({ 
+        error: 'Video not found',
+        code: 'VIDEO_NOT_FOUND'
+      });
     }
 
-    // Set security headers to prevent download
+    // CRITICAL: Enhanced security headers
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate, max-age=0');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // Prevent embedding on other sites
+    res.setHeader('Content-Security-Policy', "frame-ancestors 'self'"); // Modern frame protection
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow'); // Prevent search engine indexing
     
+    // CRITICAL: Strict CORS - only allow YOUR domain
+    const allowedOrigin = req.get('origin');
+    
+    if (allowedOrigin && allowedDomains.some(domain => allowedOrigin.includes(domain))) {
+      res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    } else if (process.env.NODE_ENV !== 'production') {
+      // In development, allow all origins
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    } else {
+      // Block CORS for unknown origins in production
+      console.log('❌ CORS blocked for origin:', allowedOrigin);
+      res.setHeader('Access-Control-Allow-Origin', 'null');
+    }
+    
+    console.log('✅ Serving playlist for video:', videoId, 'to user:', decoded.userId);
     res.sendFile(playlistPath);
 
   } catch (error) {
-    console.error('HLS playlist serve error:', error);
-    res.status(500).json({ error: 'Failed to serve video' });
+    console.error('❌ HLS playlist serve error:', error);
+    res.status(500).json({ 
+      error: 'Failed to serve video',
+      code: 'SERVER_ERROR'
+    });
   }
 });
 
@@ -443,10 +501,26 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
 router.get('/hls/:videoId/:segment', async (req, res) => {
   try {
     const { videoId, segment } = req.params;
-    const token = req.query.token || req.headers.authorization?.replace('Bearer ', '');
+    
+    // CRITICAL: Only accept token from Authorization header (NOT query params)
+    const authHeader = req.headers.authorization;
+    let token = null;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+    
+    // Fallback to query param ONLY in development mode
+    if (!token && process.env.NODE_ENV !== 'production') {
+      token = req.query.token;
+    }
 
     if (!token) {
-      return res.status(401).json({ error: 'Access token required' });
+      console.log('❌ Segment blocked: No valid token');
+      return res.status(401).json({ 
+        error: 'Access token required',
+        code: 'NO_TOKEN'
+      });
     }
 
     // Verify token
@@ -460,15 +534,21 @@ router.get('/hls/:videoId/:segment', async (req, res) => {
           code: 'TOKEN_EXPIRED'
         });
       }
-      return res.status(401).json({ error: 'Invalid token' });
+      return res.status(401).json({ 
+        error: 'Invalid token',
+        code: 'INVALID_TOKEN'
+      });
     }
 
     // Check if token is for this video
     if (decoded.videoId !== videoId) {
-      return res.status(403).json({ error: 'Token not valid for this video' });
+      return res.status(403).json({ 
+        error: 'Token not valid for this video',
+        code: 'TOKEN_MISMATCH'
+      });
     }
 
-    // Check domain restriction
+    // Check domain restriction in production
     const referer = req.get('Referer') || req.get('Origin');
     const allowedDomains = (process.env.ALLOWED_DOMAINS || 'localhost,127.0.0.1').split(',').map(d => d.trim());
     
@@ -481,10 +561,14 @@ router.get('/hls/:videoId/:segment', async (req, res) => {
         );
         
         if (!isAllowed) {
-          return res.status(403).json({ error: 'Domain not allowed' });
+          console.log('❌ Segment blocked - invalid domain:', refererHost);
+          return res.status(403).json({ 
+            error: 'Domain not allowed',
+            code: 'INVALID_DOMAIN'
+          });
         }
       } catch (urlError) {
-        console.error('Error parsing referer URL:', urlError);
+        console.error('❌ Error parsing referer URL:', urlError);
       }
     }
 
@@ -505,20 +589,38 @@ router.get('/hls/:videoId/:segment', async (req, res) => {
     const segmentPath = path.join(__dirname, '../videos/hls', videoId, segment);
     
     if (!fs.existsSync(segmentPath)) {
-      return res.status(404).json({ error: 'Segment not found' });
+      console.log('❌ Segment not found:', segmentPath);
+      return res.status(404).json({ 
+        error: 'Segment not found',
+        code: 'SEGMENT_NOT_FOUND'
+      });
     }
 
-    // Set security headers
+    // CRITICAL: Security headers for segments
     res.setHeader('Content-Type', 'video/MP2T');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate, max-age=0');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    
+    // CORS handling
+    const allowedOrigin = req.get('origin');
+    if (allowedOrigin && allowedDomains.some(domain => allowedOrigin.includes(domain))) {
+      res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    } else if (process.env.NODE_ENV !== 'production') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    }
     
     res.sendFile(segmentPath);
 
   } catch (error) {
-    console.error('HLS segment serve error:', error);
-    res.status(500).json({ error: 'Failed to serve video segment' });
+    console.error('❌ HLS segment serve error:', error);
+    res.status(500).json({ 
+      error: 'Failed to serve video segment',
+      code: 'SERVER_ERROR'
+    });
   }
 });
 
