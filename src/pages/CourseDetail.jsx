@@ -226,6 +226,7 @@ export default function CourseDetail() {
   const handlePurchase = () => {
     if (!course || course.type !== 'paid' || !user) return
 
+    // Use file system storage to match backend
     const purchases = JSON.parse(localStorage.getItem(`coursePurchases_${user.id}`) || '[]')
     
     const existingPurchase = purchases.find(p => p.courseId === course.id)
@@ -236,11 +237,27 @@ export default function CourseDetail() {
       const now = new Date()
       
       if (now <= expiresAt) {
-        alert('이미 구매한 코스입니다.')
+        const remainingDays = Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000))
+        alert(`이미 구매한 코스입니다.\n\n접근 만료일: ${expiresAt.toLocaleDateString('ko-KR')}\n남은 기간: ${remainingDays}일`)
         setIsPurchased(true)
         setCanAccessContent(true)
         return
+      } else {
+        // Access expired - offer renewal
+        if (window.confirm(`이 코스의 접근 기간이 만료되었습니다.\n\n만료일: ${expiresAt.toLocaleDateString('ko-KR')}\n\n${course.price}에 다시 구매하시겠습니까?`)) {
+          // Continue with purchase
+        } else {
+          return
+        }
       }
+    }
+
+    // Show confirmation with access duration
+    const accessDuration = course.accessDuration || 30
+    const confirmMessage = `${course.title} 구매 확인\n\n가격: ${course.price}\n접근 기간: ${accessDuration}일\n\n구매하시겠습니까?`
+    
+    if (!window.confirm(confirmMessage)) {
+      return
     }
 
     const purchase = {
@@ -248,18 +265,33 @@ export default function CourseDetail() {
       courseTitle: course.title,
       price: course.price,
       purchasedAt: new Date().toISOString(),
-      accessDuration: course.accessDuration || 30,
+      accessDuration: accessDuration,
       transactionId: `COURSE_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
     }
     
+    // Update local storage
     const updatedPurchases = purchases.filter(p => p.courseId !== course.id)
     updatedPurchases.push(purchase)
     localStorage.setItem(`coursePurchases_${user.id}`, JSON.stringify(updatedPurchases))
     
+    // IMPORTANT: Also save to backend data directory for server-side validation
+    // This would be done via API call in production
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/courses/purchase`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      credentials: 'include',
+      body: JSON.stringify(purchase)
+    }).catch(err => console.error('Failed to save purchase to backend:', err))
+    
     setIsPurchased(true)
     setPurchaseExpired(false)
     setCanAccessContent(true)
-    alert(`구매가 완료되었습니다!\n거래 ID: ${purchase.transactionId}\n\n접근 기간: ${purchase.accessDuration}일\n이제 코스를 수강할 수 있습니다.`)
+    
+    const expiresAt = new Date(Date.now() + accessDuration * 24 * 60 * 60 * 1000)
+    alert(`구매가 완료되었습니다!\n\n거래 ID: ${purchase.transactionId}\n접근 기간: ${accessDuration}일\n접근 만료일: ${expiresAt.toLocaleDateString('ko-KR')}\n\n이제 코스를 수강할 수 있습니다.`)
   }
 
   const handleLessonSelect = (lesson) => {
@@ -381,90 +413,87 @@ export default function CourseDetail() {
     return Math.round((completed / completableLessons.length) * 100)
   }
 
-  // Group lessons by chapters
-  const groupLessonsByChapters = () => {
-
-    // Calculate content statistics
-    const getContentStats = () => {
-      if (!course?.lessons) return {
-        chapters: 0,
-        lessons: 0,
-        videos: 0,
-        files: 0,
-        exercises: 0
-      }
-
-      let stats = {
-        chapters: 0,
-        lessons: 0,
-        videos: 0,
-        files: 0,
-        exercises: 0
-      }
-
-      course.lessons.forEach(lesson => {
-        if (lesson.type === 'chapter') {
-          stats.chapters++
-        } else {
-          stats.lessons++
-          
-          // Count content blocks (NEW SYSTEM)
-          if (lesson.content && Array.isArray(lesson.content)) {
-            lesson.content.forEach(block => {
-              if (block.type === 'video' && block.data?.url) {
-                stats.videos++
-              } else if (block.type === 'file' && block.data?.url) {
-                stats.files++
-              } else if (block.type === 'question') {
-                stats.exercises++
-              }
-            })
-          }
-          
-          // Legacy system support
-          if (lesson.videoUrl) {
-            stats.videos++
-          }
-          
-          if (lesson.files && lesson.files.length > 0) {
-            stats.files += lesson.files.length
-          }
-          
-          if (lesson.questions && lesson.questions.length > 0) {
-            stats.exercises += lesson.questions.length
-          }
-        }
-      })
-
-      return stats
-    }
-
-
-
-    if (!course?.lessons) return []
-    
-    const groups = []
-    let currentChapter = null
-    let currentLessons = []
-    
-    course.lessons.forEach((lesson, index) => {
-      if (lesson.type === 'chapter') {
-        if (currentChapter || currentLessons.length > 0) {
-          groups.push({ chapter: currentChapter, lessons: currentLessons })
-        }
-        currentChapter = lesson
-        currentLessons = []
-      } else {
-        currentLessons.push(lesson)
-      }
-    })
-    
-    if (currentChapter || currentLessons.length > 0) {
-      groups.push({ chapter: currentChapter, lessons: currentLessons })
-    }
-    
-    return groups
+// Calculate content statistics
+const getContentStats = () => {
+  if (!course?.lessons) return {
+    chapters: 0,
+    lessons: 0,
+    videos: 0,
+    files: 0,
+    exercises: 0
   }
+
+  let stats = {
+    chapters: 0,
+    lessons: 0,
+    videos: 0,
+    files: 0,
+    exercises: 0
+  }
+
+  course.lessons.forEach(lesson => {
+    if (lesson.type === 'chapter') {
+      stats.chapters++
+    } else {
+      stats.lessons++
+      
+      // Count content blocks (NEW SYSTEM)
+      if (lesson.content && Array.isArray(lesson.content)) {
+        lesson.content.forEach(block => {
+          if (block.type === 'video' && block.data?.url) {
+            stats.videos++
+          } else if (block.type === 'file' && block.data?.url) {
+            stats.files++
+          } else if (block.type === 'question') {
+            stats.exercises++
+          }
+        })
+      }
+      
+      // Legacy system support
+      if (lesson.videoUrl) {
+        stats.videos++
+      }
+      
+      if (lesson.files && lesson.files.length > 0) {
+        stats.files += lesson.files.length
+      }
+      
+      if (lesson.questions && lesson.questions.length > 0) {
+        stats.exercises += lesson.questions.length
+      }
+    }
+  })
+
+  return stats
+}
+
+// Group lessons by chapters
+const groupLessonsByChapters = () => {
+  if (!course?.lessons) return []
+  
+  const groups = []
+  let currentChapter = null
+  let currentLessons = []
+  
+  course.lessons.forEach((lesson, index) => {
+    if (lesson.type === 'chapter') {
+      if (currentChapter || currentLessons.length > 0) {
+        groups.push({ chapter: currentChapter, lessons: currentLessons })
+      }
+      currentChapter = lesson
+      currentLessons = []
+    } else {
+      currentLessons.push(lesson)
+    }
+  })
+  
+  if (currentChapter || currentLessons.length > 0) {
+    groups.push({ chapter: currentChapter, lessons: currentLessons })
+  }
+  
+  return groups
+}
 
   if (!course) {
     return (
@@ -663,13 +692,23 @@ export default function CourseDetail() {
                     <div className="flex items-start gap-4">
                       <Lock className="h-8 w-8 text-orange-600 flex-shrink-0" />
                       <div className="flex-grow">
-                        <h3 className="text-xl font-bold text-orange-900 mb-2">유료 코스입니다</h3>
-                        <p className="text-orange-800 mb-4">이 코스를 수강하려면 구매가 필요합니다.</p>
+                        <h3 className="text-xl font-bold text-orange-900 mb-2">
+                          {purchaseExpired ? '코스 접근 기간 만료' : '유료 코스입니다'}
+                        </h3>
+                        <p className="text-orange-800 mb-4">
+                          {purchaseExpired 
+                            ? '이 코스의 접근 기간이 만료되었습니다. 다시 구매하여 접근 권한을 복원하세요.'
+                            : '이 코스를 수강하려면 구매가 필요합니다.'
+                          }
+                        </p>
                         <div className="flex items-center gap-6 mb-4">
                           <div>
                             <div className="text-3xl font-bold text-orange-600">{course.price}</div>
                             {course.accessDuration && (
-                              <p className="text-sm text-orange-700 mt-1">구매 후 {course.accessDuration}일간 접근 가능</p>
+                              <p className="text-sm text-orange-700 mt-1">
+                                {purchaseExpired ? '재구매 시 ' : '구매 후 '}
+                                {course.accessDuration}일간 접근 가능
+                              </p>
                             )}
                           </div>
                         </div>

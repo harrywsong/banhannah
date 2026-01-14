@@ -18,6 +18,8 @@ export default function HLSVideoPlayer({ videoId, onError }) {
   const [error, setError] = useState(null);
   const [token, setToken] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [accessInfo, setAccessInfo] = useState(null); // NEW: Store access information
+  const [showAccessWarning, setShowAccessWarning] = useState(false); // NEW: Show expiration warning
   
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const MAX_RETRIES = 5;
@@ -61,6 +63,18 @@ export default function HLSVideoPlayer({ videoId, onError }) {
         if (cancelled) return;
 
         setToken(data.token);
+        
+        // Store access information
+        if (data.access) {
+          setAccessInfo(data.access);
+          
+          // Show warning if access is expiring soon
+          if (data.access.isExpiringSoon) {
+            setShowAccessWarning(true);
+            // Auto-hide warning after 10 seconds
+            setTimeout(() => setShowAccessWarning(false), 10000);
+          }
+        }
 
         // refresh 60s before expiry
         const refreshTime = Math.max((data.expiresIn - 60) * 1000, 0);
@@ -164,9 +178,16 @@ export default function HLSVideoPlayer({ videoId, onError }) {
 
     if (Hls.isSupported()) {
       const hls = new Hls({
+        debug: false, // Set to true for debugging
         xhrSetup: function (xhr, url) {
           xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
-          // Ensure token is passed for segment requests
+          
+          // CRITICAL: Pass token in Authorization header for all requests
+          if (token) {
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+          }
+          
+          // Also add token as query parameter for compatibility
           if (!url.includes('token=') && token) {
             const separator = url.includes('?') ? '&' : '?';
             xhr.open('GET', url + separator + 'token=' + token, true);
@@ -285,9 +306,34 @@ export default function HLSVideoPlayer({ videoId, onError }) {
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden group">
+      {/* Access Warning Banner */}
+      {showAccessWarning && accessInfo?.isExpiringSoon && (
+        <div className="absolute top-0 left-0 right-0 bg-yellow-600 text-white px-4 py-2 z-20 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm font-medium">
+              Your course access expires in {accessInfo.remainingDays} day{accessInfo.remainingDays !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <button 
+            onClick={() => setShowAccessWarning(false)}
+            className="text-white hover:text-yellow-200"
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      )}
+      
       <video
         ref={videoRef}
         className="w-full h-full"
+        controlsList="nodownload" // Prevent download button in controls
+        disablePictureInPicture={false} // Allow PiP for better UX
+        onContextMenu={(e) => e.preventDefault()} // Prevent right-click
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onPlay={() => setIsPlaying(true)}

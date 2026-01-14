@@ -645,17 +645,29 @@ useEffect(() => {
 
       xhr.addEventListener('load', async () => {
         if (xhr.status === 200) {
-          const data = JSON.parse(xhr.responseText)
-          if (data.success) {
-            // Update lesson form with video URL
-            setCurrentLessonForm({
-              ...currentLessonForm,
-              videoUrl: data.hlsUrl || data.videoUrl
-            })
+          const data = JSON.parse(xhr.responseText);
+if (data.success) {
+  console.log('✓ Video uploaded successfully:', data);
+  
+  // CRITICAL: Extract videoId from the HLS URL for token-based playback
+  let videoId = null;
+  if (data.hlsUrl) {
+    const hlsMatch = data.hlsUrl.match(/\/api\/videos\/hls\/([^\/]+)/);
+    if (hlsMatch) {
+      videoId = hlsMatch[1];
+    }
+  }
+  
+  // Update lesson form with video URL
+  setCurrentLessonForm({
+    ...currentLessonForm,
+    videoUrl: data.hlsUrl || data.videoUrl,
+    videoId: videoId // Store the videoId for later use
+  });
 
-            setUploadingLessonVideo(false)
-            setVideoUploadProgress(0)
-            alert('비디오가 성공적으로 업로드되었습니다!')
+  setUploadingLessonVideo(false);
+  setVideoUploadProgress(0);
+  alert('비디오가 성공적으로 업로드되었습니다!')
           } else {
             throw new Error(data.error || 'Upload failed')
           }
@@ -2019,10 +2031,24 @@ useEffect(() => {
                             if (xhr.status === 200) {
                               const data = JSON.parse(xhr.responseText);
                               if (data.success) {
+                                console.log('✓ Block video uploaded:', data);
+                                
+                                // Extract videoId from HLS URL
+                                let videoId = null;
+                                if (data.hlsUrl) {
+                                  const hlsMatch = data.hlsUrl.match(/\/api\/videos\/hls\/([^\/]+)/);
+                                  if (hlsMatch) {
+                                    videoId = hlsMatch[1];
+                                  }
+                                }
+                                
                                 const newContent = [...currentLessonForm.content];
                                 newContent[blockIndex] = {
                                   ...block,
-                                  data: { url: data.hlsUrl || data.videoUrl }
+                                  data: { 
+                                    url: data.hlsUrl || data.videoUrl,
+                                    videoId: videoId // Store videoId for token-based access
+                                  }
                                 };
                                 setCurrentLessonForm({ ...currentLessonForm, content: newContent });
                                 setUploadingLessonVideo(false);

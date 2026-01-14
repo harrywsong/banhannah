@@ -163,7 +163,6 @@ router.post('/token/:videoId', authenticate, async (req, res) => {
     for (const course of courses) {
       if (course.lessons && Array.isArray(course.lessons)) {
         for (const lesson of course.lessons) {
-
           // Check if lesson has content blocks with this video
           if (lesson.content && Array.isArray(lesson.content)) {
             for (const block of lesson.content) {
@@ -193,7 +192,8 @@ router.post('/token/:videoId', authenticate, async (req, res) => {
         {
           userId,
           videoId,
-          isFree: true
+          isFree: true,
+          generatedAt: Date.now()
         },
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
@@ -202,40 +202,101 @@ router.post('/token/:videoId', authenticate, async (req, res) => {
       return res.json({
         success: true,
         token,
-        expiresIn: 3600
+        expiresIn: 3600,
+        access: {
+          type: 'unassigned',
+          message: 'Video not assigned to any course yet'
+        }
       });
     }
 
     const course = courses.find(c => c.id === courseId);
 
-    // Check if user has access to this course
-    if (course.type === 'paid') {
-      // Check purchase records
-      const purchases = JSON.parse(
-        await fs.promises.readFile(
-          path.join(__dirname, `../data/purchases_${userId}.json`),
-          'utf-8'
-        ).catch(() => '[]')
+    // ========== FREE COURSE ACCESS ==========
+    if (course.type === 'free') {
+      const token = jwt.sign(
+        {
+          userId,
+          videoId,
+          courseId,
+          isFree: true,
+          generatedAt: Date.now()
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
       );
 
+      return res.json({
+        success: true,
+        token,
+        expiresIn: 3600,
+        access: {
+          type: 'free',
+          courseTitle: course.title
+        }
+      });
+    }
+
+    // ========== PAID COURSE ACCESS VALIDATION ==========
+    if (course.type === 'paid') {
+      // Load purchases from file system (in production, use database)
+      const purchasesFilePath = path.join(__dirname, `../data/purchases_${userId}.json`);
+      
+      let purchases = [];
+      try {
+        if (fs.existsSync(purchasesFilePath)) {
+          const purchasesData = await fs.promises.readFile(purchasesFilePath, 'utf-8');
+          purchases = JSON.parse(purchasesData);
+        }
+      } catch (error) {
+        console.error('Error reading purchases:', error);
+        return res.status(500).json({ error: 'Failed to verify purchase' });
+      }
+
+      // Find purchase for this course
       const purchase = purchases.find(p => p.courseId === courseId);
       
       if (!purchase) {
-        return res.status(403).json({ error: 'Course not purchased' });
+        return res.status(403).json({ 
+          error: 'Course not purchased',
+          code: 'NOT_PURCHASED',
+          courseId,
+          courseTitle: course.title,
+          price: course.price
+        });
       }
 
-      // Check if access has expired
+      // ========== CHECK ACCESS EXPIRATION ==========
       const purchasedAt = new Date(purchase.purchasedAt);
       const accessDuration = course.accessDuration || 30; // days
       const expiresAt = new Date(purchasedAt.getTime() + accessDuration * 24 * 60 * 60 * 1000);
       const now = new Date();
 
       if (now > expiresAt) {
-        return res.status(403).json({ error: 'Course access has expired' });
+        // Access has expired
+        const expiredDays = Math.floor((now - expiresAt) / (24 * 60 * 60 * 1000));
+        
+        return res.status(403).json({ 
+          error: 'Course access has expired',
+          code: 'ACCESS_EXPIRED',
+          courseId,
+          courseTitle: course.title,
+          purchasedAt: purchase.purchasedAt,
+          expiredAt: expiresAt.toISOString(),
+          expiredDaysAgo: expiredDays,
+          renewalPrice: course.price // Could be different for renewal
+        });
       }
 
-      // Calculate remaining access time for token expiration
-      const remainingTime = Math.floor((expiresAt - now) / 1000); // seconds
+      // ========== CALCULATE REMAINING ACCESS TIME ==========
+      const remainingTimeSeconds = Math.floor((expiresAt - now) / 1000);
+      const remainingDays = Math.floor(remainingTimeSeconds / (24 * 60 * 60));
+      
+      // Token expiration: minimum of 1 hour or remaining access time
+      const tokenExpiration = Math.min(remainingTimeSeconds, 3600);
+      
+      // Warn if access is expiring soon (within 7 days)
+      const isExpiringSoon = remainingDays <= 7;
       
       // Generate token with expiration
       const token = jwt.sign(
@@ -243,36 +304,33 @@ router.post('/token/:videoId', authenticate, async (req, res) => {
           userId,
           videoId,
           courseId,
-          expiresAt: expiresAt.toISOString()
+          purchaseId: purchase.transactionId || purchase.id,
+          expiresAt: expiresAt.toISOString(),
+          generatedAt: Date.now()
         },
         process.env.JWT_SECRET,
-        { expiresIn: Math.min(remainingTime, 3600) } // Max 1 hour or remaining access time
+        { expiresIn: tokenExpiration }
       );
 
       return res.json({
         success: true,
         token,
-        expiresIn: Math.min(remainingTime, 3600)
-      });
-    } else {
-      // Free course - generate token with 1 hour expiration
-      const token = jwt.sign(
-        {
-          userId,
-          videoId,
-          courseId,
-          isFree: true
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '1h' }
-      );
-
-      return res.json({
-        success: true,
-        token,
-        expiresIn: 3600
+        expiresIn: tokenExpiration,
+        access: {
+          type: 'paid',
+          courseTitle: course.title,
+          purchasedAt: purchase.purchasedAt,
+          accessExpiresAt: expiresAt.toISOString(),
+          remainingDays,
+          remainingSeconds: remainingTimeSeconds,
+          isExpiringSoon,
+          warning: isExpiringSoon ? `Access expires in ${remainingDays} days` : null
+        }
       });
     }
+
+    // Should never reach here
+    return res.status(500).json({ error: 'Invalid course configuration' });
 
   } catch (error) {
     console.error('Token generation error:', error);
@@ -295,7 +353,14 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ 
+          error: 'Token expired',
+          code: 'TOKEN_EXPIRED',
+          message: 'Your video access token has expired. Please refresh the page.'
+        });
+      }
+      return res.status(401).json({ error: 'Invalid token' });
     }
 
     // Check if token is for this video
@@ -303,37 +368,69 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
       return res.status(403).json({ error: 'Token not valid for this video' });
     }
 
-    // Check domain restriction (Referer header)
+    // ========== ENHANCED SECURITY: CHECK REFERER/ORIGIN ==========
     const referer = req.get('Referer') || req.get('Origin');
-    const allowedDomains = (process.env.ALLOWED_DOMAINS || 'localhost').split(',').map(d => d.trim());
+    const allowedDomains = (process.env.ALLOWED_DOMAINS || 'localhost,127.0.0.1').split(',').map(d => d.trim());
     
-    if (referer && process.env.NODE_ENV === 'production') {
+    // In production, strictly enforce domain restrictions
+    if (process.env.NODE_ENV === 'production') {
+      if (!referer) {
+        console.log('Blocked: No referer header');
+        return res.status(403).json({ 
+          error: 'Direct video access not allowed',
+          code: 'NO_REFERER'
+        });
+      }
+      
       try {
         const refererHost = new URL(referer).hostname;
         const isAllowed = allowedDomains.some(domain => 
           refererHost === domain || 
-          refererHost.endsWith(`.${domain}`) ||
-          refererHost.includes(domain)
+          refererHost.endsWith(`.${domain}`)
         );
         
         if (!isAllowed) {
-          console.log('Domain blocked:', refererHost, 'Allowed:', allowedDomains);
-          return res.status(403).json({ error: 'Domain not allowed' });
+          console.log('Blocked domain:', refererHost, 'Allowed:', allowedDomains);
+          return res.status(403).json({ 
+            error: 'Domain not allowed',
+            code: 'INVALID_DOMAIN'
+          });
         }
       } catch (urlError) {
         console.error('Error parsing referer URL:', urlError);
+        return res.status(403).json({ error: 'Invalid referer' });
+      }
+    }
+
+    // ========== ADDITIONAL CHECK: VERIFY ACCESS HASN'T EXPIRED ==========
+    if (decoded.expiresAt && !decoded.isFree) {
+      const expiresAt = new Date(decoded.expiresAt);
+      const now = new Date();
+      
+      if (now > expiresAt) {
+        return res.status(403).json({ 
+          error: 'Course access has expired',
+          code: 'ACCESS_EXPIRED',
+          expiredAt: decoded.expiresAt
+        });
       }
     }
 
     // Serve the m3u8 playlist file
-    const playlistPath = path.join(hlsDir, videoId, 'index.m3u8');
+    const playlistPath = path.join(__dirname, '../videos/hls', videoId, 'index.m3u8');
     
     if (!fs.existsSync(playlistPath)) {
       return res.status(404).json({ error: 'Video not found' });
     }
 
+    // Set security headers to prevent download
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     res.sendFile(playlistPath);
 
   } catch (error) {
@@ -346,11 +443,9 @@ router.get('/hls/:videoId/index.m3u8', async (req, res) => {
 router.get('/hls/:videoId/:segment', async (req, res) => {
   try {
     const { videoId, segment } = req.params;
-    // Check for token in both query and headers
     const token = req.query.token || req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
-      console.log('Segment request missing token:', videoId, segment);
       return res.status(401).json({ error: 'Access token required' });
     }
 
@@ -359,7 +454,13 @@ router.get('/hls/:videoId/:segment', async (req, res) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ 
+          error: 'Token expired',
+          code: 'TOKEN_EXPIRED'
+        });
+      }
+      return res.status(401).json({ error: 'Invalid token' });
     }
 
     // Check if token is for this video
@@ -369,19 +470,17 @@ router.get('/hls/:videoId/:segment', async (req, res) => {
 
     // Check domain restriction
     const referer = req.get('Referer') || req.get('Origin');
-    const allowedDomains = (process.env.ALLOWED_DOMAINS || 'localhost').split(',').map(d => d.trim());
+    const allowedDomains = (process.env.ALLOWED_DOMAINS || 'localhost,127.0.0.1').split(',').map(d => d.trim());
     
-    if (referer && process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'production' && referer) {
       try {
         const refererHost = new URL(referer).hostname;
         const isAllowed = allowedDomains.some(domain => 
           refererHost === domain || 
-          refererHost.endsWith(`.${domain}`) ||
-          refererHost.includes(domain)
+          refererHost.endsWith(`.${domain}`)
         );
         
         if (!isAllowed) {
-          console.log('Domain blocked:', refererHost, 'Allowed:', allowedDomains);
           return res.status(403).json({ error: 'Domain not allowed' });
         }
       } catch (urlError) {
@@ -389,15 +488,32 @@ router.get('/hls/:videoId/:segment', async (req, res) => {
       }
     }
 
+    // Verify access hasn't expired (for paid courses)
+    if (decoded.expiresAt && !decoded.isFree) {
+      const expiresAt = new Date(decoded.expiresAt);
+      const now = new Date();
+      
+      if (now > expiresAt) {
+        return res.status(403).json({ 
+          error: 'Course access has expired',
+          code: 'ACCESS_EXPIRED'
+        });
+      }
+    }
+
     // Serve the segment file
-    const segmentPath = path.join(hlsDir, videoId, segment);
+    const segmentPath = path.join(__dirname, '../videos/hls', videoId, segment);
     
     if (!fs.existsSync(segmentPath)) {
       return res.status(404).json({ error: 'Segment not found' });
     }
 
+    // Set security headers
     res.setHeader('Content-Type', 'video/MP2T');
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    
     res.sendFile(segmentPath);
 
   } catch (error) {

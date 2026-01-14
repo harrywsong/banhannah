@@ -108,7 +108,8 @@ app.options('*', cors(corsOptions));
 // Create necessary directories
 const uploadsDir = path.join(__dirname, 'uploads');
 const previewsDir = path.join(uploadsDir, 'previews');
-[uploadsDir, previewsDir].forEach(dir => {
+const dataDir = path.join(__dirname, 'data'); // For storing purchase records
+[uploadsDir, previewsDir, dataDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -192,7 +193,46 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
 
-
+// ========== COURSE PURCHASE ENDPOINT ==========
+app.post('/api/courses/purchase', authenticate, async (req, res) => {
+  try {
+    const purchase = req.body;
+    const userId = req.user.id;
+    
+    // Validate purchase data
+    if (!purchase.courseId || !purchase.transactionId) {
+      return res.status(400).json({ error: 'Invalid purchase data' });
+    }
+    
+    // Save purchase to file system (in production, use database)
+    const dataDir = path.join(__dirname, 'data');
+    const purchasesFilePath = path.join(dataDir, `purchases_${userId}.json`);
+    
+    let purchases = [];
+    if (fs.existsSync(purchasesFilePath)) {
+      const purchasesData = fs.readFileSync(purchasesFilePath, 'utf-8');
+      purchases = JSON.parse(purchasesData);
+    }
+    
+    // Remove any existing purchase for this course
+    purchases = purchases.filter(p => p.courseId !== purchase.courseId);
+    
+    // Add new purchase
+    purchases.push({
+      ...purchase,
+      userId,
+      savedAt: new Date().toISOString()
+    });
+    
+    // Save to file
+    fs.writeFileSync(purchasesFilePath, JSON.stringify(purchases, null, 2));
+    
+    res.json({ success: true, message: 'Purchase saved' });
+  } catch (error) {
+    console.error('Purchase save error:', error);
+    res.status(500).json({ error: 'Failed to save purchase' });
+  }
+});
 
 // ========== FILE UPLOAD ENDPOINTS ==========
 
