@@ -8,7 +8,7 @@ const getApiUrl = () => {
   }
   
   // Default to production backend
-  return 'http://banhannah.dpdns.org:3001';
+  return 'https://api.banhannah.dpdns.org';
 };
 
 export const API_URL = getApiUrl();
