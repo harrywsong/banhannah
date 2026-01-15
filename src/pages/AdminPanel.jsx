@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import AdminLogin from '../components/AdminLogin'
 import { apiEndpoint, addAuthHeaders } from '../config/api'
-import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield } from 'lucide-react'
 import { useAdminAuth } from '../contexts/AdminAuthContext';
+import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield, Download } from 'lucide-react'
+
 
 
 
@@ -759,108 +760,151 @@ if (data.success) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm font-medium">라이브 클래스</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{totalClasses}</p>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Video className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
+{/* Stats Cards - Enhanced */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform">
+    <div className="flex items-center justify-between mb-4">
+      <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+        <Video className="h-6 w-6" />
+      </div>
+      <div className="text-right">
+        <p className="text-3xl font-bold">{totalClasses}</p>
+        <p className="text-blue-100 text-sm">Total Classes</p>
+      </div>
+    </div>
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-blue-100">라이브 클래스</span>
+      <span className="bg-white/20 px-2 py-1 rounded">Active</span>
+    </div>
+  </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm font-medium">파일</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{totalFiles}</p>
-              </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <FileText className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </div>
+  <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform">
+    <div className="flex items-center justify-between mb-4">
+      <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+        <FileText className="h-6 w-6" />
+      </div>
+      <div className="text-right">
+        <p className="text-3xl font-bold">{totalFiles}</p>
+        <p className="text-green-100 text-sm">Total Files</p>
+      </div>
+    </div>
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-green-100">파일</span>
+      <span className="bg-white/20 px-2 py-1 rounded">{totalDownloads} views</span>
+    </div>
+  </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm font-medium">온라인 코스</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{totalCourses}</p>
-              </div>
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <PlayCircle className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
+  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform">
+    <div className="flex items-center justify-between mb-4">
+      <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+        <PlayCircle className="h-6 w-6" />
+      </div>
+      <div className="text-right">
+        <p className="text-3xl font-bold">{totalCourses}</p>
+        <p className="text-purple-100 text-sm">Total Courses</p>
+      </div>
+    </div>
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-purple-100">온라인 코스</span>
+      <span className="bg-white/20 px-2 py-1 rounded">Active</span>
+    </div>
+  </div>
 
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm font-medium">총 등록수</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{totalRegistered}</p>
-              </div>
-              <div className="bg-orange-100 p-3 rounded-lg">
-                <Users className="h-6 w-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-        </div>
+  <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform">
+    <div className="flex items-center justify-between mb-4">
+      <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+        <Users className="h-6 w-6" />
+      </div>
+      <div className="text-right">
+        <p className="text-3xl font-bold">{totalRegistered}</p>
+        <p className="text-orange-100 text-sm">Registrations</p>
+      </div>
+    </div>
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-orange-100">총 등록수</span>
+      <span className="bg-white/20 px-2 py-1 rounded">All time</span>
+    </div>
+  </div>
+</div>
 
-        {/* Navigation Tabs - Modern Design */}
-        <div className="bg-white rounded-xl shadow-lg mb-8 overflow-hidden">
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-1 p-2">
-              <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                  activeTab === 'dashboard'
-                    ? 'bg-primary-600 text-white shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <BarChart3 className="h-5 w-5" />
-                <span>대시보드</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('classes')}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                  activeTab === 'classes'
-                    ? 'bg-primary-600 text-white shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Video className="h-5 w-5" />
-                <span>라이브 클래스</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('files')}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                  activeTab === 'files'
-                    ? 'bg-primary-600 text-white shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <FileText className="h-5 w-5" />
-                <span>파일</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('courses')}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${
-                  activeTab === 'courses'
-                    ? 'bg-primary-600 text-white shadow-md'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <PlayCircle className="h-5 w-5" />
-                <span>온라인 코스</span>
-              </button>
-            </nav>
-          </div>
-        </div>
+{/* Navigation Tabs - Enhanced */}
+<div className="bg-white rounded-xl shadow-lg mb-8 overflow-hidden">
+  <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+    <nav className="flex space-x-1 p-3">
+      <button
+        onClick={() => setActiveTab('dashboard')}
+        className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all relative ${
+          activeTab === 'dashboard'
+            ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg scale-105'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+        }`}
+      >
+        <BarChart3 className="h-5 w-5" />
+        <span>Dashboard</span>
+        {activeTab === 'dashboard' && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-t-full" />
+        )}
+      </button>
+      <button
+        onClick={() => setActiveTab('classes')}
+        className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all relative ${
+          activeTab === 'classes'
+            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg scale-105'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+        }`}
+      >
+        <Video className="h-5 w-5" />
+        <span>Live Classes</span>
+        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
+          activeTab === 'classes' ? 'bg-white/20' : 'bg-blue-100 text-blue-600'
+        }`}>
+          {totalClasses}
+        </span>
+        {activeTab === 'classes' && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-t-full" />
+        )}
+      </button>
+      <button
+        onClick={() => setActiveTab('files')}
+        className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all relative ${
+          activeTab === 'files'
+            ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg scale-105'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+        }`}
+      >
+        <FileText className="h-5 w-5" />
+        <span>Files</span>
+        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
+          activeTab === 'files' ? 'bg-white/20' : 'bg-green-100 text-green-600'
+        }`}>
+          {totalFiles}
+        </span>
+        {activeTab === 'files' && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-t-full" />
+        )}
+      </button>
+      <button
+        onClick={() => setActiveTab('courses')}
+        className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all relative ${
+          activeTab === 'courses'
+            ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg scale-105'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+        }`}
+      >
+        <PlayCircle className="h-5 w-5" />
+        <span>Online Courses</span>
+        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
+          activeTab === 'courses' ? 'bg-white/20' : 'bg-purple-100 text-purple-600'
+        }`}>
+          {totalCourses}
+        </span>
+        {activeTab === 'courses' && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-t-full" />
+        )}
+      </button>
+    </nav>
+  </div>
+</div>
 
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
@@ -1190,61 +1234,96 @@ if (data.success) {
               </div>
             )}
 
-            {/* Classes List */}
-            {classes.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {classes.map((classItem) => (
-                  <div key={classItem.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border border-gray-100">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{classItem.title}</h3>
-                    <p className="text-gray-600 mb-4 text-sm line-clamp-2">{classItem.description}</p>
-                    
-                    <div className="space-y-2 mb-4 text-sm text-gray-600">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4" />
-                        <span>{new Date(classItem.date).toLocaleDateString('ko-KR')}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4" />
-                        <span>
-                          {classItem.time}
-                          {classItem.timezone && (
-                            <span className="ml-2 text-xs text-gray-500">
-                              [{classItem.timezone.split('/')[1] || classItem.timezone}]
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Users className="h-4 w-4" />
-                        <span>{classItem.registeredCount || 0}/{classItem.maxParticipants} 등록됨</span>
-                      </div>
-                    </div>
+{/* Classes List - Enhanced */}
+{classes.length > 0 ? (
+  <div className="space-y-4">
+    {classes.map((classItem, index) => (
+      <div 
+        key={classItem.id} 
+        className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-blue-300 group"
+      >
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-grow">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm font-bold">
+                  {index + 1}
+                </span>
+                <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  {classItem.title}
+                </h3>
+              </div>
+              <p className="text-gray-600 text-sm line-clamp-2 ml-11">
+                {classItem.description}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              <button
+                onClick={() => handleClassEdit(classItem)}
+                className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                title="Edit"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleClassDelete(classItem.id)}
+                className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
 
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleClassEdit(classItem)}
-                        className="flex-1 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span>수정</span>
-                      </button>
-                      <button
-                        onClick={() => handleClassDelete(classItem.id)}
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 bg-white rounded-xl shadow-lg">
-                <Video className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-xl text-gray-600">등록된 클래스가 없습니다</p>
-                <p className="text-gray-500 mt-2">"새 클래스 추가" 버튼을 클릭하여 첫 번째 클래스를 생성하세요</p>
-              </div>
-            )}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-11">
+            <div className="flex items-center gap-2 text-sm">
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-700">
+                {new Date(classItem.date).toLocaleDateString('ko-KR')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-700">
+                {classItem.time}
+                {classItem.timezone && (
+                  <span className="ml-1 text-xs text-gray-500">
+                    [{classItem.timezone.split('/')[1] || classItem.timezone}]
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-700">
+                {classItem.registeredCount || 0}/{classItem.maxParticipants}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Video className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-700">{classItem.platform}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+) : (
+  <div className="text-center py-16 bg-white rounded-xl shadow-lg border-2 border-dashed border-gray-200">
+    <div className="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+      <Video className="h-10 w-10 text-blue-500" />
+    </div>
+    <p className="text-xl font-semibold text-gray-900 mb-2">No classes yet</p>
+    <p className="text-gray-500 mb-6">Create your first live class to get started</p>
+    <button
+      onClick={() => setShowClassForm(true)}
+      className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+    >
+      <Plus className="h-5 w-5" />
+      <span>Add First Class</span>
+    </button>
+  </div>
+)}
           </>
         )}
 
@@ -1520,51 +1599,92 @@ if (data.success) {
               </div>
             )}
 
-            {/* Files List */}
-            {files.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {files.map((file) => (
-                  <div key={file.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border border-gray-100">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-xl font-bold text-gray-900">{file.title}</h3>
-                      <span className="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-600">
-                        무료
-                      </span>
-                    </div>
-                    <p className="text-gray-600 mb-4 text-sm line-clamp-2">{file.description}</p>
-                    
-                    <div className="space-y-2 mb-4 text-sm text-gray-600">
-                      <div>형식: {file.format}</div>
-                      {file.size && <div>크기: {file.size}</div>}
-                      {file.pages && <div>페이지: {file.pages}</div>}
-                      <div>접근 횟수: {file.downloads || 0}</div>
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleFileEdit(file)}
-                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span>수정</span>
-                      </button>
-                      <button
-                        onClick={() => handleFileDelete(file.id)}
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+{/* Files List - Enhanced */}
+{files.length > 0 ? (
+  <div className="space-y-4">
+    {files.map((file, index) => (
+      <div 
+        key={file.id} 
+        className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-green-300 group"
+      >
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-grow">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600 text-sm font-bold">
+                  {index + 1}
+                </span>
+                <h3 className="text-xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">
+                  {file.title}
+                </h3>
+                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                  Free
+                </span>
               </div>
-            ) : (
-              <div className="text-center py-12 bg-white rounded-xl shadow-lg">
-                <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-xl text-gray-600">등록된 파일이 없습니다</p>
-                <p className="text-gray-500 mt-2">"새 파일 추가" 버튼을 클릭하여 첫 번째 파일을 생성하세요</p>
+              <p className="text-gray-600 text-sm line-clamp-2 ml-11">
+                {file.description}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              <button
+                onClick={() => handleFileEdit(file)}
+                className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                title="Edit"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleFileDelete(file.id)}
+                className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-11">
+            <div className="flex items-center gap-2 text-sm">
+              <FileText className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-700">{file.format}</span>
+            </div>
+            {file.size && (
+              <div className="flex items-center gap-2 text-sm">
+                <Download className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-700">{file.size}</span>
               </div>
             )}
+            {file.pages && (
+              <div className="flex items-center gap-2 text-sm">
+                <FileText className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-700">{file.pages}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-700">{file.downloads || 0} views</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+) : (
+  <div className="text-center py-16 bg-white rounded-xl shadow-lg border-2 border-dashed border-gray-200">
+    <div className="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+      <FileText className="h-10 w-10 text-green-500" />
+    </div>
+    <p className="text-xl font-semibold text-gray-900 mb-2">No files yet</p>
+    <p className="text-gray-500 mb-6">Upload your first file to get started</p>
+    <button
+      onClick={() => setShowFileForm(true)}
+      className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+    >
+      <Plus className="h-5 w-5" />
+      <span>Add First File</span>
+    </button>
+  </div>
+)}
           </>
         )}
 
@@ -2440,52 +2560,91 @@ if (data.success) {
               </div>
             )}
 
-            {/* Courses List */}
-            {onlineCourses.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {onlineCourses.map((course) => (
-                  <div key={course.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow border border-gray-100">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-xl font-bold text-gray-900">{course.title}</h3>
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        course.type === 'paid' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'
-                      }`}>
-                        {course.type === 'paid' ? '유료' : '무료'}
-                      </span>
-                    </div>
-                    <p className="text-gray-600 mb-4 text-sm line-clamp-2">{course.description}</p>
-                    
-                    <div className="space-y-2 mb-4 text-sm text-gray-600">
-                      <div>레슨: {course.lessons?.length || 0}개</div>
-                      {course.students && <div>수강생: {course.students}명</div>}
-                      {course.type === 'paid' && <div className="font-semibold text-orange-600">가격: {course.price}</div>}
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleCourseEdit(course)}
-                        className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span>수정</span>
-                      </button>
-                      <button
-                        onClick={() => handleCourseDelete(course.id)}
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+{/* Courses List - Enhanced */}
+{onlineCourses.length > 0 ? (
+  <div className="space-y-4">
+    {onlineCourses.map((course, index) => (
+      <div 
+        key={course.id} 
+        className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-purple-300 group"
+      >
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-grow">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-600 text-sm font-bold">
+                  {index + 1}
+                </span>
+                <h3 className="text-xl font-bold text-gray-900 group-hover:text-purple-600 transition-colors">
+                  {course.title}
+                </h3>
+                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                  course.type === 'paid' 
+                    ? 'bg-orange-100 text-orange-700' 
+                    : 'bg-green-100 text-green-700'
+                }`}>
+                  {course.type === 'paid' ? 'Paid' : 'Free'}
+                </span>
               </div>
-            ) : (
-              <div className="text-center py-12 bg-white rounded-xl shadow-lg">
-                <PlayCircle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <p className="text-xl text-gray-600">등록된 온라인 코스가 없습니다</p>
-                <p className="text-gray-500 mt-2">"새 코스 추가" 버튼을 클릭하여 첫 번째 온라인 코스를 생성하세요</p>
+              <p className="text-gray-600 text-sm line-clamp-2 ml-11">
+                {course.description}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              <button
+                onClick={() => handleCourseEdit(course)}
+                className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+                title="Edit"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleCourseDelete(course.id)}
+                className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-11">
+            <div className="flex items-center gap-2 text-sm">
+              <FileText className="h-4 w-4 text-gray-400" />
+              <span className="text-gray-700">{course.lessons?.length || 0} lessons</span>
+            </div>
+            {course.students && (
+              <div className="flex items-center gap-2 text-sm">
+                <Users className="h-4 w-4 text-gray-400" />
+                <span className="text-gray-700">{course.students} students</span>
               </div>
             )}
+            {course.type === 'paid' && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-orange-600 font-bold">{course.price}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+) : (
+  <div className="text-center py-16 bg-white rounded-xl shadow-lg border-2 border-dashed border-gray-200">
+    <div className="bg-purple-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+      <PlayCircle className="h-10 w-10 text-purple-500" />
+    </div>
+    <p className="text-xl font-semibold text-gray-900 mb-2">No courses yet</p>
+    <p className="text-gray-500 mb-6">Create your first online course to get started</p>
+    <button
+      onClick={() => setShowCourseForm(true)}
+      className="inline-flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+    >
+      <Plus className="h-5 w-5" />
+      <span>Add First Course</span>
+    </button>
+  </div>
+)}
           </>
         )}
       </div>
