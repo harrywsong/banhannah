@@ -7,8 +7,8 @@ const getApiUrl = () => {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Default for development
-  return 'http://localhost:3001';
+  // Default to production backend
+  return 'http://banhannah.dpdns.org:3001';
 };
 
 export const API_URL = getApiUrl();
