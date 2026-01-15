@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react'
 import AdminLogin from '../components/AdminLogin'
-import { apiEndpoint, apiRequest, addAuthHeaders } from '../config/api'  // ← ADD addAuthHeaders here
+import { apiEndpoint, addAuthHeaders } from '../config/api'
 import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield } from 'lucide-react'
 import { useAdminAuth } from '../contexts/AdminAuthContext';
 
 
 
 export default function AdminPanel() {
-  
   const { adminSession, adminLogout, isAdmin } = useAdminAuth();
-  const [activeTab, setActiveTab] = useState('dashboard') // 'dashboard', 'classes', 'files', or 'courses'
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [classes, setClasses] = useState([])
   const [files, setFiles] = useState([])
   const [onlineCourses, setOnlineCourses] = useState([])
@@ -78,19 +77,6 @@ const [currentLessonForm, setCurrentLessonForm] = useState({
   duration: ''
 })
 
-  // Check for admin session on mount
-  useEffect(() => {
-    const savedSession = localStorage.getItem('adminSession')
-    if (savedSession) {
-      try {
-        const session = JSON.parse(savedSession)
-        setAdminSession(session)
-      } catch (err) {
-        localStorage.removeItem('adminSession')
-      }
-    }
-  }, [])
-
   // Load data when authenticated
   useEffect(() => {
     if (!adminSession) return
@@ -104,7 +90,7 @@ const [currentLessonForm, setCurrentLessonForm] = useState({
     // Load files from backend API
     const loadFiles = async () => {
       try {
-        const response = await apiRequest(apiEndpoint('files/metadata'))
+        const response = await apiRequestAdmin(apiEndpoint('files/metadata'))
         if (response.ok) {
           const data = await response.json()
           setFiles(data.files || [])
@@ -129,7 +115,7 @@ const [currentLessonForm, setCurrentLessonForm] = useState({
     // Load courses from backend API
     const loadCourses = async () => {
       try {
-        const response = await apiRequest(apiEndpoint('courses/metadata'))
+        const response = await apiRequestAdmin(apiEndpoint('courses/metadata'))
         if (response.ok) {
           const data = await response.json()
           setOnlineCourses(data.courses || [])
@@ -170,13 +156,61 @@ useEffect(() => {
   return () => window.removeEventListener('beforeunload', handleBeforeUnload)
 }, [uploadProgress])
 
-  const handleAdminLogin = (session) => {
-    setAdminSession(session)
-  }
-
   const handleLogout = () => {
     adminLogout();
     console.log('✓ Admin logged out successfully');
+  };
+
+  // Admin API request helper with admin token
+  const addAuthHeadersAdmin = (xhr) => {
+    const token = localStorage.getItem('adminToken');
+    
+    xhr.setRequestHeader('ngrok-skip-browser-warning', 'true');
+    
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+  };
+
+  const apiRequestAdmin = async (url, options = {}) => {
+    const token = localStorage.getItem('adminToken');
+    
+    const defaultHeaders = {
+      'ngrok-skip-browser-warning': 'true'
+    };
+    
+    if (token) {
+      defaultHeaders['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const isFormData = options.body instanceof FormData;
+    if (!isFormData && options.body) {
+      defaultHeaders['Content-Type'] = 'application/json';
+    }
+    
+    const mergedOptions = {
+      ...options,
+      credentials: 'include',
+      headers: {
+        ...defaultHeaders,
+        ...options.headers
+      }
+    };
+    
+    try {
+      const response = await fetch(url, mergedOptions);
+      
+      if (response.status === 401) {
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminSession');
+        window.location.href = '/administrative';
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('API request failed:', error);
+      throw error;
+    }
   };
 
   // Class handlers
@@ -263,13 +297,13 @@ useEffect(() => {
       let response
       if (editingFile) {
         // Update existing file
-        response = await apiRequest(apiEndpoint(`files/metadata/${editingFile.id}`), {
+        response = await apiRequestAdmin(apiEndpoint(`files/metadata/${editingFile.id}`), {
           method: 'PUT',
           body: JSON.stringify(fileData)
         })
       } else {
         // Create new file
-        response = await apiRequest(apiEndpoint('files/metadata'), {
+        response = await apiRequestAdmin(apiEndpoint('files/metadata'), {
           method: 'POST',
           body: JSON.stringify(fileData)
         })
@@ -277,7 +311,7 @@ useEffect(() => {
 
       if (response.ok) {
         // Reload files from backend
-        const filesResponse = await apiRequest(apiEndpoint('files/metadata'))
+        const filesResponse = await apiRequestAdmin(apiEndpoint('files/metadata'))
         if (filesResponse.ok) {
           const filesData = await filesResponse.json()
           setFiles(filesData.files || [])
@@ -313,13 +347,13 @@ useEffect(() => {
     }
 
     try {
-      const response = await apiRequest(apiEndpoint(`files/metadata/${id}`), {
+      const response = await apiRequestAdmin(apiEndpoint(`files/metadata/${id}`), {
         method: 'DELETE'
       })
 
       if (response.ok) {
         // Reload files from backend
-        const filesResponse = await apiRequest(apiEndpoint('files/metadata'))
+        const filesResponse = await apiRequestAdmin(apiEndpoint('files/metadata'))
         if (filesResponse.ok) {
           const filesData = await filesResponse.json()
           setFiles(filesData.files || [])
@@ -364,13 +398,13 @@ useEffect(() => {
       let response
       if (editingCourse) {
         // Update existing course
-        response = await apiRequest(apiEndpoint(`courses/metadata/${editingCourse.id}`), {
+        response = await apiRequestAdmin(apiEndpoint(`courses/metadata/${editingCourse.id}`), {
           method: 'PUT',
           body: JSON.stringify(courseData)
         })
       } else {
         // Create new course
-        response = await apiRequest(apiEndpoint('courses/metadata'), {
+        response = await apiRequestAdmin(apiEndpoint('courses/metadata'), {
           method: 'POST',
           body: JSON.stringify(courseData)
         })
@@ -378,7 +412,7 @@ useEffect(() => {
 
       if (response.ok) {
         // Reload courses from backend
-        const coursesResponse = await apiRequest(apiEndpoint('courses/metadata'))
+        const coursesResponse = await apiRequestAdmin(apiEndpoint('courses/metadata'))
         if (coursesResponse.ok) {
           const coursesData = await coursesResponse.json()
           setOnlineCourses(coursesData.courses || [])
@@ -413,13 +447,13 @@ useEffect(() => {
     }
 
     try {
-      const response = await apiRequest(apiEndpoint(`courses/metadata/${id}`), {
+      const response = await apiRequestAdmin(apiEndpoint(`courses/metadata/${id}`), {
         method: 'DELETE'
       })
 
       if (response.ok) {
         // Reload courses from backend
-        const coursesResponse = await apiRequest(apiEndpoint('courses/metadata'))
+        const coursesResponse = await apiRequestAdmin(apiEndpoint('courses/metadata'))
         if (coursesResponse.ok) {
           const coursesData = await coursesResponse.json()
           setOnlineCourses(coursesData.courses || [])
@@ -675,7 +709,7 @@ if (data.success) {
       })
 
       xhr.open('POST', apiEndpoint('videos/upload'))
-      addAuthHeaders(xhr)
+      addAuthHeadersAdmin(xhr)
       xhr.send(formData)
 
     } catch (error) {
@@ -688,7 +722,7 @@ if (data.success) {
 
   // Show login if not authenticated
   if (!adminSession) {
-    return <AdminLogin onLogin={handleAdminLogin} />
+    return <AdminLogin />
   }
 
   // Calculate stats
@@ -1397,7 +1431,7 @@ if (data.success) {
                                 })
                                 
                                 xhr.open('POST', apiEndpoint('files/upload'))
-                                addAuthHeaders(xhr)
+                                addAuthHeadersAdmin(xhr)
                                 xhr.send(formData)
                                 
                               } catch (error) {
@@ -2055,9 +2089,9 @@ if (data.success) {
                             setVideoUploadProgress(0);
                           });
 
-                          xhr.open('POST', apiEndpoint('videos/upload'));
-                          addAuthHeaders(xhr);
-                          xhr.send(formData);
+                          xhr.open('POST', apiEndpoint('videos/upload'))
+                          addAuthHeadersAdmin(xhr)
+                          xhr.send(formData)
                         } catch (error) {
                           console.error('Video upload error:', error);
                           alert(`비디오 업로드에 실패했습니다: ${error.message}`);
