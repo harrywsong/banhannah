@@ -1,8 +1,7 @@
-// backend/utils/email.js
+// backend/utils/email.js - FIXED VERSION
 const nodemailer = require('nodemailer');
 
-// ========== SMTP CONFIGURATION ==========
-// Create reusable transporter
+// ========== SMTP CONFIGURATION - FIXED ==========
 const createTransporter = () => {
   // Check if SMTP credentials are configured
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
@@ -10,20 +9,32 @@ const createTransporter = () => {
     console.warn('📧 To enable real emails:');
     console.warn('   1. Set SMTP_HOST, SMTP_USER, SMTP_PASS in backend/.env');
     console.warn('   2. For Gmail: Enable 2FA and create App Password at https://myaccount.google.com/apppasswords');
-    console.warn('   3. Use the 16-character App Password as SMTP_PASS');
+    console.warn('   3. Use the 16-character App Password (remove spaces) as SMTP_PASS');
     return null;
   }
 
+  // CRITICAL FIX: Remove all spaces from app password
+  const cleanPassword = process.env.SMTP_PASS.replace(/\s/g, '');
+  
   console.log('✅ SMTP configured with:', process.env.SMTP_HOST, process.env.SMTP_USER);
+  console.log('📧 Password length:', cleanPassword.length, 'characters');
 
   return nodemailer.createTransporter({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    secure: false, // CRITICAL: Must be false for port 587 (use true for port 465)
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
+      pass: cleanPassword // Use cleaned password without spaces
+    },
+    // ADDITIONAL FIX: Add these options for better compatibility
+    tls: {
+      rejectUnauthorized: false, // Accept self-signed certificates
+      minVersion: 'TLSv1.2'
+    },
+    // Enable debug output
+    debug: process.env.NODE_ENV !== 'production',
+    logger: process.env.NODE_ENV !== 'production'
   });
 };
 
@@ -84,11 +95,30 @@ const sendVerificationEmail = async (email, token, name) => {
 
   if (transporter) {
     try {
-      await transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent successfully to ${email}`);
+      const info = await transporter.sendMail(mailOptions);
+      console.log('✅ Email sent successfully to:', email);
+      console.log('📧 Message ID:', info.messageId);
+      console.log('📧 Response:', info.response);
       return true;
     } catch (error) {
       console.error('❌ Failed to send email:', error.message);
+      console.error('📧 Error code:', error.code);
+      console.error('📧 Error command:', error.command);
+      
+      // Provide helpful error messages
+      if (error.code === 'EAUTH') {
+        console.error('🔐 Authentication failed. Please check:');
+        console.error('   1. SMTP_USER is correct (your Gmail address)');
+        console.error('   2. SMTP_PASS is your App Password (16 chars, no spaces)');
+        console.error('   3. 2FA is enabled on your Google account');
+        console.error('   4. App Password was generated at: https://myaccount.google.com/apppasswords');
+      } else if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT') {
+        console.error('🌐 Connection failed. Please check:');
+        console.error('   1. Internet connection is working');
+        console.error('   2. Firewall allows outbound SMTP (port 587)');
+        console.error('   3. SMTP_HOST is correct (smtp.gmail.com)');
+      }
+      
       throw new Error(`Email sending failed: ${error.message}`);
     }
   } else {
@@ -98,6 +128,7 @@ const sendVerificationEmail = async (email, token, name) => {
     console.log(`   Subject: ${mailOptions.subject}`);
     console.log(`   Verification URL: ${verificationUrl}`);
     console.log('   ⚠️  Configure SMTP to send real emails');
+    return false;
   }
 };
 
@@ -159,8 +190,9 @@ const sendEmailChangeVerification = async (email, token, name) => {
 
   if (transporter) {
     try {
-      await transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent successfully to ${email}`);
+      const info = await transporter.sendMail(mailOptions);
+      console.log('✅ Email sent successfully to:', email);
+      console.log('📧 Message ID:', info.messageId);
       return true;
     } catch (error) {
       console.error('❌ Failed to send email:', error.message);
@@ -172,6 +204,7 @@ const sendEmailChangeVerification = async (email, token, name) => {
     console.log(`   To: ${email}`);
     console.log(`   Subject: ${mailOptions.subject}`);
     console.log(`   Verification URL: ${verificationUrl}`);
+    return false;
   }
 };
 
@@ -182,7 +215,7 @@ const sendContactFormEmail = async ({ name, email, subject, message }) => {
   // Email to admin
   const adminEmail = {
     from: process.env.EMAIL_FROM || '"반혜나 교육" <noreply@yewon.com>',
-    to: 'hwstestcontact@gmail.com', // Admin email
+    to: process.env.SMTP_USER || 'hwstestcontact@gmail.com', // Admin email
     replyTo: email, // User's email for easy reply
     subject: `[문의] ${subject}`,
     html: `
@@ -268,7 +301,7 @@ const sendContactFormEmail = async ({ name, email, subject, message }) => {
       <p>빠른 시일 내에 답변 드리겠습니다. 일반적으로 1-2 영업일 이내에 회신해 드립니다.</p>
       <p style="margin-top: 30px; padding: 15px; background: #dbeafe; border-radius: 6px; font-size: 14px;">
         <strong>💡 추가 문의사항이 있으신가요?</strong><br>
-        이 이메일에 바로 답장하시거나 hwstestcontact@gmail.com으로 연락주세요.
+        이 이메일에 바로 답장하시거나 ${process.env.SMTP_USER || 'hwstestcontact@gmail.com'}으로 연락주세요.
       </p>
     </div>
     <div class="footer">
@@ -283,19 +316,28 @@ const sendContactFormEmail = async ({ name, email, subject, message }) => {
 
   if (transporter) {
     try {
-      await transporter.sendMail(mailOptions);
-      console.log(`✅ Email sent successfully to ${email}`);
+      // Send admin email
+      const adminInfo = await transporter.sendMail(adminEmail);
+      console.log('✅ Admin notification sent successfully');
+      console.log('📧 Admin Message ID:', adminInfo.messageId);
+      
+      // Send user confirmation
+      const userInfo = await transporter.sendMail(userEmail);
+      console.log('✅ User confirmation sent successfully to:', email);
+      console.log('📧 User Message ID:', userInfo.messageId);
+      
       return true;
     } catch (error) {
-      console.error('❌ Failed to send email:', error.message);
+      console.error('❌ Failed to send contact form emails:', error.message);
       throw new Error(`Email sending failed: ${error.message}`);
     }
   } else {
     // Simulation mode
     console.log('📧 [SIMULATED EMAIL]:');
-    console.log(`   Admin notification: hwstestcontact@gmail.com`);
+    console.log(`   Admin notification: ${process.env.SMTP_USER || 'hwstestcontact@gmail.com'}`);
     console.log(`   User confirmation: ${email}`);
     console.log(`   Subject: ${subject}`);
+    return false;
   }
 };
 
@@ -353,8 +395,9 @@ const sendPasswordResetEmail = async (email, token, name) => {
   };
 
   if (transporter) {
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Password reset email sent to ${email}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Password reset email sent to:', email);
+    console.log('📧 Message ID:', info.messageId);
   } else {
     console.log('📧 [SIMULATED] Password reset email:');
     console.log(`   To: ${email}`);
