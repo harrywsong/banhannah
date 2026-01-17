@@ -1,8 +1,15 @@
-// backend/utils/email.js - FIXED VERSION
+// backend/utils/email.js - OPTIMIZED VERSION with connection pooling
 const nodemailer = require('nodemailer');
 
-// ========== SMTP CONFIGURATION - FIXED ==========
+// ========== SMTP CONFIGURATION WITH CONNECTION POOLING ==========
+let transporterInstance = null;
+
 const createTransporter = () => {
+  // Return existing transporter if already created (connection pooling)
+  if (transporterInstance) {
+    return transporterInstance;
+  }
+
   // Check if SMTP credentials are configured
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn('⚠️  SMTP credentials not configured. Emails will be simulated.');
@@ -19,23 +26,45 @@ const createTransporter = () => {
   console.log('✅ SMTP configured with:', process.env.SMTP_HOST, process.env.SMTP_USER);
   console.log('📧 Password length:', cleanPassword.length, 'characters');
 
-  return nodemailer.createTransport({
+  transporterInstance = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT) || 587,
     secure: false, // CRITICAL: Must be false for port 587 (use true for port 465)
+    pool: true, // PERFORMANCE: Use connection pooling
+    maxConnections: 5, // PERFORMANCE: Allow up to 5 simultaneous connections
+    maxMessages: 100, // PERFORMANCE: Reuse connections for up to 100 emails
     auth: {
       user: process.env.SMTP_USER,
       pass: cleanPassword // Use cleaned password without spaces
     },
+    // PERFORMANCE: Reduce timeouts for faster failures
+    connectionTimeout: 5000, // 5 seconds instead of default 2 minutes
+    greetingTimeout: 5000,
+    socketTimeout: 10000,
     // ADDITIONAL FIX: Add these options for better compatibility
     tls: {
       rejectUnauthorized: false, // Accept self-signed certificates
       minVersion: 'TLSv1.2'
     },
-    // Enable debug output
+    // Enable debug output in development
     debug: process.env.NODE_ENV !== 'production',
     logger: process.env.NODE_ENV !== 'production'
   });
+
+  return transporterInstance;
+};
+
+// Warmup SMTP connection on server start for faster first email
+const warmupTransporter = async () => {
+  const transporter = createTransporter();
+  if (transporter) {
+    try {
+      await transporter.verify();
+      console.log('✅ SMTP connection verified and ready');
+    } catch (error) {
+      console.error('❌ SMTP connection failed:', error.message);
+    }
+  }
 };
 
 // ========== EMAIL TEMPLATES ==========
@@ -409,5 +438,6 @@ module.exports = {
   sendVerificationEmail,
   sendEmailChangeVerification,
   sendContactFormEmail,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  warmupTransporter // Export warmup function
 };

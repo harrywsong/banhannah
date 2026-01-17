@@ -634,6 +634,11 @@ app.listen(PORT, HOST, async () => {
   console.log(`✓ Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✓ CORS allowed origins: All origins allowed (development mode)`);
+  
+  // Warm up SMTP connection for instant emails
+  const { warmupTransporter } = require('./utils/email');
+  await warmupTransporter();
+  
   await initializeAdmin();
 });
 
