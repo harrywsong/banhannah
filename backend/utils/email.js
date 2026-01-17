@@ -19,7 +19,7 @@ const createTransporter = () => {
   console.log('✅ SMTP configured with:', process.env.SMTP_HOST, process.env.SMTP_USER);
   console.log('📧 Password length:', cleanPassword.length, 'characters');
 
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT) || 587,
     secure: false, // CRITICAL: Must be false for port 587 (use true for port 465)
