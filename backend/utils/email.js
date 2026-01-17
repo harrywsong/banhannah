@@ -7,9 +7,14 @@ const createTransporter = () => {
   // Check if SMTP credentials are configured
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn('⚠️  SMTP credentials not configured. Emails will be simulated.');
-    console.warn('📧 Set SMTP_HOST, SMTP_USER, SMTP_PASS in .env to enable real emails');
+    console.warn('📧 To enable real emails:');
+    console.warn('   1. Set SMTP_HOST, SMTP_USER, SMTP_PASS in backend/.env');
+    console.warn('   2. For Gmail: Enable 2FA and create App Password at https://myaccount.google.com/apppasswords');
+    console.warn('   3. Use the 16-character App Password as SMTP_PASS');
     return null;
   }
+
+  console.log('✅ SMTP configured with:', process.env.SMTP_HOST, process.env.SMTP_USER);
 
   return nodemailer.createTransporter({
     host: process.env.SMTP_HOST,
@@ -78,11 +83,17 @@ const sendVerificationEmail = async (email, token, name) => {
   };
 
   if (transporter) {
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Verification email sent to ${email}`);
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Email sent successfully to ${email}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send email:', error.message);
+      throw new Error(`Email sending failed: ${error.message}`);
+    }
   } else {
     // Simulation mode
-    console.log('📧 [SIMULATED] Verification email:');
+    console.log('📧 [SIMULATED EMAIL]:');
     console.log(`   To: ${email}`);
     console.log(`   Subject: ${mailOptions.subject}`);
     console.log(`   Verification URL: ${verificationUrl}`);
@@ -147,10 +158,17 @@ const sendEmailChangeVerification = async (email, token, name) => {
   };
 
   if (transporter) {
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Email change verification sent to ${email}`);
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Email sent successfully to ${email}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send email:', error.message);
+      throw new Error(`Email sending failed: ${error.message}`);
+    }
   } else {
-    console.log('📧 [SIMULATED] Email change verification:');
+    // Simulation mode
+    console.log('📧 [SIMULATED EMAIL]:');
     console.log(`   To: ${email}`);
     console.log(`   Subject: ${mailOptions.subject}`);
     console.log(`   Verification URL: ${verificationUrl}`);
@@ -264,12 +282,17 @@ const sendContactFormEmail = async ({ name, email, subject, message }) => {
   };
 
   if (transporter) {
-    // Send both emails
-    await transporter.sendMail(adminEmail);
-    await transporter.sendMail(userEmail);
-    console.log(`✅ Contact form emails sent (admin + user confirmation)`);
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log(`✅ Email sent successfully to ${email}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to send email:', error.message);
+      throw new Error(`Email sending failed: ${error.message}`);
+    }
   } else {
-    console.log('📧 [SIMULATED] Contact form emails:');
+    // Simulation mode
+    console.log('📧 [SIMULATED EMAIL]:');
     console.log(`   Admin notification: hwstestcontact@gmail.com`);
     console.log(`   User confirmation: ${email}`);
     console.log(`   Subject: ${subject}`);

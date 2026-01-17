@@ -100,38 +100,37 @@ export default function Profile() {
       })
   
       if (response.ok) {
-        const data = await response.json()
-        
-        // Update user in localStorage
-        const updatedUser = { 
-          ...user, 
-          name: profileForm.name,
-          email: profileForm.email
-        }
-        localStorage.setItem('user', JSON.stringify(updatedUser))
-        
-        // CRITICAL: Update token if backend sent a new one
-        if (data.token) {
-          localStorage.setItem('token', data.token)
-        }
+        const data = await response.json();
         
         // Save profile picture if changed
         if (profilePicture) {
-          localStorage.setItem(`profilePicture_${user.id}`, profilePicturePreview)
+          localStorage.setItem(`profilePicture_${user.id}`, profilePicturePreview);
         }
-  
-        if (data.emailChanged || emailChanged) {
+        
+        if (data.emailChanged) {
+          // Email was changed - user needs to verify new email
           setMessage({ 
             type: 'success', 
-            text: '프로필이 업데이트되었습니다! 이메일이 변경되어 다시 로그인해야 합니다.' 
-          })
+            text: `새 이메일로 인증 링크가 전송되었습니다!\n\n${profileForm.email}을 확인하고 인증을 완료한 후 새 이메일로 로그인해주세요.\n\n(스팸 폴더도 확인해주세요)\n\n3초 후 자동으로 로그아웃됩니다.`
+          });
           
-          // Auto logout after 2 seconds if email changed
+          // Auto logout after 3 seconds
           setTimeout(() => {
-            logout()
-            navigate('/login')
-          }, 2000)
+            logout();
+            navigate('/login');
+          }, 3000);
         } else {
+          // Name only changed or no email change
+          const updatedUser = { 
+            ...user, 
+            name: profileForm.name,
+            email: profileForm.email
+          };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          
+          if (data.token) {
+            localStorage.setItem('token', data.token);
+          }
           setMessage({ type: 'success', text: '프로필이 성공적으로 업데이트되었습니다!' })
           
           // Refresh page to update navbar

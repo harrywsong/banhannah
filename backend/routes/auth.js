@@ -62,19 +62,26 @@ router.post('/register', registerValidation, async (req, res) => {
     });
 
     // Send verification email
+    let emailSent = false;
     try {
       await sendVerificationEmail(email, verificationToken, name);
       console.log('✅ Verification email sent to:', email);
+      emailSent = true;
     } catch (emailError) {
       console.error('❌ Failed to send verification email:', emailError);
+      console.error('Error details:', emailError.message);
       // Continue registration even if email fails
       console.warn('⚠️ User registered but verification email failed');
+      console.warn('💡 Check SMTP configuration in backend/.env');
     }
 
     res.status(201).json({
       success: true,
       user,
-      message: '회원가입이 완료되었습니다. 이메일을 확인하여 계정을 인증해주세요.'
+      emailSent,
+      message: emailSent 
+        ? '회원가입이 완료되었습니다. 이메일을 확인하여 계정을 인증해주세요.'
+        : '회원가입이 완료되었습니다. 이메일 전송에 실패했지만 관리자에게 문의하여 계정을 인증할 수 있습니다.'
     });
   } catch (error) {
     console.error('Register error:', error);

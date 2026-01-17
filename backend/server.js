@@ -25,6 +25,7 @@ const { promisify } = require('util');
 // Import routes
 const authRoutes = require('./routes/auth');
 const videoRoutes = require('./routes/videos');
+const contactRoutes = require('./routes/contact');
 
 // Import middleware
 const { authenticate, requireAdmin, optionalAuth } = require('./middleware/auth');
@@ -211,6 +212,7 @@ app.get('/api/health', (req, res) => {
 // Auth routes
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
+app.use('/api/contact', contactRoutes);
 
 // ========== COURSE PURCHASE ENDPOINT ==========
 app.post('/api/courses/purchase', authenticate, async (req, res) => {

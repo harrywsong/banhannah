@@ -33,8 +33,12 @@ export default function Register() {
     const result = await register(formData.name, formData.email, formData.password)
     
     if (result.success) {
-      alert('회원가입이 완료되었습니다! 이메일을 확인하여 계정을 인증해주세요.')
-      navigate('/login')
+      const message = result.emailSent !== false
+        ? '회원가입이 완료되었습니다!\n\n이메일을 확인하여 계정을 인증해주세요.\n(스팸 폴더도 확인해주세요)'
+        : '회원가입이 완료되었습니다!\n\n⚠️ 이메일 전송에 실패했습니다.\n로그인을 시도하면 인증 이메일 재전송 옵션을 볼 수 있습니다.';
+      
+      alert(message);
+      navigate('/login');
     } else {
       setError(result.error || 'Registration failed. Please try again.')
     }
