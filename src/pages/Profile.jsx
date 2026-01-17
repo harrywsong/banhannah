@@ -85,11 +85,11 @@ export default function Profile() {
     e.preventDefault()
     setMessage({ type: '', text: '' })
     setLoading(true)
-
+  
     try {
       // Check if email was changed
       const emailChanged = profileForm.email !== user.email
-
+  
       // In production, this would call the backend API
       const response = await apiRequest(apiEndpoint('auth/profile'), {
         method: 'PUT',
@@ -98,7 +98,7 @@ export default function Profile() {
           email: profileForm.email
         })
       })
-
+  
       if (response.ok) {
         const data = await response.json()
         
@@ -110,11 +110,16 @@ export default function Profile() {
         }
         localStorage.setItem('user', JSON.stringify(updatedUser))
         
+        // CRITICAL: Update token if backend sent a new one
+        if (data.token) {
+          localStorage.setItem('token', data.token)
+        }
+        
         // Save profile picture if changed
         if (profilePicture) {
           localStorage.setItem(`profilePicture_${user.id}`, profilePicturePreview)
         }
-
+  
         if (data.emailChanged || emailChanged) {
           setMessage({ 
             type: 'success', 

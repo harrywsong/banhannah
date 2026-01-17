@@ -14,9 +14,13 @@ export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
 
+  const [showResendButton, setShowResendButton] = useState(false)
+  const [resending, setResending] = useState(false)
+  
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setShowResendButton(false)
     
     const result = await login(formData.email, formData.password)
     
@@ -24,6 +28,42 @@ export default function Login() {
       navigate('/dashboard')
     } else {
       setError(result.error || 'Login failed. Please try again.')
+      
+      // Show resend button if email not verified
+      if (result.code === 'EMAIL_NOT_VERIFIED') {
+        setShowResendButton(true)
+      }
+    }
+  }
+  
+  const handleResendVerification = async () => {
+    setResending(true)
+    setError('')
+    
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      const response = await fetch(`${API_URL}/api/auth/resend-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify({ email: formData.email })
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok && data.success) {
+        setError('')
+        alert('인증 이메일이 재전송되었습니다. 이메일을 확인해주세요.')
+        setShowResendButton(false)
+      } else {
+        setError(data.error || '이메일 재전송에 실패했습니다.')
+      }
+    } catch (error) {
+      setError('서버와 연결할 수 없습니다.')
+    } finally {
+      setResending(false)
     }
   }
 

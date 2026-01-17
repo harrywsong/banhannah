@@ -10,14 +10,17 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("STUDENT")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  reviews   Review[]
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  name              String
+  password          String
+  role              String    @default("STUDENT")
+  emailVerified     Boolean   @default(false)
+  verificationToken String?
+  tokenExpiry       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  reviews           Review[]
 }
 
 model File {

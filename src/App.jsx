@@ -22,6 +22,7 @@ import FAQs from './pages/FAQs';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import Profile from './pages/Profile';
+import VerifyEmail from './pages/VerifyEmail';
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/login" element={<Login />} />
                       <Route path="/register" element={<Register />} />
+                      <Route path="/verify-email" element={<VerifyEmail />} />
                       <Route path="/forgot-password" element={<ForgotPassword />} />
                       <Route path="/about" element={<About />} />
                       <Route path="/contact" element={<Contact />} />

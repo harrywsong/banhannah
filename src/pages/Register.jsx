@@ -33,7 +33,8 @@ export default function Register() {
     const result = await register(formData.name, formData.email, formData.password)
     
     if (result.success) {
-      navigate('/dashboard')
+      alert('회원가입이 완료되었습니다! 이메일을 확인하여 계정을 인증해주세요.')
+      navigate('/login')
     } else {
       setError(result.error || 'Registration failed. Please try again.')
     }

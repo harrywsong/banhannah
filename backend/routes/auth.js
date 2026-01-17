@@ -1,9 +1,11 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const { registerValidation, loginValidation } = require('../middleware/validation');
 const { authenticate } = require('../middleware/auth');
+const { sendVerificationEmail, sendEmailChangeVerification } = require('../utils/email');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -34,42 +36,127 @@ router.post('/register', registerValidation, async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Create user (not verified yet)
     const user = await prisma.user.create({
       data: {
         email,
         name,
         password: hashedPassword,
-        role: 'STUDENT'
+        role: 'STUDENT',
+        emailVerified: false,
+        verificationToken,
+        tokenExpiry
       },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
+        emailVerified: true,
         createdAt: true
       }
     });
 
-    // Generate token
-    const token = generateToken(user.id);
-
-    // Set cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    // Send verification email
+    try {
+      await sendVerificationEmail(email, verificationToken, name);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Continue registration even if email fails
+    }
 
     res.status(201).json({
       success: true,
       user,
-      token
+      message: '회원가입이 완료되었습니다. 이메일을 확인하여 계정을 인증해주세요.'
     });
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// Verify email
+router.get('/verify-email/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const user = await prisma.user.findFirst({
+      where: {
+        verificationToken: token,
+        tokenExpiry: {
+          gt: new Date()
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: '유효하지 않거나 만료된 인증 링크입니다.' });
+    }
+
+    // Verify user
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        verificationToken: null,
+        tokenExpiry: null
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      message: '이메일이 성공적으로 인증되었습니다. 이제 로그인할 수 있습니다.' 
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.status(500).json({ error: '이메일 인증에 실패했습니다.' });
+  }
+});
+
+// Resend verification email
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({ error: '이미 인증된 계정입니다.' });
+    }
+
+    // Generate new verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verificationToken,
+        tokenExpiry
+      }
+    });
+
+    // Send verification email
+    await sendVerificationEmail(email, verificationToken, user.name);
+
+    res.json({ 
+      success: true, 
+      message: '인증 이메일이 재전송되었습니다.' 
+    });
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({ error: '인증 이메일 재전송에 실패했습니다.' });
   }
 });
 
@@ -85,6 +172,15 @@ router.post('/login', loginValidation, async (req, res) => {
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      return res.status(403).json({ 
+        error: '이메일 인증이 필요합니다. 이메일을 확인해주세요.',
+        code: 'EMAIL_NOT_VERIFIED',
+        email: user.email
+      });
     }
 
     // Verify password
@@ -167,8 +263,23 @@ router.put('/profile', authenticate, async (req, res) => {
         return res.status(400).json({ error: 'Email already in use by another account' });
       }
       
+      // Generate verification token for new email
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      
       updateData.email = email;
+      updateData.emailVerified = false;
+      updateData.verificationToken = verificationToken;
+      updateData.tokenExpiry = tokenExpiry;
       emailChanged = true;
+      
+      // Send verification email to NEW email address
+      try {
+        await sendEmailChangeVerification(email, verificationToken, name || req.user.name);
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+        return res.status(500).json({ error: '이메일 전송에 실패했습니다. 다시 시도해주세요.' });
+      }
     }
 
     // Update user in database
@@ -179,28 +290,36 @@ router.put('/profile', authenticate, async (req, res) => {
         id: true,
         email: true,
         name: true,
-        role: true
+        role: true,
+        emailVerified: true
       }
     });
 
-    // CRITICAL FIX: Generate new token with updated user ID
-    // The password remains the same - only email/name changed
-    const newToken = generateToken(updatedUser.id);
+    if (emailChanged) {
+      // Log out user - they need to verify new email
+      res.clearCookie('token');
+      res.json({ 
+        success: true, 
+        message: '새 이메일로 인증 링크가 전송되었습니다. 이메일을 확인하고 인증 후 다시 로그인해주세요.',
+        requiresRelogin: true
+      });
+    } else {
+      // Generate new token only if email not changed
+      const newToken = generateToken(updatedUser.id);
+      
+      res.cookie('token', newToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
 
-    // Update cookie with new token
-    res.cookie('token', newToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
-
-    res.json({ 
-      success: true, 
-      user: updatedUser,
-      token: newToken, // Send new token to frontend
-      emailChanged: emailChanged
-    });
+      res.json({ 
+        success: true, 
+        user: updatedUser,
+        token: newToken
+      });
+    }
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: 'Failed to update profile' });
