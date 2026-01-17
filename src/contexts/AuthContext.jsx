@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { apiEndpoint, apiRequest } from '../config/api'
 
 const AuthContext = createContext(null)
 
@@ -6,66 +7,132 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Load user from localStorage on mount
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
+  // Load user from localStorage and verify with backend on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('user')
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
+    const loadUser = async () => {
+      const savedUser = localStorage.getItem('user')
+      const token = localStorage.getItem('token')
+      
+      if (savedUser && token) {
+        try {
+          setUser(JSON.parse(savedUser))
+          
+          // Verify token with backend
+          const response = await apiRequest(apiEndpoint('auth/me'))
+          if (response.ok) {
+            const data = await response.json()
+            setUser(data.user)
+            localStorage.setItem('user', JSON.stringify(data.user))
+          } else {
+            // Token invalid, clear everything
+            localStorage.removeItem('user')
+            localStorage.removeItem('token')
+            setUser(null)
+          }
+        } catch (error) {
+          console.error('Error verifying token:', error)
+          // Keep user logged in locally even if backend is down
+        }
+      }
+      setLoading(false)
     }
-    setLoading(false)
+
+    loadUser()
   }, [])
 
-  const login = (email, password) => {
-    // Mock authentication - in production, call API
-    const mockUsers = [
-      { id: 1, email: 'admin@yewon.com', password: 'admin123', name: 'Admin User', role: 'admin' },
-      { id: 2, email: 'student@yewon.com', password: 'student123', name: 'Student User', role: 'student' },
-      { id: 3, email: 'test@test.com', password: 'test123', name: 'Test User', role: 'student' }
-    ]
+  const login = async (email, password) => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, password })
+      })
 
-    const foundUser = mockUsers.find(u => u.email === email && u.password === password)
-    
-    if (foundUser) {
-      const userData = {
-        id: foundUser.id,
-        email: foundUser.email,
-        name: foundUser.name,
-        role: foundUser.role
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        const userData = {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role
+        }
+        
+        setUser(userData)
+        localStorage.setItem('user', JSON.stringify(userData))
+        
+        if (data.token) {
+          localStorage.setItem('token', data.token)
+        }
+        
+        return { success: true, user: userData }
+      } else {
+        return { success: false, error: data.error || 'Login failed' }
       }
-      setUser(userData)
-      localStorage.setItem('user', JSON.stringify(userData))
-      return { success: true, user: userData }
+    } catch (error) {
+      console.error('Login error:', error)
+      return { success: false, error: 'Cannot connect to server. Please try again.' }
     }
-    
-    return { success: false, error: 'Invalid email or password' }
   }
 
-  const register = (name, email, password) => {
-    // Mock registration - in production, call API
-    const newUser = {
-      id: Date.now(),
-      email,
-      name,
-      role: 'student'
-    }
-    
-    // Check if user already exists
-    const existingUsers = JSON.parse(localStorage.getItem('users') || '[]')
-    if (existingUsers.find(u => u.email === email)) {
-      return { success: false, error: 'Email already registered' }
-    }
+  const register = async (name, email, password) => {
+    try {
+      const response = await fetch(`${API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ name, email, password })
+      })
 
-    existingUsers.push({ ...newUser, password })
-    localStorage.setItem('users', JSON.stringify(existingUsers))
-    
-    setUser(newUser)
-    localStorage.setItem('user', JSON.stringify(newUser))
-    return { success: true, user: newUser }
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        const userData = {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role
+        }
+        
+        setUser(userData)
+        localStorage.setItem('user', JSON.stringify(userData))
+        
+        if (data.token) {
+          localStorage.setItem('token', data.token)
+        }
+        
+        return { success: true, user: userData }
+      } else {
+        return { success: false, error: data.error || 'Registration failed' }
+      }
+    } catch (error) {
+      console.error('Registration error:', error)
+      return { success: false, error: 'Cannot connect to server. Please try again.' }
+    }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      }).catch(err => console.error('Logout error:', err))
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+    
     setUser(null)
     localStorage.removeItem('user')
+    localStorage.removeItem('token')
   }
 
   const value = {
@@ -74,7 +141,7 @@ export function AuthProvider({ children }) {
     register,
     logout,
     loading,
-    isAdmin: user?.role === 'admin'
+    isAdmin: user?.role === 'ADMIN'
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

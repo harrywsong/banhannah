@@ -16,21 +16,21 @@ export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-
+  
     if (formData.password !== formData.confirmPassword) {
       setError('비밀번호가 일치하지 않습니다')
       return
     }
-
+  
     if (formData.password.length < 6) {
       setError('비밀번호는 최소 6자 이상이어야 합니다')
       return
     }
-
-    const result = register(formData.name, formData.email, formData.password)
+  
+    const result = await register(formData.name, formData.email, formData.password)
     
     if (result.success) {
       navigate('/dashboard')

@@ -21,6 +21,7 @@ import Contact from './pages/Contact';
 import FAQs from './pages/FAQs';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -65,7 +66,7 @@ function App() {
                       <Route path="/faqs" element={<FAQs />} />
                       <Route path="/privacy" element={<Privacy />} />
                       <Route path="/terms" element={<Terms />} />
-                    </Routes>
+                      <Route path="/profile" element={<Profile />} />                    </Routes>
                   </main>
                   <Footer />
                 </div>
