@@ -49,7 +49,6 @@ export default function Login() {
             </Link>
           </p>
           <p className="mt-4 text-center text-xs text-gray-500">
-            데모: admin@yewon.com / admin123 또는 test@test.com / test123
           </p>
         </div>
 

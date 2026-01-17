@@ -1,18 +1,37 @@
-import { useState } from 'react'
+// src/components/Navbar.jsx
+import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Menu, X, BookOpen, User, LogOut, FileText, Video } from 'lucide-react'
+import { Menu, X, BookOpen, User, LogOut, FileText, Video, ChevronDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
   const navigate = useNavigate()
   const { user, logout, isAdmin } = useAuth()
+  const userMenuRef = useRef(null)
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleLogout = () => {
     logout()
     navigate('/')
     setIsOpen(false)
+    setShowUserMenu(false)
   }
+
+  // Get profile picture from localStorage
+  const profilePicture = user ? localStorage.getItem(`profilePicture_${user.id}`) : null
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50 border-b border-gray-100">
@@ -81,19 +100,53 @@ export default function Navbar() {
             
             {user ? (
               <div className="flex items-center space-x-3 ml-2 pl-3 border-l border-gray-200">
-                <div className="flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg">
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                    {user.name.charAt(0)}
-                  </div>
-                  <span className="text-gray-700 font-medium">{user.name}님</span>
+                {/* User Menu Dropdown */}
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                      {profilePicture ? (
+                        <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        user.name.charAt(0)
+                      )}
+                    </div>
+                    <span className="text-gray-700 font-medium">{user.name}님</span>
+                    <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {showUserMenu && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                      <Link
+                        to="/profile"
+                        onClick={() => setShowUserMenu(false)}
+                        className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors flex items-center space-x-2"
+                      >
+                        <User className="h-4 w-4" />
+                        <span>내 프로필</span>
+                      </Link>
+                      <Link
+                        to="/dashboard"
+                        onClick={() => setShowUserMenu(false)}
+                        className="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors flex items-center space-x-2"
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span>대시보드</span>
+                      </Link>
+                      <div className="border-t border-gray-200 my-1"></div>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>로그아웃</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-all duration-200 flex items-center space-x-2 font-medium"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>로그아웃</span>
-                </button>
               </div>
             ) : (
               <Link 
@@ -167,20 +220,33 @@ export default function Navbar() {
               <div className="border-t border-gray-200 my-2"></div>
               
               {user && (
-                <Link 
-                  to="/dashboard" 
-                  className="px-4 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors font-medium" 
-                  onClick={() => setIsOpen(false)}
-                >
-                  대시보드
-                </Link>
+                <>
+                  <Link 
+                    to="/dashboard" 
+                    className="px-4 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors font-medium" 
+                    onClick={() => setIsOpen(false)}
+                  >
+                    대시보드
+                  </Link>
+                  <Link 
+                    to="/profile" 
+                    className="px-4 py-3 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors font-medium" 
+                    onClick={() => setIsOpen(false)}
+                  >
+                    내 프로필
+                  </Link>
+                </>
               )}
               
               {user ? (
                 <>
                   <div className="px-4 py-3 flex items-center space-x-3 bg-gray-50 rounded-lg">
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
-                      {user.name.charAt(0)}
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold overflow-hidden">
+                      {profilePicture ? (
+                        <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        user.name.charAt(0)
+                      )}
                     </div>
                     <div>
                       <div className="font-semibold text-gray-900">{user.name}님, 안녕하세요</div>
