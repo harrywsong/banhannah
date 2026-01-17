@@ -149,11 +149,26 @@ router.get('/me', authenticate, async (req, res) => {
 // Update user profile
 router.put('/profile', authenticate, async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, email } = req.body;
+    
+    // If email is being changed, check if it's already taken
+    if (email && email !== req.user.email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+      
+      if (existingUser && existingUser.id !== req.user.id) {
+        return res.status(400).json({ error: 'Email already in use by another account' });
+      }
+    }
+
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
 
     const user = await prisma.user.update({
       where: { id: req.user.id },
-      data: { name },
+      data: updateData,
       select: {
         id: true,
         email: true,
@@ -162,7 +177,11 @@ router.put('/profile', authenticate, async (req, res) => {
       }
     });
 
-    res.json({ success: true, user });
+    res.json({ 
+      success: true, 
+      user,
+      emailChanged: email && email !== req.user.email
+    });
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: 'Failed to update profile' });

@@ -87,17 +87,27 @@ export default function Profile() {
     setLoading(true)
 
     try {
+      // Check if email was changed
+      const emailChanged = profileForm.email !== user.email
+
       // In production, this would call the backend API
       const response = await apiRequest(apiEndpoint('auth/profile'), {
         method: 'PUT',
-        body: JSON.stringify({ name: profileForm.name })
+        body: JSON.stringify({ 
+          name: profileForm.name,
+          email: profileForm.email
+        })
       })
 
       if (response.ok) {
         const data = await response.json()
         
         // Update user in localStorage
-        const updatedUser = { ...user, name: profileForm.name }
+        const updatedUser = { 
+          ...user, 
+          name: profileForm.name,
+          email: profileForm.email
+        }
         localStorage.setItem('user', JSON.stringify(updatedUser))
         
         // Save profile picture if changed
@@ -105,12 +115,25 @@ export default function Profile() {
           localStorage.setItem(`profilePicture_${user.id}`, profilePicturePreview)
         }
 
-        setMessage({ type: 'success', text: '프로필이 성공적으로 업데이트되었습니다!' })
-        
-        // Refresh page to update navbar
-        setTimeout(() => {
-          window.location.reload()
-        }, 1500)
+        if (data.emailChanged || emailChanged) {
+          setMessage({ 
+            type: 'success', 
+            text: '프로필이 업데이트되었습니다! 이메일이 변경되어 다시 로그인해야 합니다.' 
+          })
+          
+          // Auto logout after 2 seconds if email changed
+          setTimeout(() => {
+            logout()
+            navigate('/login')
+          }, 2000)
+        } else {
+          setMessage({ type: 'success', text: '프로필이 성공적으로 업데이트되었습니다!' })
+          
+          // Refresh page to update navbar
+          setTimeout(() => {
+            window.location.reload()
+          }, 1500)
+        }
       } else {
         const errorData = await response.json()
         setMessage({ type: 'error', text: errorData.error || '프로필 업데이트에 실패했습니다.' })
@@ -302,22 +325,26 @@ export default function Profile() {
                 </div>
               </div>
 
-              {/* Email (Read-only) */}
+              {/* Email */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  이메일
+                  이메일 *
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                   <input
                     type="email"
                     id="email"
+                    required
                     value={profileForm.email}
-                    disabled
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+                    onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="이메일을 입력하세요"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">이메일 주소는 변경할 수 없습니다</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  이메일 변경 시 자동으로 로그아웃되며 새 이메일로 다시 로그인해야 합니다
+                </p>
               </div>
 
               {/* Submit Button */}
