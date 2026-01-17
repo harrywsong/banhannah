@@ -64,9 +64,11 @@ router.post('/register', registerValidation, async (req, res) => {
     // Send verification email
     try {
       await sendVerificationEmail(email, verificationToken, name);
+      console.log('✅ Verification email sent to:', email);
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
+      console.error('❌ Failed to send verification email:', emailError);
       // Continue registration even if email fails
+      console.warn('⚠️ User registered but verification email failed');
     }
 
     res.status(201).json({
@@ -242,14 +244,21 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
-// ========== FIXED: Update user profile ==========
+// ========== IMPROVED: Update user profile ==========
 router.put('/profile', authenticate, async (req, res) => {
   try {
     const { name, email } = req.body;
     
+    // Validation
+    if (!name || !email) {
+      return res.status(400).json({ error: '이름과 이메일은 필수 항목입니다.' });
+    }
+    
     // Build update data object
     const updateData = {};
-    if (name) updateData.name = name;
+    if (name && name !== req.user.name) {
+      updateData.name = name;
+    }
     
     // Check if email is being changed
     let emailChanged = false;
@@ -260,7 +269,7 @@ router.put('/profile', authenticate, async (req, res) => {
       });
       
       if (existingUser && existingUser.id !== req.user.id) {
-        return res.status(400).json({ error: 'Email already in use by another account' });
+        return res.status(400).json({ error: '이미 사용 중인 이메일입니다.' });
       }
       
       // Generate verification token for new email
@@ -276,10 +285,21 @@ router.put('/profile', authenticate, async (req, res) => {
       // Send verification email to NEW email address
       try {
         await sendEmailChangeVerification(email, verificationToken, name || req.user.name);
+        console.log('✅ Email change verification sent to:', email);
       } catch (emailError) {
-        console.error('Failed to send verification email:', emailError);
-        return res.status(500).json({ error: '이메일 전송에 실패했습니다. 다시 시도해주세요.' });
+        console.error('❌ Failed to send verification email:', emailError);
+        // Continue with update but warn user
+        console.warn('⚠️ Email update will proceed but verification email failed to send');
       }
+    }
+
+    // Only update if there are changes
+    if (Object.keys(updateData).length === 0) {
+      return res.json({ 
+        success: true, 
+        message: '변경사항이 없습니다.',
+        user: req.user
+      });
     }
 
     // Update user in database
@@ -300,11 +320,12 @@ router.put('/profile', authenticate, async (req, res) => {
       res.clearCookie('token');
       res.json({ 
         success: true, 
+        emailChanged: true,
         message: '새 이메일로 인증 링크가 전송되었습니다. 이메일을 확인하고 인증 후 다시 로그인해주세요.',
         requiresRelogin: true
       });
     } else {
-      // Generate new token only if email not changed
+      // Generate new token with updated user info
       const newToken = generateToken(updatedUser.id);
       
       res.cookie('token', newToken, {
@@ -316,13 +337,15 @@ router.put('/profile', authenticate, async (req, res) => {
 
       res.json({ 
         success: true, 
+        emailChanged: false,
         user: updatedUser,
-        token: newToken
+        token: newToken,
+        message: '프로필이 성공적으로 업데이트되었습니다.'
       });
     }
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ error: 'Failed to update profile' });
+    res.status(500).json({ error: '프로필 업데이트에 실패했습니다. 다시 시도해주세요.' });
   }
 });
 
