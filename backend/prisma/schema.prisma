@@ -1,0 +1,50 @@
+<artifact identifier="prisma-schema-postgres" type="application/vnd.ant.code" language="prisma" title="Prisma Schema File (PostgreSQL)">
+// Prisma schema file for Yewon Educational Platformgenerator client {
+provider = "prisma-client-js"
+}datasource db {
+provider = "postgresql"
+url      = env("DATABASE_URL")
+}model User {
+id        Int      @id @default(autoincrement())
+email     String   @unique
+name      String
+password  String
+role      String   @default("STUDENT")
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+reviews   Review[]
+}model File {
+id           Int      @id @default(autoincrement())
+title        String
+description  String
+format       String
+size         String?
+pages        String?
+fileUrl      String
+previewImage String?
+type         String?  @default("file")
+downloads    Int      @default(0)
+createdAt    DateTime @default(now())
+updatedAt    DateTime @updatedAt
+}model Course {
+id             Int      @id @default(autoincrement())
+title          String
+description    String
+type           String   @default("free")
+price          String?
+accessDuration Int?
+lessons        Json?
+students       Int      @default(0)
+createdAt      DateTime @default(now())
+updatedAt      DateTime @updatedAt
+}model Review {
+id        Int      @id @default(autoincrement())
+userId    Int
+itemId    Int
+itemType  String
+rating    Int
+comment   String
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAtuser User @relation(fields: [userId], references: [id], onDelete: Cascade)@@unique([userId, itemId, itemType])
+}
+</artifact>
