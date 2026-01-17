@@ -146,13 +146,19 @@ router.get('/me', authenticate, async (req, res) => {
   }
 });
 
-// Update user profile
+// ========== FIXED: Update user profile ==========
 router.put('/profile', authenticate, async (req, res) => {
   try {
     const { name, email } = req.body;
     
-    // If email is being changed, check if it's already taken
+    // Build update data object
+    const updateData = {};
+    if (name) updateData.name = name;
+    
+    // Check if email is being changed
+    let emailChanged = false;
     if (email && email !== req.user.email) {
+      // Verify new email is not already taken by another user
       const existingUser = await prisma.user.findUnique({
         where: { email }
       });
@@ -160,13 +166,13 @@ router.put('/profile', authenticate, async (req, res) => {
       if (existingUser && existingUser.id !== req.user.id) {
         return res.status(400).json({ error: 'Email already in use by another account' });
       }
+      
+      updateData.email = email;
+      emailChanged = true;
     }
 
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
-
-    const user = await prisma.user.update({
+    // Update user in database
+    const updatedUser = await prisma.user.update({
       where: { id: req.user.id },
       data: updateData,
       select: {
@@ -177,10 +183,23 @@ router.put('/profile', authenticate, async (req, res) => {
       }
     });
 
+    // CRITICAL FIX: Generate new token with updated user ID
+    // The password remains the same - only email/name changed
+    const newToken = generateToken(updatedUser.id);
+
+    // Update cookie with new token
+    res.cookie('token', newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
     res.json({ 
       success: true, 
-      user,
-      emailChanged: email && email !== req.user.email
+      user: updatedUser,
+      token: newToken, // Send new token to frontend
+      emailChanged: emailChanged
     });
   } catch (error) {
     console.error('Update profile error:', error);
