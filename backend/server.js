@@ -165,6 +165,7 @@ const defaultAllowed = [
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultAllowed.join(',')).split(',').map(s => s.trim()).filter(Boolean);
 
+// CRITICAL: Apply CORS BEFORE any other middleware
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -207,6 +208,9 @@ app.use(cors({
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
+
+// Explicit OPTIONS handler for extra safety - MUST be after cors() middleware
+app.options('*', cors());
 
 // Explicit OPTIONS handler for extra safety
 app.options('*', (req, res) => {
