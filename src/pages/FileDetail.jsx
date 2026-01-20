@@ -28,8 +28,12 @@ export default function FileDetail() {
     pageNum: 1,
     numPages: 0,
     scale: 1.5,
-    rendering: false
+    rendering: false,
+    rotation: 0
   });
+  
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef(null);
 
   useEffect(() => {
     if (!user) {
@@ -73,6 +77,14 @@ export default function FileDetail() {
       setReviewForm({ rating: userReview.rating, comment: userReview.comment })
     }
   }, [id, user, navigate, getReviewsByItemId, getUserReview])
+
+  // Auto-fit page when entering fullscreen or changing pages
+useEffect(() => {
+  if (isFullscreen && pdfState.pdfDoc) {
+    // Small delay to ensure container has resized
+    setTimeout(() => fitPageToScreen(), 100);
+  }
+}, [isFullscreen, pdfState.pageNum, pdfState.rotation]);
 
   // PDF.js rendering effect
 useEffect(() => {
@@ -122,6 +134,59 @@ useEffect(() => {
   loadPDF();
 }, [file?.displayUrl, file?.format]);
 
+// Keyboard shortcuts for PDF navigation
+useEffect(() => {
+  if (!showViewer || file?.format?.toLowerCase() !== 'pdf') return;
+  
+  const handleKeyPress = (e) => {
+    // Prevent if user is typing in an input
+    if (e.target.tagName === 'INPUT') return;
+    
+    switch(e.key) {
+      case 'ArrowLeft':
+      case 'PageUp':
+        if (pdfState.pageNum > 1) {
+          setPdfState(prev => ({ ...prev, pageNum: prev.pageNum - 1 }));
+        }
+        e.preventDefault();
+        break;
+      case 'ArrowRight':
+      case 'PageDown':
+      case ' ':
+        if (pdfState.pageNum < pdfState.numPages) {
+          setPdfState(prev => ({ ...prev, pageNum: prev.pageNum + 1 }));
+        }
+        e.preventDefault();
+        break;
+      case 'Home':
+        setPdfState(prev => ({ ...prev, pageNum: 1 }));
+        e.preventDefault();
+        break;
+      case 'End':
+        setPdfState(prev => ({ ...prev, pageNum: pdfState.numPages }));
+        e.preventDefault();
+        break;
+      case '+':
+      case '=':
+        setPdfState(prev => ({ ...prev, scale: Math.min(3, prev.scale + 0.25) }));
+        e.preventDefault();
+        break;
+      case '-':
+        setPdfState(prev => ({ ...prev, scale: Math.max(0.5, prev.scale - 0.25) }));
+        e.preventDefault();
+        break;
+      case 'Escape':
+        if (isFullscreen) {
+          setIsFullscreen(false);
+        }
+        break;
+    }
+  };
+  
+  window.addEventListener('keydown', handleKeyPress);
+  return () => window.removeEventListener('keydown', handleKeyPress);
+}, [showViewer, pdfState.pageNum, pdfState.numPages, pdfState.scale, isFullscreen, file?.format]);
+
 // Render PDF page effect
 useEffect(() => {
   if (!pdfState.pdfDoc || !canvasRef.current || pdfState.rendering) {
@@ -133,7 +198,7 @@ useEffect(() => {
 
     try {
       const page = await pdfState.pdfDoc.getPage(pdfState.pageNum);
-      const viewport = page.getViewport({ scale: pdfState.scale });
+      let viewport = page.getViewport({ scale: pdfState.scale, rotation: pdfState.rotation });
 
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
@@ -162,11 +227,26 @@ useEffect(() => {
   };
 
   renderPage();
-}, [pdfState.pdfDoc, pdfState.pageNum, pdfState.scale]);
-
+}, [pdfState.pdfDoc, pdfState.pageNum, pdfState.scale, pdfState.rotation]);
   if (!user) {
     return null
   }
+
+  const fitPageToScreen = () => {
+    if (!pdfState.pdfDoc || !containerRef.current || !canvasRef.current) return;
+    
+    pdfState.pdfDoc.getPage(pdfState.pageNum).then(page => {
+      const containerWidth = containerRef.current.clientWidth - 32; // minus padding
+      const containerHeight = containerRef.current.clientHeight - 32;
+      
+      const viewport = page.getViewport({ scale: 1, rotation: pdfState.rotation });
+      const scaleX = containerWidth / viewport.width;
+      const scaleY = containerHeight / viewport.height;
+      const newScale = Math.min(scaleX, scaleY) * 0.95; // 95% to add some margin
+      
+      setPdfState(prev => ({ ...prev, scale: newScale }));
+    });
+  };
 
   const incrementAccessCount = async () => {
     if (!file || !file.id) return
@@ -407,19 +487,31 @@ useEffect(() => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* File Viewer - IMPROVED ERROR HANDLING */}
         {showViewer && (
-          <div className="bg-white rounded-xl shadow-md mb-8 overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-              <h2 className="text-xl font-bold text-gray-900">{file.title}</h2>
-              <button
-                onClick={() => {
-                  setShowViewer(false);
-                  setViewerError(null);
-                }}
-                className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                title="뷰어 닫기"
-              >
-                <X className="h-5 w-5" />
-              </button>
+          <div className={`bg-white rounded-xl shadow-md overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : 'mb-8'}`}>
+            <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+              <h2 className="text-lg font-bold text-gray-900">{file.title}</h2>
+              <div className="flex items-center gap-2">
+                {file.format?.toLowerCase() === 'pdf' && (
+                  <button
+                    onClick={() => setIsFullscreen(!isFullscreen)}
+                    className="text-gray-600 hover:text-gray-900 p-2 rounded hover:bg-gray-200 transition-colors"
+                    title={isFullscreen ? "전체화면 종료" : "전체화면"}
+                  >
+                    {isFullscreen ? '⤓' : '⤢'}
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowViewer(false);
+                    setViewerError(null);
+                    setIsFullscreen(false);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 p-2 rounded hover:bg-gray-200 transition-colors"
+                  title="뷰어 닫기"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
             
             {viewerError ? (
@@ -442,59 +534,120 @@ useEffect(() => {
                 </div>
               </div>
             ) : file.displayUrl && (
-  <div className="relative w-full bg-gray-900" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
+  <div className={`relative w-full bg-gray-900 ${isFullscreen ? 'h-screen' : ''}`} style={!isFullscreen ? { height: 'calc(100vh - 200px)', minHeight: '600px' } : {}}>
     {file.format?.toLowerCase() === 'pdf' ? (
       // PDF.js Canvas Renderer
-      <div className="w-full h-full overflow-auto bg-gray-900 flex flex-col">
+      <div className="w-full h-full flex flex-col bg-gray-800">
         {/* PDF Controls */}
-        <div className="bg-gray-800 p-3 flex items-center justify-between text-white sticky top-0 z-10">
-          <button
-            onClick={() => {
-              if (pdfState.pageNum > 1) {
-                setPdfState(prev => ({ ...prev, pageNum: prev.pageNum - 1 }));
-              }
-            }}
-            disabled={pdfState.pageNum <= 1}
-            className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            ← 이전
-          </button>
+        <div className="bg-gray-900 px-4 py-2 flex items-center justify-between text-white flex-shrink-0 border-b border-gray-700">
+          {/* Left Controls - Navigation */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (pdfState.pageNum > 1) {
+                  setPdfState(prev => ({ ...prev, pageNum: prev.pageNum - 1 }));
+                }
+              }}
+              disabled={pdfState.pageNum <= 1}
+              className="px-3 py-1.5 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+            >
+              ← 이전
+            </button>
+            
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 rounded text-sm">
+              <input
+                type="number"
+                min="1"
+                max={pdfState.numPages}
+                value={pdfState.pageNum}
+                onChange={(e) => {
+                  const page = parseInt(e.target.value);
+                  if (page >= 1 && page <= pdfState.numPages) {
+                    setPdfState(prev => ({ ...prev, pageNum: page }));
+                  }
+                }}
+                className="w-12 bg-gray-800 text-center rounded px-1 py-0.5 border border-gray-600 focus:outline-none focus:border-blue-500"
+              />
+              <span className="text-gray-400">/</span>
+              <span>{pdfState.numPages}</span>
+            </div>
+            
+            <button
+              onClick={() => {
+                if (pdfState.pageNum < pdfState.numPages) {
+                  setPdfState(prev => ({ ...prev, pageNum: prev.pageNum + 1 }));
+                }
+              }}
+              disabled={pdfState.pageNum >= pdfState.numPages}
+              className="px-3 py-1.5 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+            >
+              다음 →
+            </button>
+          </div>
           
-          <span className="text-sm">
-            페이지 {pdfState.pageNum} / {pdfState.numPages}
-          </span>
-          
-          <button
-            onClick={() => {
-              if (pdfState.pageNum < pdfState.numPages) {
-                setPdfState(prev => ({ ...prev, pageNum: prev.pageNum + 1 }));
-              }
-            }}
-            disabled={pdfState.pageNum >= pdfState.numPages}
-            className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            다음 →
-          </button>
-          
-          <select
-            value={pdfState.scale}
-            onChange={(e) => setPdfState(prev => ({ ...prev, scale: parseFloat(e.target.value) }))}
-            className="px-3 py-2 bg-gray-700 rounded text-white"
-          >
-            <option value="0.75">75%</option>
-            <option value="1">100%</option>
-            <option value="1.25">125%</option>
-            <option value="1.5">150%</option>
-            <option value="2">200%</option>
-          </select>
+          {/* Center Controls - View Mode */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fitPageToScreen}
+              className="px-3 py-1.5 bg-gray-700 rounded hover:bg-gray-600 transition-colors text-sm font-medium"
+              title="화면에 맞춤"
+            >
+              ⛶ 화면 맞춤
+            </button>
+            
+            <button
+              onClick={() => setPdfState(prev => ({ ...prev, rotation: (prev.rotation + 90) % 360 }))}
+              className="px-3 py-1.5 bg-gray-700 rounded hover:bg-gray-600 transition-colors text-lg"
+              title="회전"
+            >
+              ↻
+            </button>
+          </div>
+
+          {/* Right Controls - Zoom & Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPdfState(prev => ({ ...prev, scale: Math.max(0.5, prev.scale - 0.25) }))}
+              className="px-3 py-1.5 bg-gray-700 rounded hover:bg-gray-600 text-lg font-bold transition-colors"
+              title="축소"
+            >
+              −
+            </button>
+            
+            <span className="px-2 text-sm font-medium text-gray-300 min-w-[4rem] text-center">
+              {Math.round(pdfState.scale * 100)}%
+            </span>
+            
+            <button
+              onClick={() => setPdfState(prev => ({ ...prev, scale: Math.min(3, prev.scale + 0.25) }))}
+              className="px-3 py-1.5 bg-gray-700 rounded hover:bg-gray-600 text-lg font-bold transition-colors"
+              title="확대"
+            >
+              +
+            </button>
+            
+            <div className="w-px h-6 bg-gray-600 mx-1"></div>
+            
+            <button
+              onClick={handleDownload}
+              className="px-3 py-1.5 bg-blue-600 rounded hover:bg-blue-700 transition-colors flex items-center gap-1 text-sm font-medium"
+              title="다운로드"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">다운로드</span>
+            </button>
+          </div>
         </div>
 
         {/* PDF Canvas */}
-        <div className="flex-1 overflow-auto flex items-start justify-center p-4">
+        <div 
+          ref={containerRef}
+          className="flex-1 overflow-auto flex items-start justify-center bg-gray-800 p-4"
+        >
           <canvas
             ref={canvasRef}
-            className="shadow-2xl block"
-            style={{ background: '#ffffff' }}
+            className="shadow-2xl block mx-auto"
+            style={{ background: '#ffffff', maxWidth: '100%', height: 'auto' }}
           />
         </div>
       </div>
