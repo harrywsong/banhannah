@@ -109,43 +109,20 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Rate limiting - more permissive in development
-// ========== RATE LIMITING - SMARTER CONFIGURATION ==========
+// Rate limiting - more permissive for authenticated users
+// ========== RATE LIMITING - PRODUCTION ==========
 if (process.env.NODE_ENV === 'production') {
-  // Stricter limits in production
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per window
+    max: 500, // Increased from 100 to 500 for admin panel usage
     message: { error: 'Too many requests, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
-    // Skip rate limiting for admin users
-    skip: (req) => {
-      const token = req.headers.authorization?.substring(7) || req.cookies.token;
-      if (token) {
-        try {
-          const jwt = require('jsonwebtoken');
-          const decoded = jwt.verify(token, process.env.JWT_SECRET);
-          // Check if user is admin (would need to query DB in real scenario)
-          return false; // For now, don't skip
-        } catch {
-          return false;
-        }
-      }
-      return false;
-    }
   });
   app.use('/api/', limiter);
-  console.log('✓ Rate limiting enabled (100 req/15min)');
+  console.log('✓ Rate limiting enabled (500 req/15min)');
 } else {
-  // Very permissive limits in development
-  const devLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    max: 1000, // 1000 requests per minute (essentially unlimited)
-    message: { error: 'Too many requests, please try again later.' }
-  });
-  app.use('/api/', devLimiter);
-  console.log('⚠️  Rate limiting VERY PERMISSIVE (development mode: 1000 req/min)');
+  console.log('⚠️  Rate limiting DISABLED (development mode)');
 }
 
 // ====================== IMPROVED & COMPLETE CORS CONFIGURATION ======================
@@ -165,24 +142,21 @@ const defaultAllowed = [
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultAllowed.join(',')).split(',').map(s => s.trim()).filter(Boolean);
 
-// CRITICAL: Apply CORS BEFORE any other middleware
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
+    // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
     }
 
-    // In non-production, also allow all origins to ease local/dev testing
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('DEV CORS allow for origin:', origin);
-      return callback(null, true);
-    }
-
-    console.log('Blocked CORS for origin:', origin);
-    // Return a clear error for blocked origins
+    // IMPORTANT: Log rejected origins for debugging
+    console.log('❌ CORS blocked origin:', origin);
+    console.log('📋 Allowed origins:', allowedOrigins);
+    
+    // In production, strictly enforce allowed origins
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -208,6 +182,9 @@ app.use(cors({
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
+
+// Explicit OPTIONS handler for extra safety - MUST be after cors() middleware
+app.options('*', cors());
 
 // Explicit OPTIONS handler for extra safety - MUST be after cors() middleware
 app.options('*', cors());
