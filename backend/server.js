@@ -380,14 +380,71 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
 // View/download endpoints
 app.get('/api/files/view/:filename', (req, res) => {
   try {
-    console.log('DEBUG /api/files/view', { method: req.method, url: req.originalUrl, host: req.get('host'), origin: req.get('origin'), referer: req.get('referer'), ua: req.get('user-agent') });
-    const safeFilename = path.basename(req.params.filename);
+    console.log('DEBUG /api/files/view', { 
+      method: req.method, 
+      url: req.originalUrl, 
+      filename: req.params.filename 
+    });
+    
+    const safeFilename = decodeURIComponent(path.basename(req.params.filename));
     const filePath = path.join(uploadsDir, safeFilename);
     
+    console.log('Looking for file at:', filePath);
+    
     if (!fs.existsSync(filePath)) {
+      console.error('File not found:', filePath);
       return res.status(404).json({ error: 'File not found' });
     }
     
+    // ========== FIXED: Allow iframe embedding from your domains ==========
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'https://banhannah.pages.dev',
+      'http://banhannah.ddns.org',
+      'https://banhannah.ddns.org',
+      'http://banhannah.dpdns.org',
+      'https://banhannah.dpdns.org'
+    ];
+    
+    const origin = req.get('origin') || req.get('referer');
+    const isAllowedOrigin = allowedOrigins.some(allowed => 
+      origin && origin.includes(allowed.replace(/^https?:\/\//, ''))
+    );
+    
+    // Set CORS headers
+    if (isAllowedOrigin || process.env.NODE_ENV !== 'production') {
+      res.setHeader('Access-Control-Allow-Origin', req.get('origin') || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    
+    // Set content headers
+    const ext = path.extname(safeFilename).toLowerCase();
+    const contentTypes = {
+      '.pdf': 'application/pdf',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    };
+    
+    res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'inline');
+    
+    // ========== CRITICAL FIX: Remove restrictive CSP headers for file viewing ==========
+    // Allow embedding in iframes from your domains
+    const frameAncestors = allowedOrigins.join(' ');
+    res.setHeader('Content-Security-Policy', `frame-ancestors ${frameAncestors}`);
+    res.setHeader('X-Frame-Options', 'ALLOWALL'); // Override restrictive default
+    
+    // Cache control
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    
+    console.log('✅ Sending file:', safeFilename);
     res.sendFile(filePath);
   } catch (error) {
     console.error('View error:', error);
