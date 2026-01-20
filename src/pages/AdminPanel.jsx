@@ -3,6 +3,8 @@ import AdminLogin from '../components/AdminLogin'
 import { apiEndpoint, addAuthHeaders } from '../config/api'
 import { useAdminAuth } from '../contexts/AdminAuthContext';
 import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield, Download, BookOpen, FileQuestion, ChevronUp, ChevronDown } from 'lucide-react'
+import { ImageIcon } from "lucide-react";
+
 
 export default function AdminPanel() {
   const { adminSession, adminLogout, isAdmin } = useAdminAuth();
@@ -43,8 +45,11 @@ export default function AdminPanel() {
     instructor: '',
     maxParticipants: '20',
     registrationStart: '',
-    registrationEnd: ''
+    registrationEnd: '',
+    previewImage: ''
   })
+  const [classPreviewFile, setClassPreviewFile] = useState(null)
+  const [classPreviewUrl, setClassPreviewUrl] = useState(null)
 
   const [fileFormData, setFileFormData] = useState({
     title: '',
@@ -55,6 +60,8 @@ export default function AdminPanel() {
     fileUrl: '',
     previewImage: ''
   })
+  const [filePreviewFile, setFilePreviewFile] = useState(null)
+  const [filePreviewUrl, setFilePreviewUrl] = useState(null)
 
   const [courseFormData, setCourseFormData] = useState({
     title: '',
@@ -250,8 +257,11 @@ useEffect(() => {
       instructor: classItem.instructor || '',
       maxParticipants: (classItem.maxParticipants || 20).toString(),
       registrationStart: classItem.registrationStart || '',
-      registrationEnd: classItem.registrationEnd || ''
+      registrationEnd: classItem.registrationEnd || '',
+      previewImage: classItem.previewImage || ''
     })
+    setClassPreviewUrl(classItem.previewImage || null)
+    setClassPreviewFile(null)
     setShowClassForm(true)
   }
 
@@ -276,8 +286,11 @@ useEffect(() => {
       instructor: '',
       maxParticipants: '20',
       registrationStart: '',
-      registrationEnd: ''
+      registrationEnd: '',
+      previewImage: ''
     })
+    setClassPreviewFile(null)
+    setClassPreviewUrl(null)
     setShowClassForm(false)
     setEditingClass(null)
   }
@@ -338,6 +351,8 @@ useEffect(() => {
       fileUrl: file.fileUrl || '',
       previewImage: file.previewImage || ''
     })
+    setFilePreviewUrl(file.previewImage || null)
+    setFilePreviewFile(null)
     setShowFileForm(true)
   }
 
@@ -378,6 +393,8 @@ useEffect(() => {
       fileUrl: '',
       previewImage: ''
     })
+    setFilePreviewFile(null)
+    setFilePreviewUrl(null)
     setShowFileForm(false)
     setEditingFile(null)
   }
@@ -720,6 +737,128 @@ if (data.success) {
     }
   }
 
+  // Handle file preview image upload
+  const handleFilePreviewUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Validate image type
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const xhr = new XMLHttpRequest()
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100)
+          setUploadProgress({
+            fileName: file.name,
+            progress: percentComplete,
+            type: 'image'
+          })
+        }
+      })
+
+      xhr.addEventListener('load', async () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText)
+          if (data.success) {
+            setFileFormData({
+              ...fileFormData,
+              previewImage: data.fileUrl
+            })
+            setFilePreviewUrl(data.fileUrl)
+            setFilePreviewFile(file)
+            alert('미리보기 이미지가 성공적으로 업로드되었습니다!')
+          }
+        } else {
+          throw new Error('Upload failed')
+        }
+        setUploadProgress(null)
+      })
+
+      xhr.addEventListener('error', () => {
+        alert('이미지 업로드에 실패했습니다.')
+        setUploadProgress(null)
+      })
+
+      xhr.open('POST', apiEndpoint('files/upload'))
+      addAuthHeadersAdmin(xhr)
+      xhr.send(formData)
+    } catch (error) {
+      console.error('Image upload error:', error)
+      alert(`이미지 업로드에 실패했습니다: ${error.message}`)
+      setUploadProgress(null)
+    }
+  }
+
+  // Handle class preview image upload
+  const handleClassPreviewUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    // Validate image type
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const xhr = new XMLHttpRequest()
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100)
+          setUploadProgress({
+            fileName: file.name,
+            progress: percentComplete,
+            type: 'image'
+          })
+        }
+      })
+
+      xhr.addEventListener('load', async () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText)
+          if (data.success) {
+            setClassFormData({
+              ...classFormData,
+              previewImage: data.fileUrl
+            })
+            setClassPreviewUrl(data.fileUrl)
+            setClassPreviewFile(file)
+            alert('미리보기 이미지가 성공적으로 업로드되었습니다!')
+          }
+        } else {
+          throw new Error('Upload failed')
+        }
+        setUploadProgress(null)
+      })
+
+      xhr.addEventListener('error', () => {
+        alert('이미지 업로드에 실패했습니다.')
+        setUploadProgress(null)
+      })
+
+      xhr.open('POST', apiEndpoint('files/upload'))
+      addAuthHeadersAdmin(xhr)
+      xhr.send(formData)
+    } catch (error) {
+      console.error('Image upload error:', error)
+      alert(`이미지 업로드에 실패했습니다: ${error.message}`)
+      setUploadProgress(null)
+    }
+  }
+
   // Show login if not authenticated
   if (!adminSession) {
     return <AdminLogin />
@@ -1001,12 +1140,11 @@ if (data.success) {
                 <span>새 클래스 추가</span>
               </button>
             </div>
-
-            {/* Class Form Modal - Keep existing but with modern styling */}
+{/* Class Form Modal - IMPROVED UI */}
             {showClassForm && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                  <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-t-2xl">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="sticky top-0 z-10 p-6 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-2xl">
                     <h3 className="text-2xl font-bold">
                       {editingClass ? '클래스 수정' : '새 클래스 추가'}
                     </h3>
@@ -1015,205 +1153,291 @@ if (data.success) {
                     </button>
                   </div>
 
-                  <form onSubmit={handleClassSubmit} className="p-6 space-y-4">
-                    {/* Keep all existing form fields - same structure */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        클래스 제목 *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={classFormData.title}
-                        onChange={(e) => setClassFormData({ ...classFormData, title: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="예: 초급 영어 회화"
-                      />
-                    </div>
+                  <form onSubmit={handleClassSubmit} className="p-6 space-y-6">
+                    {/* Basic Info Section */}
+                    <div className="border-b pb-6">
+                      <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <Video className="h-5 w-5 text-blue-600" />
+                        기본 정보
+                      </h4>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        설명 *
-                      </label>
-                      <textarea
-                        required
-                        rows="3"
-                        value={classFormData.description}
-                        onChange={(e) => setClassFormData({ ...classFormData, description: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="클래스 내용 및 목표 설명..."
-                      />
-                    </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            클래스 제목 *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={classFormData.title}
+                            onChange={(e) => setClassFormData({ ...classFormData, title: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="예: 초급 영어 회화"
+                          />
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          클래스 날짜 *
-                        </label>
-                        <input
-                          type="date"
-                          required
-                          value={classFormData.date}
-                          onChange={(e) => setClassFormData({ ...classFormData, date: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          시간 *
-                        </label>
-                        <input
-                          type="time"
-                          required
-                          value={classFormData.time}
-                          onChange={(e) => setClassFormData({ ...classFormData, time: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            설명 *
+                          </label>
+                          <textarea
+                            required
+                            rows="3"
+                            value={classFormData.description}
+                            onChange={(e) => setClassFormData({ ...classFormData, description: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="클래스 내용 및 목표 설명..."
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        시간대 (Timezone) *
-                      </label>
-                      <select
-                        required
-                        value={classFormData.timezone}
-                        onChange={(e) => setClassFormData({ ...classFormData, timezone: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      >
-                        <optgroup label="한국/일본">
-                          <option value="Asia/Seoul">한국 표준시 (KST) - Asia/Seoul</option>
-                          <option value="Asia/Tokyo">일본 표준시 (JST) - Asia/Tokyo</option>
-                        </optgroup>
-                        <optgroup label="중국/대만">
-                          <option value="Asia/Shanghai">중국 표준시 (CST) - Asia/Shanghai</option>
-                          <option value="Asia/Taipei">대만 표준시 (TST) - Asia/Taipei</option>
-                        </optgroup>
-                        <optgroup label="미국">
-                          <option value="America/New_York">동부 시간 (EST/EDT) - America/New_York</option>
-                          <option value="America/Chicago">중부 시간 (CST/CDT) - America/Chicago</option>
-                          <option value="America/Denver">산지 시간 (MST/MDT) - America/Denver</option>
-                          <option value="America/Los_Angeles">태평양 시간 (PST/PDT) - America/Los_Angeles</option>
-                        </optgroup>
-                        <optgroup label="유럽">
-                          <option value="Europe/London">영국 시간 (GMT/BST) - Europe/London</option>
-                          <option value="Europe/Paris">중부유럽 시간 (CET/CEST) - Europe/Paris</option>
-                        </optgroup>
-                        <optgroup label="기타">
-                          <option value="UTC">협정 세계시 (UTC)</option>
-                          <option value="Australia/Sydney">호주 동부 시간 (AEST/AEDT) - Australia/Sydney</option>
-                        </optgroup>
-                      </select>
-                    </div>
+                    {/* Schedule Section */}
+                    <div className="border-b pb-6">
+                      <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-blue-600" />
+                        일정 설정
+                      </h4>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          등록 시작일 *
-                        </label>
-                        <input
-                          type="datetime-local"
-                          required
-                          value={classFormData.registrationStart}
-                          onChange={(e) => setClassFormData({ ...classFormData, registrationStart: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        />
-                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            클래스 날짜 *
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={classFormData.date}
+                            onChange={(e) => setClassFormData({ ...classFormData, date: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          등록 마감일 *
-                        </label>
-                        <input
-                          type="datetime-local"
-                          required
-                          value={classFormData.registrationEnd}
-                          onChange={(e) => setClassFormData({ ...classFormData, registrationEnd: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            시간 *
+                          </label>
+                          <input
+                            type="time"
+                            required
+                            value={classFormData.time}
+                            onChange={(e) => setClassFormData({ ...classFormData, time: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          소요 시간 *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={classFormData.duration}
-                          onChange={(e) => setClassFormData({ ...classFormData, duration: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          placeholder="예: 60분"
-                        />
-                      </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            시간대 (Timezone) *
+                          </label>
+                          <select
+                            required
+                            value={classFormData.timezone}
+                            onChange={(e) => setClassFormData({ ...classFormData, timezone: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <optgroup label="한국/일본">
+                              <option value="Asia/Seoul">한국 표준시 (KST) - Asia/Seoul</option>
+                              <option value="Asia/Tokyo">일본 표준시 (JST) - Asia/Tokyo</option>
+                            </optgroup>
+                            <optgroup label="중국/대만">
+                              <option value="Asia/Shanghai">중국 표준시 (CST) - Asia/Shanghai</option>
+                              <option value="Asia/Taipei">대만 표준시 (TST) - Asia/Taipei</option>
+                            </optgroup>
+                            <optgroup label="미국">
+                              <option value="America/New_York">동부 시간 (EST/EDT)</option>
+                              <option value="America/Chicago">중부 시간 (CST/CDT)</option>
+                              <option value="America/Denver">산지 시간 (MST/MDT)</option>
+                              <option value="America/Los_Angeles">태평양 시간 (PST/PDT)</option>
+                            </optgroup>
+                            <optgroup label="유럽">
+                              <option value="Europe/London">영국 시간 (GMT/BST)</option>
+                              <option value="Europe/Paris">중부유럽 시간 (CET/CEST)</option>
+                            </optgroup>
+                            <optgroup label="기타">
+                              <option value="UTC">협정 세계시 (UTC)</option>
+                              <option value="Australia/Sydney">호주 동부 시간 (AEST/AEDT)</option>
+                            </optgroup>
+                          </select>
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          플랫폼 *
-                        </label>
-                        <select
-                          required
-                          value={classFormData.platform}
-                          onChange={(e) => setClassFormData({ ...classFormData, platform: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        >
-                          <option value="Zoom">Zoom</option>
-                          <option value="Microsoft Teams">Microsoft Teams</option>
-                          <option value="Google Meet">Google Meet</option>
-                          <option value="Other">기타</option>
-                        </select>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            소요 시간 *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={classFormData.duration}
+                            onChange={(e) => setClassFormData({ ...classFormData, duration: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="예: 60분"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        미팅 링크 *
-                      </label>
-                      <input
-                        type="url"
-                        required
-                        value={classFormData.meetingLink}
-                        onChange={(e) => setClassFormData({ ...classFormData, meetingLink: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="https://zoom.us/j/..."
-                      />
-                    </div>
+                    {/* Registration Period Section */}
+                    <div className="border-b pb-6">
+                      <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-blue-600" />
+                        등록 기간
+                      </h4>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          강사 *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={classFormData.instructor}
-                          onChange={(e) => setClassFormData({ ...classFormData, instructor: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          placeholder="강사 이름"
-                        />
-                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            등록 시작일 *
+                          </label>
+                          <input
+                            type="datetime-local"
+                            required
+                            value={classFormData.registrationStart}
+                            onChange={(e) => setClassFormData({ ...classFormData, registrationStart: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          최대 인원 *
-                        </label>
-                        <input
-                          type="number"
-                          required
-                          min="1"
-                          value={classFormData.maxParticipants}
-                          onChange={(e) => setClassFormData({ ...classFormData, maxParticipants: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        />
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            등록 마감일 *
+                          </label>
+                          <input
+                            type="datetime-local"
+                            required
+                            value={classFormData.registrationEnd}
+                            onChange={(e) => setClassFormData({ ...classFormData, registrationEnd: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex justify-end space-x-4 pt-4 border-t">
+                    {/* Platform & Meeting Section */}
+                    <div className="border-b pb-6">
+                      <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <Settings className="h-5 w-5 text-blue-600" />
+                        플랫폼 정보
+                      </h4>
+
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              플랫폼 *
+                            </label>
+                            <select
+                              required
+                              value={classFormData.platform}
+                              onChange={(e) => setClassFormData({ ...classFormData, platform: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="Zoom">Zoom</option>
+                              <option value="Microsoft Teams">Microsoft Teams</option>
+                              <option value="Google Meet">Google Meet</option>
+                              <option value="Other">기타</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              강사 *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={classFormData.instructor}
+                              onChange={(e) => setClassFormData({ ...classFormData, instructor: e.target.value })}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="강사 이름"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            미팅 링크 *
+                          </label>
+                          <input
+                            type="url"
+                            required
+                            value={classFormData.meetingLink}
+                            onChange={(e) => setClassFormData({ ...classFormData, meetingLink: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="https://zoom.us/j/..."
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            최대 인원 *
+                          </label>
+                          <input
+                            type="number"
+                            required
+                            min="1"
+                            value={classFormData.maxParticipants}
+                            onChange={(e) => setClassFormData({ ...classFormData, maxParticipants: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Preview Image Section */}
+                    <div className="border-b pb-6">
+                      <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <ImageIcon className="h-5 w-5 text-blue-600" />
+                        미리보기 이미지
+                      </h4>
+
+                      <div className="space-y-4">
+                        {classPreviewUrl && (
+                          <div className="relative inline-block">
+                            <img 
+                              src={classPreviewUrl} 
+                              alt="미리보기" 
+                              className="max-w-full h-48 object-cover rounded-lg border-2 border-gray-300"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setClassPreviewUrl(null)
+                                setClassPreviewFile(null)
+                                setClassFormData({ ...classFormData, previewImage: '' })
+                              }}
+                              className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+                          <ImageIcon className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-600 mb-2">미리보기 이미지 업로드 (선택사항)</p>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleClassPreviewUpload}
+                            className="hidden"
+                            id="class-preview-upload"
+                          />
+                          <label
+                            htmlFor="class-preview-upload"
+                            className="cursor-pointer inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
+                          >
+                            이미지 선택
+                          </label>
+                          <p className="text-xs text-gray-500 mt-2">
+                            권장: 800x600px, JPG/PNG
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Submit Buttons */}
+                    <div className="flex justify-end space-x-4 pt-4">
                       <button
                         type="button"
                         onClick={resetClassForm}
@@ -1223,7 +1447,7 @@ if (data.success) {
                       </button>
                       <button
                         type="submit"
-                        className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-lg"
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg"
                       >
                         {editingClass ? '수정하기' : '생성하기'}
                       </button>
@@ -1232,6 +1456,7 @@ if (data.success) {
                 </div>
               </div>
             )}
+          
 
 {/* Classes List - Enhanced */}
 {classes.length > 0 ? (
