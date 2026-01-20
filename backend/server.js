@@ -43,8 +43,25 @@ const app = express();
 // Trust proxy - CRITICAL for ngrok + rate-limiter + X-Forwarded-For
 app.set('trust proxy', 1);
 
+// Security middleware - Custom CSP that allows iframe embedding AND PDF viewing
 app.use(helmet({
-  contentSecurityPolicy: false  // Disable CSP completely for development
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // PDF.js needs inline scripts
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"], // blob: for PDF rendering
+      connectSrc: ["'self'", "blob:"], // blob: for PDF loading
+      fontSrc: ["'self'", "data:"], // data: for PDF fonts
+      objectSrc: ["'self'", "blob:"], // Allow PDF object/embed
+      mediaSrc: ["'self'", "blob:"], // blob: for media in PDFs
+      frameSrc: ["'self'", "blob:"], // blob: for PDF iframes
+      workerSrc: ["'self'", "blob:"], // PDF.js uses workers
+      childSrc: ["'self'", "blob:"], // PDF viewer needs this
+      // DO NOT set frame-ancestors - allow all embedding
+    }
+  }
 }));
 app.use(cookieParser());
 
@@ -383,7 +400,6 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
   }
 });
 
-// ========== COMPLETE FIX for /api/files/view/:filename ==========
 
 app.get('/api/files/view/:filename', (req, res) => {
   try {
@@ -408,7 +424,7 @@ app.get('/api/files/view/:filename', (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
     
-// ========== CRITICAL FIX: Allow iframe embedding from your frontend ==========
+    // ========== CRITICAL FIX: Dynamic CSP based on origin ==========
     const allowedOrigins = [
       'http://localhost:5173',
       'http://127.0.0.1:5173',
@@ -422,20 +438,34 @@ app.get('/api/files/view/:filename', (req, res) => {
     const origin = req.get('origin');
     const referer = req.get('referer');
     
-    // Allow framing from your frontend domains
+    // Check if request is from allowed origin
+    let allowedOrigin = null;
     if (origin && allowedOrigins.some(allowed => origin.includes(allowed))) {
-      res.setHeader('Content-Security-Policy', `frame-ancestors ${origin}`);
-      res.setHeader('X-Frame-Options', 'ALLOW-FROM ' + origin);
+      allowedOrigin = origin;
     } else if (referer) {
-      // Check referer if no origin
-      const refererOrigin = new URL(referer).origin;
-      if (allowedOrigins.some(allowed => refererOrigin.includes(allowed))) {
-        res.setHeader('Content-Security-Policy', `frame-ancestors ${refererOrigin}`);
-        res.setHeader('X-Frame-Options', 'ALLOW-FROM ' + refererOrigin);
+      try {
+        const refererOrigin = new URL(referer).origin;
+        if (allowedOrigins.some(allowed => refererOrigin.includes(allowed))) {
+          allowedOrigin = refererOrigin;
+        }
+      } catch (e) {
+        console.error('Error parsing referer:', e);
       }
-    } else {
-      // Development fallback - allow all
+    }
+    
+    // Set appropriate CSP headers
+    if (allowedOrigin) {
+      // Allow embedding from specific origin
+      res.setHeader('Content-Security-Policy', `frame-ancestors ${allowedOrigin}`);
+      res.setHeader('X-Frame-Options', 'ALLOWALL'); // Modern browsers prefer CSP
+    } else if (process.env.NODE_ENV !== 'production') {
+      // Development mode - allow all
       res.setHeader('Content-Security-Policy', "frame-ancestors *");
+      res.setHeader('X-Frame-Options', 'ALLOWALL');
+    } else {
+      // Production - unknown origin - block
+      res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
+      res.setHeader('X-Frame-Options', 'DENY');
     }
     
     // Safe headers
