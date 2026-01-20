@@ -44,7 +44,14 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "frame-ancestors": ["'self'", "https://banhannah.pages.dev", "http://localhost:5173"]
+    }
+  }
+}));
 app.use(cookieParser());
 
 // DEBUG: log incoming preflight requests and optionally force permissive CORS
@@ -382,7 +389,7 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
   }
 });
 
-// COMPLETE FIX for /api/files/view/:filename with PDF embedding support
+// ========== COMPLETE FIX for /api/files/view/:filename ==========
 
 app.get('/api/files/view/:filename', (req, res) => {
   try {
@@ -407,7 +414,7 @@ app.get('/api/files/view/:filename', (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
     
-    // ========== CRITICAL: CORS Headers FIRST ==========
+    // ========== CRITICAL: CORS Headers ==========
     const allowedOrigins = [
       'http://localhost:5173',
       'http://127.0.0.1:5173',
@@ -430,10 +437,11 @@ app.get('/api/files/view/:filename', (req, res) => {
       console.log('⚠️ DEV MODE: CORS allowed for all origins');
     }
     
-    // ========== CRITICAL: Permissive CSP and headers for PDF embedding ==========
-    // Allow embedding in iframes from ANY origin (for PDF viewer compatibility)
-    res.setHeader('X-Frame-Options', 'ALLOWALL'); // Or remove this header entirely
-    res.setHeader('Content-Security-Policy', "frame-ancestors *"); // Allow all iframe parents
+    // ========== CRITICAL FIX: Remove/Fix CSP Headers ==========
+    // DO NOT set X-Frame-Options at all - let it default to allowing framing
+    // DO NOT set Content-Security-Policy with frame-ancestors restriction
+    
+    // Safe headers that don't block embedding
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
     res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
