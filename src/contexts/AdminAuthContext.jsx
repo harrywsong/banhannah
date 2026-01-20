@@ -42,7 +42,25 @@ export function AdminAuthProvider({ children }) {
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
+      let data;
+      // Handle non-JSON or error responses (e.g. 429 Too Many Requests)
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const errJson = await response.json();
+          return { success: false, error: errJson.error || JSON.stringify(errJson) };
+        }
+        const text = await response.text();
+        return { success: false, error: text || `HTTP ${response.status}` };
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        return { success: false, error: text || 'Unexpected server response' };
+      }
 
       if (response.ok && data.success) {
         // CRITICAL: Check if user is admin
