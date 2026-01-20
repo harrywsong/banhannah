@@ -76,9 +76,12 @@ export default function FileDetail() {
 
   // PDF.js rendering effect
 useEffect(() => {
-  if (!canvasRef.current || !file?.displayUrl || file.format?.toLowerCase() !== 'pdf') {
-    return;
-  }
+    // Only require a valid PDF URL and format here. Loading the PDF
+    // should not depend on the canvas being mounted yet (avoids a
+    // race where the effect returns before the canvas exists).
+    if (!file?.displayUrl || file.format?.toLowerCase() !== 'pdf') {
+      return;
+    }
 
   const loadPDF = async () => {
     try {
@@ -127,25 +130,30 @@ useEffect(() => {
 
   const renderPage = async () => {
     setPdfState(prev => ({ ...prev, rendering: true }));
-    
+
     try {
       const page = await pdfState.pdfDoc.getPage(pdfState.pageNum);
       const viewport = page.getViewport({ scale: pdfState.scale });
-      
+
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
-      
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-      
+
+      // Handle HiDPI screens by scaling the canvas backing store
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.round(viewport.width * ratio);
+      canvas.height = Math.round(viewport.height * ratio);
+      canvas.style.width = `${Math.round(viewport.width)}px`;
+      canvas.style.height = `${Math.round(viewport.height)}px`;
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+
       const renderContext = {
         canvasContext: context,
         viewport: viewport
       };
-      
+
       await page.render(renderContext).promise;
       console.log('✅ Page rendered:', pdfState.pageNum);
-      
+
     } catch (error) {
       console.error('❌ Page render error:', error);
     } finally {
@@ -169,13 +177,14 @@ useEffect(() => {
       })
       if (response.ok) {
         const data = await response.json()
-        setFile(data.file)
+        // Preserve any transient client-only fields (like displayUrl)
+        setFile(prev => ({ ...data.file, displayUrl: prev?.displayUrl || data.file.displayUrl }))
       } else {
         setFile({ ...file, downloads: (file.downloads || 0) + 1 })
       }
     } catch (error) {
       console.error('❌ Error incrementing access count:', error)
-      setFile({ ...file, downloads: (file.downloads || 0) + 1 })
+      setFile(prev => ({ ...prev, downloads: (prev?.downloads || file?.downloads || 0) + 1 }))
     }
   }
 
@@ -482,17 +491,18 @@ useEffect(() => {
 
         {/* PDF Canvas */}
         <div className="flex-1 overflow-auto flex items-start justify-center p-4">
-          <canvas 
-            ref={canvasRef} 
-            className="shadow-2xl"
+          <canvas
+            ref={canvasRef}
+            className="shadow-2xl block"
+            style={{ background: '#ffffff' }}
           />
         </div>
       </div>
     ) : (
       // Regular iframe for other formats
       <iframe
-        key={file.displayUrl}
-        src={file.displayUrl}
+        key={file.displayUrl || file.fileUrl}
+        src={file.displayUrl || (file.fileUrl ? buildFileUrl(file.fileUrl, 'view') : '')}
         className="w-full h-full border-0"
         title={`${file.title} 뷰어`}
         onLoad={() => {
