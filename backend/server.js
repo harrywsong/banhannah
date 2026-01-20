@@ -76,9 +76,14 @@ app.use('/api/', limiter);
 // Allow specific origins; prefer environment override `ALLOWED_ORIGINS`
 const defaultAllowed = [
   'http://localhost:5173',
+  'http://127.0.0.1:5173',
   'https://banhannah.pages.dev',
+  // support both common dynamic DNS providers and api subdomain
+  'http://banhannah.ddns.org',
+  'https://banhannah.ddns.org',
   'http://banhannah.dpdns.org',
   'https://banhannah.dpdns.org',
+  'https://api.banhannah.ddns.org',
   'https://api.banhannah.dpdns.org'
 ];
 
@@ -290,7 +295,9 @@ app.post('/api/files/upload', authenticate, upload.single('file'), async (req, r
     
     // Prefer explicit SERVER_URL, otherwise derive from the incoming request
     const serverUrl = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
-    const fileUrl = `${serverUrl}/api/files/view/${req.file.filename}`;
+    // encode filename so spaces and special chars become safe in URLs
+    const encodedFilename = encodeURIComponent(req.file.filename);
+    const fileUrl = `${serverUrl}/api/files/view/${encodedFilename}`;
     const filePath = req.file.path;
     const ext = path.extname(req.file.originalname).toLowerCase();
     let pages = null;
@@ -307,7 +314,7 @@ app.post('/api/files/upload', authenticate, upload.single('file'), async (req, r
         const previewGenerated = await generatePDFPreview(filePath, previewPath);
         
         if (previewGenerated) {
-          previewImage = `${serverUrl}/api/files/preview/${previewFilename}`;
+          previewImage = `${serverUrl}/api/files/preview/${encodeURIComponent(previewFilename)}`;
         }
       } catch (pdfError) {
         console.error('PDF processing error:', pdfError);
@@ -338,7 +345,7 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
     
     // Prefer explicit SERVER_URL, otherwise derive from the incoming request
     const serverUrl = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
-    const videoUrl = `${serverUrl}/api/videos/view/${req.file.filename}`;
+    const videoUrl = `${serverUrl}/api/videos/view/${encodeURIComponent(req.file.filename)}`;
     
     res.json({
       success: true,
