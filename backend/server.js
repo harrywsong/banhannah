@@ -388,18 +388,21 @@ app.get('/api/files/view/:filename', (req, res) => {
     console.log('DEBUG /api/files/view', { 
       method: req.method, 
       url: req.originalUrl, 
-      filename: req.params.filename,
+      rawFilename: req.params.filename,
       origin: req.get('origin'),
       referer: req.get('referer')
     });
     
-    const safeFilename = decodeURIComponent(path.basename(req.params.filename));
+    // CRITICAL: Only decode once - the filename comes already URL-encoded from the request
+    const safeFilename = path.basename(req.params.filename);
     const filePath = path.join(uploadsDir, safeFilename);
     
     console.log('Looking for file at:', filePath);
+    console.log('Safe filename:', safeFilename);
     
     if (!fs.existsSync(filePath)) {
-      console.error('File not found:', filePath);
+      console.error('❌ File not found:', filePath);
+      console.error('Available files:', fs.readdirSync(uploadsDir).slice(0, 5));
       return res.status(404).json({ error: 'File not found' });
     }
     
@@ -415,7 +418,6 @@ app.get('/api/files/view/:filename', (req, res) => {
     ];
     
     const origin = req.get('origin');
-    const referer = req.get('referer');
     
     // Allow CORS from whitelisted origins
     if (origin && allowedOrigins.includes(origin)) {
@@ -427,25 +429,11 @@ app.get('/api/files/view/:filename', (req, res) => {
       console.log('⚠️ DEV MODE: CORS allowed for all origins');
     }
     
-    // ========== CRITICAL: CSP with ALL domains ==========
-    // Build the CSP header with all allowed origins
-    const cspDomains = [
-      'localhost:5173',
-      '127.0.0.1:5173',
-      'banhannah.pages.dev',
-      'banhannah.ddns.org',
-      'banhannah.dpdns.org',
-      '*.pages.dev', // Wildcard for Cloudflare Pages preview URLs
-    ];
+    // ========== CRITICAL: Permissive CSP for PDF embedding ==========
+    res.setHeader('Content-Security-Policy', "frame-ancestors *");
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     
-    const cspValue = `frame-ancestors 'self' ${cspDomains.map(d => 
-      d.includes('*') ? `https://${d} http://${d}` : `https://${d} http://${d}`
-    ).join(' ')}`;
-    
-    res.setHeader('Content-Security-Policy', cspValue);
-    console.log('✅ CSP set:', cspValue);
-    
-    // ========== Remove conflicting headers ==========
+    // ========== Remove conflicting headers that block iframes ==========
     res.removeHeader('X-Frame-Options');
     
     // ========== Content Type ==========
@@ -463,10 +451,11 @@ app.get('/api/files/view/:filename', (req, res) => {
     };
     
     res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
-    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Content-Disposition', 'inline; filename="' + safeFilename + '"');
+    res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=3600');
     
-    console.log('✅ Sending file:', safeFilename);
+    console.log('✅ Sending file:', safeFilename, 'Type:', contentTypes[ext]);
     res.sendFile(filePath);
   } catch (error) {
     console.error('❌ View error:', error);

@@ -89,22 +89,32 @@ export default function FileDetail() {
   const buildFileUrl = (fileUrl, action = 'view') => {
     if (!fileUrl) return null;
     
-    const getFilename = (url) => {
-      if (url.includes('/api/files/view/')) {
-        return url.split('/api/files/view/')[1];
-      }
-      if (url.includes('/api/files/download/')) {
-        return url.split('/api/files/download/')[1];
-      }
-      const parts = url.split('/');
-      return parts[parts.length - 1];
-    };
+    // Extract just the filename from any URL format
+    let filename;
+    if (fileUrl.includes('/api/files/')) {
+      // Already a full API URL - extract filename
+      const parts = fileUrl.split('/');
+      filename = parts[parts.length - 1];
+    } else if (fileUrl.includes('/')) {
+      // Path with slashes - get last part
+      const parts = fileUrl.split('/');
+      filename = parts[parts.length - 1];
+    } else {
+      // Just a filename
+      filename = fileUrl;
+    }
     
-    const filename = getFilename(fileUrl);
-    if (!filename) return null;
+    // Decode if encoded, then re-encode properly
+    const decodedFilename = decodeURIComponent(filename);
+    const encodedFilename = encodeURIComponent(decodedFilename);
     
-    const cleanFilename = decodeURIComponent(filename);
-    const encodedFilename = encodeURIComponent(cleanFilename);
+    console.log('🔗 Building URL:', {
+      original: fileUrl,
+      extracted: filename,
+      decoded: decodedFilename,
+      encoded: encodedFilename,
+      action
+    });
     
     return `${API_URL}/api/files/${action}/${encodedFilename}`;
   };
