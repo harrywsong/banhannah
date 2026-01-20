@@ -110,17 +110,42 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Rate limiting - more permissive in development
-// ========== RATE LIMITING - DISABLED IN DEVELOPMENT ==========
+// ========== RATE LIMITING - SMARTER CONFIGURATION ==========
 if (process.env.NODE_ENV === 'production') {
+  // Stricter limits in production
   const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: { error: 'Too many requests, please try again later.' }
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // 100 requests per window
+    message: { error: 'Too many requests, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    // Skip rate limiting for admin users
+    skip: (req) => {
+      const token = req.headers.authorization?.substring(7) || req.cookies.token;
+      if (token) {
+        try {
+          const jwt = require('jsonwebtoken');
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          // Check if user is admin (would need to query DB in real scenario)
+          return false; // For now, don't skip
+        } catch {
+          return false;
+        }
+      }
+      return false;
+    }
   });
   app.use('/api/', limiter);
   console.log('✓ Rate limiting enabled (100 req/15min)');
 } else {
-  console.log('⚠️  Rate limiting DISABLED (development mode)');
+  // Very permissive limits in development
+  const devLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 1000, // 1000 requests per minute (essentially unlimited)
+    message: { error: 'Too many requests, please try again later.' }
+  });
+  app.use('/api/', devLimiter);
+  console.log('⚠️  Rate limiting VERY PERMISSIVE (development mode: 1000 req/min)');
 }
 
 // ====================== IMPROVED & COMPLETE CORS CONFIGURATION ======================
