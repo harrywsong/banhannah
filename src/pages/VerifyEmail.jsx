@@ -17,7 +17,7 @@ export default function VerifyEmail() {
       }
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
         const response = await fetch(`${API_URL}/api/auth/verify-email/${token}`, {
           headers: {
             'ngrok-skip-browser-warning': 'true'

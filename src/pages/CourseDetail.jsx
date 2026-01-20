@@ -276,7 +276,7 @@ export default function CourseDetail() {
     
     // IMPORTANT: Also save to backend data directory for server-side validation
     // This would be done via API call in production
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/courses/purchase`, {
+    fetch(`https://api.banhannah.dpdns.org/api/courses/purchase`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

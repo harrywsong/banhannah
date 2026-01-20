@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
 import { apiEndpoint, apiRequest } from '../config/api'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+
 export default function FileDetail() {
   const { id } = useParams()
   const { user } = useAuth()
@@ -29,12 +31,16 @@ export default function FileDetail() {
         const response = await apiRequest(apiEndpoint(`files/metadata/${id}`))
         if (response.ok) {
           const data = await response.json()
+          console.log('Loaded file from backend:', data.file) // DEBUG
+          console.log('File URL type:', typeof data.file?.fileUrl) // DEBUG
+          console.log('File URL value:', data.file?.fileUrl) // DEBUG
           setFile(data.file)
         } else {
           // Fallback to localStorage if backend fails
           const savedFiles = JSON.parse(localStorage.getItem('resourceFiles') || '[]')
           const foundFile = savedFiles.find(f => f.id === parseInt(id))
           if (foundFile) {
+            console.log('Loaded file from localStorage:', foundFile) // DEBUG
             setFile(foundFile)
           }
         }
@@ -44,6 +50,7 @@ export default function FileDetail() {
         const savedFiles = JSON.parse(localStorage.getItem('resourceFiles') || '[]')
         const foundFile = savedFiles.find(f => f.id === parseInt(id))
         if (foundFile) {
+          console.log('Loaded file from localStorage (error fallback):', foundFile) // DEBUG
           setFile(foundFile)
         }
       }
@@ -93,12 +100,22 @@ export default function FileDetail() {
     
     // If fileUrl exists, trigger actual download
     if (file.fileUrl) {
+      // Ensure fileUrl is a string and properly formatted
+      const fileUrl = typeof file.fileUrl === 'string' ? file.fileUrl : String(file.fileUrl)
+      
+      // Clean up the URL if needed
+      const cleanUrl = fileUrl.startsWith('http') ? fileUrl : `${API_URL}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`
+      
       const link = document.createElement('a')
-      link.href = file.fileUrl
+      link.href = cleanUrl
       link.download = file.title || 'download'
+      link.target = '_blank' // Open in new tab as fallback
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+    } else {
+      alert('파일 URL이 설정되지 않았습니다. 관리자에게 문의하세요.')
+      return
     }
     
     // Save to user's downloads (use resources_${user.id} to match Dashboard)
@@ -119,13 +136,24 @@ export default function FileDetail() {
     // Update access count
     incrementAccessCount()
   }
-
   const handleViewInBrowser = () => {
     if (!file) return
     
     // If fileUrl exists, show viewer in same page
     if (file.fileUrl) {
+      // Ensure fileUrl is a string and properly formatted
+      const fileUrl = typeof file.fileUrl === 'string' ? file.fileUrl : String(file.fileUrl)
+      
+      // Clean up the URL if needed
+      const cleanUrl = fileUrl.startsWith('http') ? fileUrl : `${API_URL}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`
+      
+      // Log for debugging
+      console.log('Opening file URL:', cleanUrl)
+      
       setShowViewer(true)
+      // Update the file state with clean URL for iframe
+      setFile(prev => ({ ...prev, fileUrl: cleanUrl }))
+      
       // Increment access count when viewing in browser
       incrementAccessCount()
       
