@@ -43,20 +43,23 @@ const app = express();
 // Trust proxy - CRITICAL for ngrok + rate-limiter + X-Forwarded-For
 app.set('trust proxy', 1);
 
-// Security middleware - Custom CSP that allows iframe embedding
+// Security middleware - Custom CSP that allows iframe embedding AND PDF viewing
 app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: false,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // PDF.js needs inline scripts
       styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      // DO NOT set frame-ancestors - allow all
+      imgSrc: ["'self'", "data:", "https:", "blob:"], // blob: for PDF rendering
+      connectSrc: ["'self'", "blob:"], // blob: for PDF loading
+      fontSrc: ["'self'", "data:"], // data: for PDF fonts
+      objectSrc: ["'self'", "blob:"], // Allow PDF object/embed
+      mediaSrc: ["'self'", "blob:"], // blob: for media in PDFs
+      frameSrc: ["'self'", "blob:"], // blob: for PDF iframes
+      workerSrc: ["'self'", "blob:"], // PDF.js uses workers
+      childSrc: ["'self'", "blob:"], // PDF viewer needs this
+      // DO NOT set frame-ancestors - allow all embedding
     }
   }
 }));
