@@ -3,11 +3,14 @@
 
 // Get API URL from environment variable
 // Always use production API
-export const API_URL = 'https://api.banhannah.dpdns.org';
+// Use empty base in development so Vite's dev proxy (`/api` -> backend) is used.
+// In production, use the real API URL.
+export const API_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || 'https://api.banhannah.dpdns.org');
 
 // Helper function to build API endpoints
 export const apiEndpoint = (path) => {
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  // If API_URL is empty (dev), return a relative path that will be proxied by Vite.
   return `${API_URL}/api/${cleanPath}`;
 };
 

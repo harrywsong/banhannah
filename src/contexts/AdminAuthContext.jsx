@@ -9,7 +9,7 @@ export function AdminAuthProvider({ children }) {
   const [adminSession, setAdminSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+  const API_URL = 'https://api.banhannah.dpdns.org'
 
   // Load admin session on mount
   useEffect(() => {

@@ -18,7 +18,7 @@ export default function HLSVideoPlayer({ videoId, onError }) {
   const [error, setError] = useState(null);
   const [tokenState, setTokenState] = useState(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+  const API_URL = 'https://api.banhannah.dpdns.org'
 
   // ── Fetch streaming token ────────────────────────────────────────────────
   const fetchToken = async () => {

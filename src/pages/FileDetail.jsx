@@ -1,3 +1,4 @@
+// src/pages/FileDetail.jsx - FIXED VERSION
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Download, FileText, Clock, Star, MessageCircle, X, Eye } from 'lucide-react'
@@ -25,32 +26,26 @@ export default function FileDetail() {
       return
     }
 
-    // Load file from backend API
     const loadFile = async () => {
       try {
         const response = await apiRequest(apiEndpoint(`files/metadata/${id}`))
         if (response.ok) {
           const data = await response.json()
-          console.log('Loaded file from backend:', data.file) // DEBUG
-          console.log('File URL type:', typeof data.file?.fileUrl) // DEBUG
-          console.log('File URL value:', data.file?.fileUrl) // DEBUG
+          console.log('✅ Loaded file from backend:', data.file)
           setFile(data.file)
         } else {
-          // Fallback to localStorage if backend fails
           const savedFiles = JSON.parse(localStorage.getItem('resourceFiles') || '[]')
           const foundFile = savedFiles.find(f => f.id === parseInt(id))
           if (foundFile) {
-            console.log('Loaded file from localStorage:', foundFile) // DEBUG
+            console.log('✅ Loaded file from localStorage:', foundFile)
             setFile(foundFile)
           }
         }
       } catch (error) {
-        console.error('Error loading file:', error)
-        // Fallback to localStorage if backend fails
+        console.error('❌ Error loading file:', error)
         const savedFiles = JSON.parse(localStorage.getItem('resourceFiles') || '[]')
         const foundFile = savedFiles.find(f => f.id === parseInt(id))
         if (foundFile) {
-          console.log('Loaded file from localStorage (error fallback):', foundFile) // DEBUG
           setFile(foundFile)
         }
       }
@@ -61,7 +56,6 @@ export default function FileDetail() {
     const itemReviews = getReviewsByItemId(parseInt(id), 'file')
     setReviews(itemReviews)
 
-    // Check if user has already reviewed this file
     const userReview = getUserReview(user.id, parseInt(id), 'file')
     if (userReview) {
       setEditingReview(userReview)
@@ -73,7 +67,7 @@ export default function FileDetail() {
     return null
   }
 
-  // Helper function to increment access count
+  // ========== FIXED: Increment access count ==========
   const incrementAccessCount = async () => {
     if (!file || !file.id) return
 
@@ -85,40 +79,82 @@ export default function FileDetail() {
         const data = await response.json()
         setFile(data.file)
       } else {
-        // Fallback: update local state
         setFile({ ...file, downloads: (file.downloads || 0) + 1 })
       }
     } catch (error) {
-      console.error('Error incrementing access count:', error)
-      // Fallback: update local state
+      console.error('❌ Error incrementing access count:', error)
       setFile({ ...file, downloads: (file.downloads || 0) + 1 })
     }
   }
 
+  // ========== FIXED: Extract filename from URL ==========
+  const getFilenameFromUrl = (fileUrl) => {
+    if (!fileUrl) return null
+    
+    // If it's already a full URL, extract filename
+    if (fileUrl.startsWith('http')) {
+      const urlParts = fileUrl.split('/')
+      return urlParts[urlParts.length - 1]
+    }
+    
+    // If it's a path like /api/files/view/filename.pdf
+    if (fileUrl.includes('/api/files/view/')) {
+      return fileUrl.split('/api/files/view/')[1]
+    }
+    
+    // If it's a path like /api/files/download/filename.pdf
+    if (fileUrl.includes('/api/files/download/')) {
+      return fileUrl.split('/api/files/download/')[1]
+    }
+    
+    // Otherwise assume it's just the filename
+    return fileUrl
+  }
+
+  // ========== FIXED: Build proper file URL ==========
+  const buildFileUrl = (fileUrl, action = 'view') => {
+    if (!fileUrl) return null
+    
+    const filename = getFilenameFromUrl(fileUrl)
+    if (!filename) return null
+    
+    // Don't double-encode if already encoded
+    const cleanFilename = decodeURIComponent(filename)
+    const encodedFilename = encodeURIComponent(cleanFilename)
+    
+    return `${API_URL}/api/files/${action}/${encodedFilename}`
+  }
+
+  // ========== FIXED: Download handler ==========
   const handleDownload = () => {
     if (!file) return
     
-    // If fileUrl exists, trigger actual download
     if (file.fileUrl) {
-      // Ensure fileUrl is a string and properly formatted
-      const fileUrl = typeof file.fileUrl === 'string' ? file.fileUrl : String(file.fileUrl)
+      const downloadUrl = buildFileUrl(file.fileUrl, 'download')
       
-      // Clean up the URL if needed
-      const cleanUrl = fileUrl.startsWith('http') ? fileUrl : `${API_URL}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`
+      if (!downloadUrl) {
+        alert('❌ 파일 URL이 설정되지 않았습니다. 관리자에게 문의하세요.')
+        return
+      }
       
+      console.log('🔗 Download URL:', downloadUrl)
+      
+      // Create temporary link and trigger download
       const link = document.createElement('a')
-      link.href = cleanUrl
+      link.href = downloadUrl
       link.download = file.title || 'download'
-      link.target = '_blank' // Open in new tab as fallback
+      link.target = '_blank'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+      
+      console.log('✅ Download triggered')
     } else {
-      alert('파일 URL이 설정되지 않았습니다. 관리자에게 문의하세요.')
+      alert('❌ 파일 URL이 설정되지 않았습니다. 관리자에게 문의하세요.')
       return
     }
     
-    // Save to user's downloads (use resources_${user.id} to match Dashboard)
+    // Save to user's downloads
     const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]')
     const fileToSave = {
       id: file.id,
@@ -133,31 +169,29 @@ export default function FileDetail() {
       localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources))
     }
 
-    // Update access count
     incrementAccessCount()
   }
+
+  // ========== FIXED: View in browser handler ==========
   const handleViewInBrowser = () => {
     if (!file) return
     
-    // If fileUrl exists, show viewer in same page
     if (file.fileUrl) {
-      // Ensure fileUrl is a string and properly formatted
-      const fileUrl = typeof file.fileUrl === 'string' ? file.fileUrl : String(file.fileUrl)
+      const viewUrl = buildFileUrl(file.fileUrl, 'view')
       
-      // Clean up the URL if needed
-      const cleanUrl = fileUrl.startsWith('http') ? fileUrl : `${API_URL}${fileUrl.startsWith('/') ? '' : '/'}${fileUrl}`
+      if (!viewUrl) {
+        alert('❌ 파일 URL이 설정되지 않았습니다. 관리자 패널에서 파일 URL을 설정해주세요.')
+        return
+      }
       
-      // Log for debugging
-      console.log('Opening file URL:', cleanUrl)
+      console.log('🔗 View URL:', viewUrl)
       
       setShowViewer(true)
-      // Update the file state with clean URL for iframe
-      setFile(prev => ({ ...prev, fileUrl: cleanUrl }))
+      setFile(prev => ({ ...prev, displayUrl: viewUrl }))
       
-      // Increment access count when viewing in browser
       incrementAccessCount()
       
-      // Save to user's downloads when viewing (use resources_${user.id} to match Dashboard)
+      // Save to user's resources
       if (user) {
         const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]')
         const fileToSave = {
@@ -174,7 +208,7 @@ export default function FileDetail() {
         }
       }
     } else {
-      alert(`브라우저에서 파일을 확인합니다.\n\n파일: ${file.title}\n형식: ${file.format}\n\n파일 URL이 설정되지 않았습니다. 관리자 패널에서 파일 URL을 설정해주세요.`)
+      alert(`❌ 파일 URL이 설정되지 않았습니다.\n\n관리자 패널에서 파일을 업로드하고 URL을 설정해주세요.`)
     }
   }
 
@@ -185,7 +219,6 @@ export default function FileDetail() {
       return
     }
 
-    // Check if user has downloaded/accessed the file
     const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]')
     const hasDownloaded = myResources.find(f => f.id === file.id)
     
@@ -257,9 +290,9 @@ export default function FileDetail() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* File Viewer (when viewing) - Full width when sidebar is hidden */}
-        {showViewer && file.fileUrl && (
-          <div className="bg-white rounded-xl shadow-md">
+        {/* File Viewer - Full width when shown */}
+        {showViewer && file.displayUrl && (
+          <div className="bg-white rounded-xl shadow-md mb-8">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-xl font-bold text-gray-900">{file.title}</h2>
               <button
@@ -271,15 +304,19 @@ export default function FileDetail() {
             </div>
             <div className="w-full" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
               <iframe
-                src={file.fileUrl}
+                src={file.displayUrl}
                 className="w-full h-full border-0"
                 title={`${file.title} 뷰어`}
+                onError={(e) => {
+                  console.error('❌ Iframe load error:', e)
+                  alert('파일을 로드할 수 없습니다. 파일이 존재하는지 확인하세요.')
+                }}
               />
             </div>
           </div>
         )}
 
-        {/* Grid layout for normal view (when viewer is hidden) */}
+        {/* Grid layout for normal view */}
         {!showViewer && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
