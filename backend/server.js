@@ -277,7 +277,8 @@ app.post('/api/files/upload', authenticate, upload.single('file'), async (req, r
       return res.status(400).json({ error: 'No file uploaded' });
     }
     
-    const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3001}`;
+    // Prefer explicit SERVER_URL, otherwise derive from the incoming request
+    const serverUrl = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
     const fileUrl = `${serverUrl}/api/files/view/${req.file.filename}`;
     const filePath = req.file.path;
     const ext = path.extname(req.file.originalname).toLowerCase();
@@ -324,7 +325,8 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
       return res.status(400).json({ error: 'No video uploaded' });
     }
     
-    const serverUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3001}`;
+    // Prefer explicit SERVER_URL, otherwise derive from the incoming request
+    const serverUrl = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
     const videoUrl = `${serverUrl}/api/videos/view/${req.file.filename}`;
     
     res.json({
