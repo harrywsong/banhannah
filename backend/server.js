@@ -414,7 +414,7 @@ app.get('/api/files/view/:filename', (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
     
-    // ========== CRITICAL: CORS Headers ==========
+// ========== CRITICAL FIX: Allow iframe embedding from your frontend ==========
     const allowedOrigins = [
       'http://localhost:5173',
       'http://127.0.0.1:5173',
@@ -426,25 +426,27 @@ app.get('/api/files/view/:filename', (req, res) => {
     ];
     
     const origin = req.get('origin');
+    const referer = req.get('referer');
     
-    // Allow CORS from whitelisted origins
-    if (origin && allowedOrigins.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      console.log('✅ CORS allowed for origin:', origin);
-    } else if (process.env.NODE_ENV !== 'production') {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      console.log('⚠️ DEV MODE: CORS allowed for all origins');
+    // Allow framing from your frontend domains
+    if (origin && allowedOrigins.some(allowed => origin.includes(allowed))) {
+      res.setHeader('Content-Security-Policy', `frame-ancestors ${origin}`);
+      res.setHeader('X-Frame-Options', 'ALLOW-FROM ' + origin);
+    } else if (referer) {
+      // Check referer if no origin
+      const refererOrigin = new URL(referer).origin;
+      if (allowedOrigins.some(allowed => refererOrigin.includes(allowed))) {
+        res.setHeader('Content-Security-Policy', `frame-ancestors ${refererOrigin}`);
+        res.setHeader('X-Frame-Options', 'ALLOW-FROM ' + refererOrigin);
+      }
+    } else {
+      // Development fallback - allow all
+      res.setHeader('Content-Security-Policy', "frame-ancestors *");
     }
     
-    // ========== CRITICAL FIX: Remove/Fix CSP Headers ==========
-    // DO NOT set X-Frame-Options at all - let it default to allowing framing
-    // DO NOT set Content-Security-Policy with frame-ancestors restriction
-    
-    // Safe headers that don't block embedding
+    // Safe headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
     
     // ========== Content Type Detection ==========
     const ext = path.extname(safeFilename).toLowerCase();
