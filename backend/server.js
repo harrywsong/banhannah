@@ -73,24 +73,35 @@ app.use('/api/', limiter);
 
 
 // ====================== IMPROVED & COMPLETE CORS CONFIGURATION ======================
-// Allow specific origins in production
-const allowedOrigins = [
+// Allow specific origins; prefer environment override `ALLOWED_ORIGINS`
+const defaultAllowed = [
   'http://localhost:5173',
   'https://banhannah.pages.dev',
-  'http://banhannah.dpdns.org'
+  'http://banhannah.dpdns.org',
+  'https://banhannah.dpdns.org',
+  'https://api.banhannah.dpdns.org'
 ];
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultAllowed.join(',')).split(',').map(s => s.trim()).filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('Blocked CORS for origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      return callback(null, true);
     }
+
+    // In non-production, also allow all origins to ease local/dev testing
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('DEV CORS allow for origin:', origin);
+      return callback(null, true);
+    }
+
+    console.log('Blocked CORS for origin:', origin);
+    // Return a clear error for blocked origins
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
