@@ -7,7 +7,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  const API_URL = 'https://api.banhannah.dpdns.org'
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
   // Load user from localStorage and verify with backend on mount
   useEffect(() => {
