@@ -382,7 +382,7 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
   }
 });
 
-// View/download endpoints
+// ========== FIXED /api/files/view/:filename endpoint ==========
 app.get('/api/files/view/:filename', (req, res) => {
   try {
     console.log('DEBUG /api/files/view', { 
@@ -440,11 +440,17 @@ app.get('/api/files/view/:filename', (req, res) => {
     res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
     res.setHeader('Content-Disposition', 'inline');
     
-    // ========== CRITICAL FIX: Remove restrictive CSP headers for file viewing ==========
-    // Allow embedding in iframes from your domains
-    const frameAncestors = allowedOrigins.join(' ');
-    res.setHeader('Content-Security-Policy', `frame-ancestors ${frameAncestors}`);
-    res.setHeader('X-Frame-Options', 'ALLOWALL'); // Override restrictive default
+    // ========== CRITICAL FIX: Allow embedding from your domains ==========
+    // Build frame-ancestors CSP directive with all your domains
+    const frameAncestors = allowedOrigins
+      .map(url => url.replace(/^https?:\/\//, '')) // Remove protocol
+      .join(' ');
+    
+    res.setHeader('Content-Security-Policy', `frame-ancestors 'self' ${frameAncestors}`);
+    
+    // Alternative: Remove X-Frame-Options entirely or set to ALLOWALL
+    // (CSP frame-ancestors takes precedence anyway)
+    res.removeHeader('X-Frame-Options');
     
     // Cache control
     res.setHeader('Cache-Control', 'public, max-age=3600');
