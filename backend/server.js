@@ -382,13 +382,15 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
   }
 });
 
-// ========== FIXED /api/files/view/:filename endpoint ==========
+// ========== COMPLETE FIX for /api/files/view/:filename ==========
 app.get('/api/files/view/:filename', (req, res) => {
   try {
     console.log('DEBUG /api/files/view', { 
       method: req.method, 
       url: req.originalUrl, 
-      filename: req.params.filename 
+      filename: req.params.filename,
+      origin: req.get('origin'),
+      referer: req.get('referer')
     });
     
     const safeFilename = decodeURIComponent(path.basename(req.params.filename));
@@ -401,7 +403,7 @@ app.get('/api/files/view/:filename', (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
     
-    // ========== FIXED: Allow iframe embedding from your domains ==========
+    // ========== CRITICAL: CORS Headers FIRST ==========
     const allowedOrigins = [
       'http://localhost:5173',
       'http://127.0.0.1:5173',
@@ -412,18 +414,41 @@ app.get('/api/files/view/:filename', (req, res) => {
       'https://banhannah.dpdns.org'
     ];
     
-    const origin = req.get('origin') || req.get('referer');
-    const isAllowedOrigin = allowedOrigins.some(allowed => 
-      origin && origin.includes(allowed.replace(/^https?:\/\//, ''))
-    );
+    const origin = req.get('origin');
+    const referer = req.get('referer');
     
-    // Set CORS headers
-    if (isAllowedOrigin || process.env.NODE_ENV !== 'production') {
-      res.setHeader('Access-Control-Allow-Origin', req.get('origin') || '*');
+    // Allow CORS from whitelisted origins
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
+      console.log('✅ CORS allowed for origin:', origin);
+    } else if (process.env.NODE_ENV !== 'production') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      console.log('⚠️ DEV MODE: CORS allowed for all origins');
     }
     
-    // Set content headers
+    // ========== CRITICAL: CSP with ALL domains ==========
+    // Build the CSP header with all allowed origins
+    const cspDomains = [
+      'localhost:5173',
+      '127.0.0.1:5173',
+      'banhannah.pages.dev',
+      'banhannah.ddns.org',
+      'banhannah.dpdns.org',
+      '*.pages.dev', // Wildcard for Cloudflare Pages preview URLs
+    ];
+    
+    const cspValue = `frame-ancestors 'self' ${cspDomains.map(d => 
+      d.includes('*') ? `https://${d} http://${d}` : `https://${d} http://${d}`
+    ).join(' ')}`;
+    
+    res.setHeader('Content-Security-Policy', cspValue);
+    console.log('✅ CSP set:', cspValue);
+    
+    // ========== Remove conflicting headers ==========
+    res.removeHeader('X-Frame-Options');
+    
+    // ========== Content Type ==========
     const ext = path.extname(safeFilename).toLowerCase();
     const contentTypes = {
       '.pdf': 'application/pdf',
@@ -439,26 +464,12 @@ app.get('/api/files/view/:filename', (req, res) => {
     
     res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
     res.setHeader('Content-Disposition', 'inline');
-    
-    // ========== CRITICAL FIX: Allow embedding from your domains ==========
-    // Build frame-ancestors CSP directive with all your domains
-    const frameAncestors = allowedOrigins
-      .map(url => url.replace(/^https?:\/\//, '')) // Remove protocol
-      .join(' ');
-    
-    res.setHeader('Content-Security-Policy', `frame-ancestors 'self' ${frameAncestors}`);
-    
-    // Alternative: Remove X-Frame-Options entirely or set to ALLOWALL
-    // (CSP frame-ancestors takes precedence anyway)
-    res.removeHeader('X-Frame-Options');
-    
-    // Cache control
     res.setHeader('Cache-Control', 'public, max-age=3600');
     
     console.log('✅ Sending file:', safeFilename);
     res.sendFile(filePath);
   } catch (error) {
-    console.error('View error:', error);
+    console.error('❌ View error:', error);
     res.status(500).json({ error: 'File view failed' });
   }
 });
