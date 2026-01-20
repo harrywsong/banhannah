@@ -3,10 +3,11 @@
 
 // Get API URL from environment variable
 const getApiUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
+  // Allow an explicit empty string to override production URL during local dev.
+  if (Object.prototype.hasOwnProperty.call(import.meta.env, 'VITE_API_URL')) {
     return import.meta.env.VITE_API_URL;
   }
-  
+
   // Default to production backend
   return 'https://api.banhannah.dpdns.org';
 };
