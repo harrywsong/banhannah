@@ -59,7 +59,6 @@ app.use(helmet({
       frameSrc: ["'self'", "blob:"], // blob: for PDF iframes
       workerSrc: ["'self'", "blob:"], // PDF.js uses workers
       childSrc: ["'self'", "blob:"], // PDF viewer needs this
-      // DO NOT set frame-ancestors - allow all embedding
     }
   }
 }));
@@ -456,15 +455,12 @@ app.get('/api/files/view/:filename', (req, res) => {
     // Set appropriate CSP headers
     if (allowedOrigin) {
       // Allow embedding from specific origin
-      res.setHeader('Content-Security-Policy', `frame-ancestors ${allowedOrigin}`);
       res.setHeader('X-Frame-Options', 'ALLOWALL'); // Modern browsers prefer CSP
     } else if (process.env.NODE_ENV !== 'production') {
       // Development mode - allow all
-      res.setHeader('Content-Security-Policy', "frame-ancestors *");
       res.setHeader('X-Frame-Options', 'ALLOWALL');
     } else {
       // Production - unknown origin - block
-      res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
       res.setHeader('X-Frame-Options', 'DENY');
     }
     
