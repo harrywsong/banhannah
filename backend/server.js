@@ -81,13 +81,18 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Rate limiting - more permissive in development
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 100 : 10000,  // 10000 in dev, 100 in prod
-  message: 'Too many requests from this IP, please try again later.'
-});
-app.use('/api/', limiter);
-
+// ========== RATE LIMITING - DISABLED IN DEVELOPMENT ==========
+if (process.env.NODE_ENV === 'production') {
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: 'Too many requests, please try again later.' }
+  });
+  app.use('/api/', limiter);
+  console.log('✓ Rate limiting enabled (100 req/15min)');
+} else {
+  console.log('⚠️  Rate limiting DISABLED (development mode)');
+}
 
 // ====================== IMPROVED & COMPLETE CORS CONFIGURATION ======================
 // Allow specific origins; prefer environment override `ALLOWED_ORIGINS`

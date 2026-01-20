@@ -174,45 +174,47 @@ useEffect(() => {
   };
 
   const apiRequestAdmin = async (url, options = {}) => {
-    const token = localStorage.getItem('adminToken');
+  const token = localStorage.getItem('adminToken')
+  
+  const defaultHeaders = {
+    'ngrok-skip-browser-warning': 'true',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache'
+  }
+  
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`
+  }
+  
+  const isFormData = options.body instanceof FormData
+  if (!isFormData && options.body) {
+    defaultHeaders['Content-Type'] = 'application/json'
+  }
+  
+  const mergedOptions = {
+    ...options,
+    credentials: 'include',
+    headers: {
+      ...defaultHeaders,
+      ...options.headers
+    }
+  }
+  
+  try {
+    console.log('Admin API Request:', { url, method: options.method || 'GET', hasToken: !!token })
+    const response = await fetch(url, mergedOptions)
     
-    const defaultHeaders = {
-      'ngrok-skip-browser-warning': 'true'
-    };
-    
-    if (token) {
-      defaultHeaders['Authorization'] = `Bearer ${token}`;
+    // Log rate limit errors
+    if (response.status === 429) {
+      console.error('❌ Rate limit exceeded:', await response.text())
     }
     
-    const isFormData = options.body instanceof FormData;
-    if (!isFormData && options.body) {
-      defaultHeaders['Content-Type'] = 'application/json';
-    }
-    
-    const mergedOptions = {
-      ...options,
-      credentials: 'include',
-      headers: {
-        ...defaultHeaders,
-        ...options.headers
-      }
-    };
-    
-    try {
-      const response = await fetch(url, mergedOptions);
-      
-      if (response.status === 401) {
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminSession');
-        window.location.href = '/administrative';
-      }
-      
-      return response;
-    } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
-    }
-  };
+    return response
+  } catch (error) {
+    console.error('Admin API request failed:', error)
+    throw error
+  }
+}
 
   // Class handlers
   const handleClassSubmit = (e) => {
