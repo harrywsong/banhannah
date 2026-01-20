@@ -80,10 +80,11 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Rate limiting (KEEP THIS)
+// Rate limiting - more permissive in development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100
+  max: process.env.NODE_ENV === 'production' ? 100 : 10000,  // 10000 in dev, 100 in prod
+  message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api/', limiter);
 
