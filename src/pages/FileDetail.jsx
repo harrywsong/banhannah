@@ -113,104 +113,136 @@ export default function FileDetail() {
 
   // ========== FIXED: Build proper file URL ==========
   const buildFileUrl = (fileUrl, action = 'view') => {
-    if (!fileUrl) return null
-    
-    const filename = getFilenameFromUrl(fileUrl)
-    if (!filename) return null
-    
-    // Don't double-encode if already encoded
-    const cleanFilename = decodeURIComponent(filename)
-    const encodedFilename = encodeURIComponent(cleanFilename)
-    
-    return `${API_URL}/api/files/${action}/${encodedFilename}`
-  }
+  if (!fileUrl) return null;
+  
+  // Extract filename from URL
+  const getFilename = (url) => {
+    if (url.includes('/api/files/view/')) {
+      return url.split('/api/files/view/')[1];
+    }
+    if (url.includes('/api/files/download/')) {
+      return url.split('/api/files/download/')[1];
+    }
+    // If it's just a filename or a full URL, extract the last part
+    const parts = url.split('/');
+    return parts[parts.length - 1];
+  };
+  
+  const filename = getFilename(fileUrl);
+  if (!filename) return null;
+  
+  // Decode if already encoded, then re-encode properly
+  const cleanFilename = decodeURIComponent(filename);
+  const encodedFilename = encodeURIComponent(cleanFilename);
+  
+  return `${API_URL}/api/files/${action}/${encodedFilename}`;
+};
 
   // ========== FIXED: Download handler ==========
   const handleDownload = () => {
-    if (!file) return
+  if (!file || !file.fileUrl) {
+    alert('❌ 파일 URL이 설정되지 않았습니다.\n\n관리자 패널에서 파일을 업로드하고 URL을 설정해주세요.');
+    return;
+  }
+  
+  const downloadUrl = buildFileUrl(file.fileUrl, 'download');
+  
+  if (!downloadUrl) {
+    alert('❌ 파일 URL 생성에 실패했습니다.');
+    return;
+  }
+  
+  console.log('🔗 Download URL:', downloadUrl);
+  
+  // Method 1: Try direct window.open (works for most files)
+  const newWindow = window.open(downloadUrl, '_blank');
+  
+  // Fallback: If popup blocked, use fetch + blob
+  if (!newWindow) {
+    console.log('📥 Popup blocked, using fetch download...');
     
-    if (file.fileUrl) {
-      const downloadUrl = buildFileUrl(file.fileUrl, 'download')
-      
-      if (!downloadUrl) {
-        alert('❌ 파일 URL이 설정되지 않았습니다. 관리자에게 문의하세요.')
-        return
+    fetch(downloadUrl, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true'
       }
-      
-      console.log('🔗 Download URL:', downloadUrl)
-      
-      // Create temporary link and trigger download
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = file.title || 'download'
-      link.target = '_blank'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      console.log('✅ Download triggered')
-    } else {
-      alert('❌ 파일 URL이 설정되지 않았습니다. 관리자에게 문의하세요.')
-      return
-    }
-    
-    // Save to user's downloads
-    const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]')
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('Download failed');
+        return response.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.title || 'download';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        console.log('✅ Download triggered via blob');
+      })
+      .catch(error => {
+        console.error('Download error:', error);
+        alert('다운로드에 실패했습니다. 다시 시도해주세요.');
+      });
+  }
+  
+  // Save to user's downloads
+  const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]');
+  const fileToSave = {
+    id: file.id,
+    title: file.title,
+    format: file.format,
+    size: file.size,
+    downloadedAt: new Date().toISOString()
+  };
+  
+  if (!myResources.find(f => f.id === file.id)) {
+    myResources.push(fileToSave);
+    localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources));
+  }
+
+  incrementAccessCount();
+};
+
+  // ========== FIXED: View in browser handler ==========
+  const handleViewInBrowser = () => {
+  if (!file || !file.fileUrl) {
+    alert('❌ 파일 URL이 설정되지 않았습니다.\n\n관리자 패널에서 파일을 업로드하고 URL을 설정해주세요.');
+    return;
+  }
+  
+  const viewUrl = buildFileUrl(file.fileUrl, 'view');
+  
+  if (!viewUrl) {
+    alert('❌ 파일 URL 생성에 실패했습니다.');
+    return;
+  }
+  
+  console.log('🔗 View URL:', viewUrl);
+  
+  setShowViewer(true);
+  setFile(prev => ({ ...prev, displayUrl: viewUrl }));
+  
+  incrementAccessCount();
+  
+  // Save to user's resources
+  if (user) {
+    const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]');
     const fileToSave = {
       id: file.id,
       title: file.title,
       format: file.format,
       size: file.size,
       downloadedAt: new Date().toISOString()
-    }
+    };
     
     if (!myResources.find(f => f.id === file.id)) {
-      myResources.push(fileToSave)
-      localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources))
-    }
-
-    incrementAccessCount()
-  }
-
-  // ========== FIXED: View in browser handler ==========
-  const handleViewInBrowser = () => {
-    if (!file) return
-    
-    if (file.fileUrl) {
-      const viewUrl = buildFileUrl(file.fileUrl, 'view')
-      
-      if (!viewUrl) {
-        alert('❌ 파일 URL이 설정되지 않았습니다. 관리자 패널에서 파일 URL을 설정해주세요.')
-        return
-      }
-      
-      console.log('🔗 View URL:', viewUrl)
-      
-      setShowViewer(true)
-      setFile(prev => ({ ...prev, displayUrl: viewUrl }))
-      
-      incrementAccessCount()
-      
-      // Save to user's resources
-      if (user) {
-        const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]')
-        const fileToSave = {
-          id: file.id,
-          title: file.title,
-          format: file.format,
-          size: file.size,
-          downloadedAt: new Date().toISOString()
-        }
-        
-        if (!myResources.find(f => f.id === file.id)) {
-          myResources.push(fileToSave)
-          localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources))
-        }
-      }
-    } else {
-      alert(`❌ 파일 URL이 설정되지 않았습니다.\n\n관리자 패널에서 파일을 업로드하고 URL을 설정해주세요.`)
+      myResources.push(fileToSave);
+      localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources));
     }
   }
+};
 
   const handleReviewSubmit = (e) => {
     e.preventDefault()
