@@ -48,7 +48,16 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      "frame-ancestors": ["'self'", "https://banhannah.pages.dev", "http://localhost:5173"]
+      "frame-ancestors": [
+        "'self'", 
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://banhannah.pages.dev",
+        "http://banhannah.ddns.org",
+        "https://banhannah.ddns.org",
+        "http://banhannah.dpdns.org",
+        "https://banhannah.dpdns.org"
+      ]
     }
   }
 }));
