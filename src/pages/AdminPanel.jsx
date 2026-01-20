@@ -2,10 +2,7 @@ import { useState, useEffect } from 'react'
 import AdminLogin from '../components/AdminLogin'
 import { apiEndpoint, addAuthHeaders } from '../config/api'
 import { useAdminAuth } from '../contexts/AdminAuthContext';
-import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield, Download } from 'lucide-react'
-
-
-
+import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield, Download, BookOpen, FileQuestion, ChevronUp, ChevronDown } from 'lucide-react'
 
 export default function AdminPanel() {
   const { adminSession, adminLogout, isAdmin } = useAdminAuth();
@@ -566,10 +563,10 @@ useEffect(() => {
   }
 
   const addLessonToCourse = () => {
-    if (!currentLessonForm.title) {
-      alert('레슨 제목을 입력하세요')
-      return
-    }
+  if (!currentLessonForm.title?.trim()) {
+    alert('레슨 제목을 입력하세요')
+    return
+  }
     
     // Ensure content array exists and has proper order
     const content = (currentLessonForm.content || []).map((block, index) => ({
@@ -1886,10 +1883,20 @@ if (data.success) {
     </div>
 
 {/* Add/Edit Lesson Form */}
-<div className="border-2 border-dashed border-gray-300 rounded-lg p-4 space-y-3 bg-white">
-  <div className="flex items-center justify-between mb-2">
-    <h4 className="font-semibold text-gray-700">
-      {editingLesson ? '레슨/챕터 수정' : '레슨/챕터 추가'}
+<div className="border-2 border-purple-200 rounded-xl p-6 space-y-4 bg-gradient-to-br from-purple-50 to-white shadow-sm">
+  <div className="flex items-center justify-between mb-3">
+    <h4 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+      {editingLesson ? (
+        <>
+          <Edit className="h-5 w-5 text-purple-600" />
+          레슨/챕터 수정
+        </>
+      ) : (
+        <>
+          <Plus className="h-5 w-5 text-purple-600" />
+          레슨/챕터 추가
+        </>
+      )}
     </h4>
     {editingLesson && (
       <button
@@ -1903,33 +1910,53 @@ if (data.success) {
   </div>
 
   {/* Lesson Type Selector */}
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2">타입</label>
-    <div className="flex gap-2">
-      <button
-        type="button"
-        onClick={() => setCurrentLessonForm({ ...currentLessonForm, type: 'lesson', content: [] })}
-        className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-          (currentLessonForm.type || 'lesson') === 'lesson'
-            ? 'border-purple-500 bg-purple-50 text-purple-700'
-            : 'border-gray-300 text-gray-600 hover:border-gray-400'
-        }`}
-      >
-        레슨 (콘텐츠)
-      </button>
-      <button
-        type="button"
-        onClick={() => setCurrentLessonForm({ ...currentLessonForm, type: 'chapter', content: [] })}
-        className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
-          currentLessonForm.type === 'chapter'
-            ? 'border-blue-500 bg-blue-50 text-blue-700'
-            : 'border-gray-300 text-gray-600 hover:border-gray-400'
-        }`}
-      >
-        챕터 (구분자)
-      </button>
-    </div>
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">타입 선택</label>
+  <div className="grid grid-cols-2 gap-3">
+    <button
+      type="button"
+      onClick={() => setCurrentLessonForm({ ...currentLessonForm, type: 'lesson', content: [] })}
+      className={`group relative px-4 py-4 rounded-xl border-2 transition-all ${
+        (currentLessonForm.type || 'lesson') === 'lesson'
+          ? 'border-purple-500 bg-purple-50 shadow-md scale-105'
+          : 'border-gray-300 hover:border-purple-300 hover:shadow-sm'
+      }`}
+    >
+      <div className="flex items-center gap-2 justify-center">
+        <FileText className={`h-5 w-5 ${
+          (currentLessonForm.type || 'lesson') === 'lesson' ? 'text-purple-600' : 'text-gray-500'
+        }`} />
+        <span className={`font-semibold ${
+          (currentLessonForm.type || 'lesson') === 'lesson' ? 'text-purple-700' : 'text-gray-700'
+        }`}>
+          레슨
+        </span>
+      </div>
+      <p className="text-xs text-gray-500 mt-1">비디오, 텍스트, 파일 포함</p>
+    </button>
+    <button
+      type="button"
+      onClick={() => setCurrentLessonForm({ ...currentLessonForm, type: 'chapter', content: [] })}
+      className={`group relative px-4 py-4 rounded-xl border-2 transition-all ${
+        currentLessonForm.type === 'chapter'
+          ? 'border-blue-500 bg-blue-50 shadow-md scale-105'
+          : 'border-gray-300 hover:border-blue-300 hover:shadow-sm'
+      }`}
+    >
+      <div className="flex items-center gap-2 justify-center">
+        <BookOpen className={`h-5 w-5 ${
+          currentLessonForm.type === 'chapter' ? 'text-blue-600' : 'text-gray-500'
+        }`} />
+        <span className={`font-semibold ${
+          currentLessonForm.type === 'chapter' ? 'text-blue-700' : 'text-gray-700'
+        }`}>
+          챕터
+        </span>
+      </div>
+      <p className="text-xs text-gray-500 mt-1">구분자 역할만</p>
+    </button>
   </div>
+</div>
 
   {/* Title */}
   <div>
@@ -1963,11 +1990,11 @@ if (data.success) {
   {/* Content Builder (only for lessons, not chapters) */}
   {currentLessonForm.type !== 'chapter' && (
     <div className="border-t pt-4 mt-4">
-      <div className="flex items-center justify-between mb-3">
-        <label className="block text-sm font-medium text-gray-700">
-          레슨 콘텐츠 블록
+      <div className="flex items-center justify-between mb-4">
+        <label className="block text-sm font-semibold text-gray-900">
+          콘텐츠 블록
         </label>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => {
@@ -1980,9 +2007,10 @@ if (data.success) {
               });
               setCurrentLessonForm({ ...currentLessonForm, content: newContent });
             }}
-            className="text-xs px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            className="group flex items-center gap-1.5 text-xs px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 shadow-sm hover:shadow-md transition-all"
           >
-            + 비디오
+            <Video className="h-3.5 w-3.5" />
+            <span>비디오</span>
           </button>
           <button
             type="button"
@@ -1996,9 +2024,10 @@ if (data.success) {
               });
               setCurrentLessonForm({ ...currentLessonForm, content: newContent });
             }}
-            className="text-xs px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="group flex items-center gap-1.5 text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm hover:shadow-md transition-all"
           >
-            + 텍스트
+            <FileText className="h-3.5 w-3.5" />
+            <span>텍스트</span>
           </button>
           <button
             type="button"
@@ -2012,9 +2041,10 @@ if (data.success) {
               });
               setCurrentLessonForm({ ...currentLessonForm, content: newContent });
             }}
-            className="text-xs px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            className="group flex items-center gap-1.5 text-xs px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-sm hover:shadow-md transition-all"
           >
-            + 파일
+            <Download className="h-3.5 w-3.5" />
+            <span>파일</span>
           </button>
           <button
             type="button"
@@ -2033,34 +2063,39 @@ if (data.success) {
               });
               setCurrentLessonForm({ ...currentLessonForm, content: newContent });
             }}
-            className="text-xs px-3 py-1 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+            className="group flex items-center gap-1.5 text-xs px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 shadow-sm hover:shadow-md transition-all"
           >
-            + 문제
+            <FileQuestion className="h-3.5 w-3.5" />
+            <span>문제</span>
           </button>
         </div>
       </div>
 
       {/* Content Blocks List */}
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+      <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
         {(currentLessonForm.content || []).map((block, blockIndex) => (
-          <div key={block.id} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
+          <div key={block.id} className="bg-white p-4 rounded-xl border-2 border-gray-200 hover:border-purple-300 shadow-sm hover:shadow-md transition-all">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold px-2 py-1 rounded" style={{
+                {block.type === 'video' && <Video className="h-4 w-4 text-red-600" />}
+                {block.type === 'text' && <FileText className="h-4 w-4 text-blue-600" />}
+                {block.type === 'file' && <Download className="h-4 w-4 text-green-600" />}
+                {block.type === 'question' && <FileQuestion className="h-4 w-4 text-orange-600" />}
+                <span className="text-sm font-bold px-2.5 py-1 rounded-lg" style={{
                   backgroundColor: block.type === 'video' ? '#fef2f2' : 
                                   block.type === 'text' ? '#eff6ff' :
                                   block.type === 'file' ? '#f0fdf4' : '#fff7ed',
                   color: block.type === 'video' ? '#991b1b' :
-                         block.type === 'text' ? '#1e40af' :
-                         block.type === 'file' ? '#166534' : '#9a3412'
+                        block.type === 'text' ? '#1e40af' :
+                        block.type === 'file' ? '#166534' : '#9a3412'
                 }}>
                   {block.type === 'video' ? '비디오' :
-                   block.type === 'text' ? '텍스트' :
-                   block.type === 'file' ? '파일' : '문제'}
+                  block.type === 'text' ? '텍스트' :
+                  block.type === 'file' ? '파일' : '문제'}
                 </span>
-                <span className="text-xs text-gray-500">#{blockIndex + 1}</span>
+                <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">#{blockIndex + 1}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {blockIndex > 0 && (
                   <button
                     type="button"
@@ -2071,10 +2106,10 @@ if (data.success) {
                       newContent.forEach((c, i) => c.order = i);
                       setCurrentLessonForm({ ...currentLessonForm, content: newContent });
                     }}
-                    className="text-gray-500 hover:text-gray-700 text-xs"
+                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                     title="위로 이동"
                   >
-                    ↑
+                    <ChevronUp className="h-4 w-4" />
                   </button>
                 )}
                 {blockIndex < currentLessonForm.content.length - 1 && (
@@ -2087,20 +2122,23 @@ if (data.success) {
                       newContent.forEach((c, i) => c.order = i);
                       setCurrentLessonForm({ ...currentLessonForm, content: newContent });
                     }}
-                    className="text-gray-500 hover:text-gray-700 text-xs"
+                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                     title="아래로 이동"
                   >
-                    ↓
+                    <ChevronDown className="h-4 w-4" />
                   </button>
                 )}
+                <div className="w-px h-4 bg-gray-300 mx-1"></div>
                 <button
                   type="button"
                   onClick={() => {
-                    const newContent = currentLessonForm.content.filter((_, i) => i !== blockIndex);
-                    newContent.forEach((c, i) => c.order = i);
-                    setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                    if (window.confirm('이 블록을 삭제하시겠습니까?')) {
+                      const newContent = currentLessonForm.content.filter((_, i) => i !== blockIndex);
+                      newContent.forEach((c, i) => c.order = i);
+                      setCurrentLessonForm({ ...currentLessonForm, content: newContent });
+                    }
                   }}
-                  className="text-red-600 hover:text-red-700"
+                  className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
                   title="삭제"
                 >
                   <X className="h-4 w-4" />
@@ -2533,10 +2571,20 @@ if (data.success) {
   <button
     type="button"
     onClick={addLessonToCourse}
-    disabled={!currentLessonForm.title}
-    className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+    disabled={!currentLessonForm.title?.trim()}
+    className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-purple-800 font-semibold disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
   >
-    {editingLesson ? '레슨/챕터 수정' : '레슨/챕터 추가'}
+    {editingLesson ? (
+      <>
+        <Edit className="h-5 w-5" />
+        <span>레슨/챕터 수정</span>
+      </>
+    ) : (
+      <>
+        <Plus className="h-5 w-5" />
+        <span>레슨/챕터 추가</span>
+      </>
+    )}
   </button>
 </div>
   </div>
