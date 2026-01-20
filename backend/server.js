@@ -144,6 +144,13 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || defaultAllowed.join(','))
 
 app.use(cors({
   origin: (origin, callback) => {
+    // DEVELOPMENT MODE: Allow all origins
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔓 DEV MODE: Allowing origin:', origin || 'no-origin');
+      return callback(null, true);
+    }
+    
+    // PRODUCTION MODE: Strict origin checking
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
@@ -183,18 +190,15 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-// Explicit OPTIONS handler for extra safety - MUST be after cors() middleware
-app.options('*', cors());
-
-// Explicit OPTIONS handler for extra safety - MUST be after cors() middleware
-app.options('*', cors());
-
 // Explicit OPTIONS handler for extra safety
 app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  if (process.env.NODE_ENV !== 'production') {
+    res.header('Access-Control-Allow-Origin', req.get('origin') || '*');
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
   res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Range, ngrok-skip-browser-warning, Origin, Accept, X-Requested-With');
   res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.status(204).end();
 });
 
