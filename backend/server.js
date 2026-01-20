@@ -382,7 +382,8 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
   }
 });
 
-// ========== COMPLETE FIX for /api/files/view/:filename ==========
+// COMPLETE FIX for /api/files/view/:filename with PDF embedding support
+
 app.get('/api/files/view/:filename', (req, res) => {
   try {
     console.log('DEBUG /api/files/view', { 
@@ -393,8 +394,8 @@ app.get('/api/files/view/:filename', (req, res) => {
       referer: req.get('referer')
     });
     
-    // CRITICAL: Only decode once - the filename comes already URL-encoded from the request
-    const safeFilename = path.basename(req.params.filename);
+    // CRITICAL: Decode ONLY ONCE to avoid double-decoding issues
+    const safeFilename = path.basename(decodeURIComponent(req.params.filename));
     const filePath = path.join(uploadsDir, safeFilename);
     
     console.log('Looking for file at:', filePath);
@@ -429,14 +430,15 @@ app.get('/api/files/view/:filename', (req, res) => {
       console.log('⚠️ DEV MODE: CORS allowed for all origins');
     }
     
-    // ========== CRITICAL: Permissive CSP for PDF embedding ==========
-    res.setHeader('Content-Security-Policy', "frame-ancestors *");
+    // ========== CRITICAL: Permissive CSP and headers for PDF embedding ==========
+    // Allow embedding in iframes from ANY origin (for PDF viewer compatibility)
+    res.setHeader('X-Frame-Options', 'ALLOWALL'); // Or remove this header entirely
+    res.setHeader('Content-Security-Policy', "frame-ancestors *"); // Allow all iframe parents
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
     
-    // ========== Remove conflicting headers that block iframes ==========
-    res.removeHeader('X-Frame-Options');
-    
-    // ========== Content Type ==========
+    // ========== Content Type Detection ==========
     const ext = path.extname(safeFilename).toLowerCase();
     const contentTypes = {
       '.pdf': 'application/pdf',
@@ -450,13 +452,42 @@ app.get('/api/files/view/:filename', (req, res) => {
       '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     };
     
-    res.setHeader('Content-Type', contentTypes[ext] || 'application/octet-stream');
-    res.setHeader('Content-Disposition', 'inline; filename="' + safeFilename + '"');
-    res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    const contentType = contentTypes[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
     
-    console.log('✅ Sending file:', safeFilename, 'Type:', contentTypes[ext]);
-    res.sendFile(filePath);
+    // ========== CRITICAL: Inline disposition for viewing in browser ==========
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(safeFilename)}"`);
+    
+    // ========== Support Range Requests (for PDF partial loading) ==========
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+    
+    if (range) {
+      // Handle partial content request (required for PDF viewers)
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = (end - start) + 1;
+      
+      res.status(206); // Partial Content
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+      res.setHeader('Content-Length', chunksize);
+      res.setHeader('Accept-Ranges', 'bytes');
+      
+      const stream = fs.createReadStream(filePath, { start, end });
+      stream.pipe(res);
+      
+      console.log('✅ Sending partial content:', safeFilename, `bytes ${start}-${end}/${fileSize}`);
+    } else {
+      // Send entire file
+      res.setHeader('Content-Length', fileSize);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      
+      console.log('✅ Sending complete file:', safeFilename, 'Type:', contentType);
+      res.sendFile(filePath);
+    }
   } catch (error) {
     console.error('❌ View error:', error);
     res.status(500).json({ error: 'File view failed' });

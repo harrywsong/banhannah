@@ -1,7 +1,7 @@
-// src/pages/FileDetail.jsx - COMPLETE FIXED VERSION
+// src/pages/FileDetail.jsx - COMPLETE PDF VIEWER FIX
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Download, FileText, Clock, Star, MessageCircle, X, Eye } from 'lucide-react'
+import { ArrowLeft, Download, FileText, Clock, Star, MessageCircle, X, Eye, AlertCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
 import { apiEndpoint, apiRequest } from '../config/api'
@@ -19,6 +19,8 @@ export default function FileDetail() {
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' })
   const [editingReview, setEditingReview] = useState(null)
   const [showViewer, setShowViewer] = useState(false)
+  const [viewerError, setViewerError] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -86,32 +88,37 @@ export default function FileDetail() {
     }
   }
 
-  const buildFileUrl = (fileUrl, action = 'view') => {
+  const extractFilename = (fileUrl) => {
     if (!fileUrl) return null;
     
-    // Extract just the filename from any URL format
+    // Extract filename from various URL formats
     let filename;
     if (fileUrl.includes('/api/files/')) {
-      // Already a full API URL - extract filename
       const parts = fileUrl.split('/');
       filename = parts[parts.length - 1];
     } else if (fileUrl.includes('/')) {
-      // Path with slashes - get last part
       const parts = fileUrl.split('/');
       filename = parts[parts.length - 1];
     } else {
-      // Just a filename
       filename = fileUrl;
     }
     
-    // Decode if encoded, then re-encode properly
-    const decodedFilename = decodeURIComponent(filename);
-    const encodedFilename = encodeURIComponent(decodedFilename);
+    // Decode once to get clean filename
+    return decodeURIComponent(filename);
+  };
+
+  const buildFileUrl = (fileUrl, action = 'view') => {
+    if (!fileUrl) return null;
+    
+    const cleanFilename = extractFilename(fileUrl);
+    if (!cleanFilename) return null;
+    
+    // Encode properly for URL
+    const encodedFilename = encodeURIComponent(cleanFilename);
     
     console.log('🔗 Building URL:', {
       original: fileUrl,
-      extracted: filename,
-      decoded: decodedFilename,
+      clean: cleanFilename,
       encoded: encodedFilename,
       action
     });
@@ -131,9 +138,9 @@ export default function FileDetail() {
       return;
     }
     
-    console.log('🔗 Download URL:', downloadUrl);
+    console.log('📥 Starting download:', downloadUrl);
     
-    // Create hidden link and trigger download
+    // Create hidden link for download
     const link = document.createElement('a');
     link.href = downloadUrl;
     link.download = file.title || 'download';
@@ -160,41 +167,63 @@ export default function FileDetail() {
     incrementAccessCount();
   };
 
-  const handleViewInBrowser = () => {
+  const handleViewInBrowser = async () => {
     if (!file || !file.fileUrl) {
       alert('❌ 파일 URL이 설정되지 않았습니다.');
       return;
     }
     
+    setViewerError(null);
+    setIsLoading(true);
+    
     const viewUrl = buildFileUrl(file.fileUrl, 'view');
     if (!viewUrl) {
       alert('❌ 파일 URL 생성에 실패했습니다.');
+      setIsLoading(false);
       return;
     }
     
-    console.log('🔗 View URL:', viewUrl);
+    console.log('👁️ Opening viewer with URL:', viewUrl);
     
-    // Update file with display URL and show viewer
-    setFile(prev => ({ ...prev, displayUrl: viewUrl }));
-    setShowViewer(true);
-    
-    incrementAccessCount();
-    
-    // Save to user's resources
-    if (user) {
-      const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]');
-      const fileToSave = {
-        id: file.id,
-        title: file.title,
-        format: file.format,
-        size: file.size,
-        downloadedAt: new Date().toISOString()
-      };
+    // Test if URL is accessible before showing viewer
+    try {
+      const testResponse = await fetch(viewUrl, {
+        method: 'HEAD',
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      });
       
-      if (!myResources.find(f => f.id === file.id)) {
-        myResources.push(fileToSave);
-        localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources));
+      if (!testResponse.ok) {
+        throw new Error(`File not accessible (${testResponse.status})`);
       }
+      
+      // URL is accessible, show viewer
+      setFile(prev => ({ ...prev, displayUrl: viewUrl }));
+      setShowViewer(true);
+      incrementAccessCount();
+      
+      // Save to resources
+      if (user) {
+        const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]');
+        const fileToSave = {
+          id: file.id,
+          title: file.title,
+          format: file.format,
+          size: file.size,
+          downloadedAt: new Date().toISOString()
+        };
+        
+        if (!myResources.find(f => f.id === file.id)) {
+          myResources.push(fileToSave);
+          localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources));
+        }
+      }
+    } catch (error) {
+      console.error('❌ File access error:', error);
+      setViewerError(`파일을 로드할 수 없습니다: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -276,37 +305,83 @@ export default function FileDetail() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* File Viewer - FIXED: Always render when showViewer is true */}
-        {showViewer && file.displayUrl && (
+        {/* File Viewer - IMPROVED ERROR HANDLING */}
+        {showViewer && (
           <div className="bg-white rounded-xl shadow-md mb-8 overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b bg-gray-50">
               <h2 className="text-xl font-bold text-gray-900">{file.title}</h2>
               <button
-                onClick={() => setShowViewer(false)}
+                onClick={() => {
+                  setShowViewer(false);
+                  setViewerError(null);
+                }}
                 className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors"
                 title="뷰어 닫기"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="w-full bg-gray-100" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
-              <iframe
-                key={file.displayUrl}
-                src={file.displayUrl}
-                className="w-full h-full border-0"
-                title={`${file.title} 뷰어`}
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                onLoad={() => console.log('✅ Iframe loaded successfully')}
-                onError={(e) => {
-                  console.error('❌ Iframe load error:', e)
-                  alert('파일을 로드할 수 없습니다. 파일이 존재하는지 확인하세요.')
-                }}
-              />
-            </div>
+            
+            {viewerError ? (
+              <div className="p-8 text-center">
+                <AlertCircle className="h-16 w-16 mx-auto mb-4 text-red-500" />
+                <p className="text-lg font-semibold text-gray-900 mb-2">파일 로드 실패</p>
+                <p className="text-gray-600 mb-4">{viewerError}</p>
+                <button
+                  onClick={handleViewInBrowser}
+                  className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+                >
+                  다시 시도
+                </button>
+              </div>
+            ) : isLoading ? (
+              <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 200px)' }}>
+                <div className="text-center">
+                  <div className="w-16 h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-gray-600">파일 로딩 중...</p>
+                </div>
+              </div>
+            ) : file.displayUrl && (
+              <div className="relative w-full bg-gray-100" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
+                {file.format?.toLowerCase() === 'pdf' ? (
+                  // PDF.js viewer for better compatibility
+                  <iframe
+                    key={file.displayUrl}
+                    src={`${file.displayUrl}#view=FitH&toolbar=1&navpanes=0`}
+                    className="w-full h-full border-0"
+                    title={`${file.title} 뷰어`}
+                    onLoad={(e) => {
+                      console.log('✅ PDF loaded successfully');
+                      setIsLoading(false);
+                    }}
+                    onError={(e) => {
+                      console.error('❌ PDF load error:', e);
+                      setViewerError('PDF를 로드할 수 없습니다. 다운로드하여 확인해주세요.');
+                    }}
+                  />
+                ) : (
+                  // Regular iframe for other formats
+                  <iframe
+                    key={file.displayUrl}
+                    src={file.displayUrl}
+                    className="w-full h-full border-0"
+                    title={`${file.title} 뷰어`}
+                    onLoad={() => {
+                      console.log('✅ File loaded successfully');
+                      setIsLoading(false);
+                    }}
+                    onError={(e) => {
+                      console.error('❌ File load error:', e);
+                      setViewerError('파일을 로드할 수 없습니다. 다운로드하여 확인해주세요.');
+                    }}
+                  />
+                )}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Grid layout for normal view */}
+        {/* Rest of the content... (keeping existing code) */}
         {!showViewer && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
@@ -491,10 +566,20 @@ export default function FileDetail() {
 
                 <button
                   onClick={handleViewInBrowser}
-                  className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors mb-3 flex items-center justify-center space-x-2"
+                  disabled={isLoading}
+                  className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors mb-3 flex items-center justify-center space-x-2 disabled:bg-primary-400 disabled:cursor-not-allowed"
                 >
-                  <Eye className="h-5 w-5" />
-                  <span>브라우저에서 보기</span>
+                  {isLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>로딩 중...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-5 w-5" />
+                      <span>브라우저에서 보기</span>
+                    </>
+                  )}
                 </button>
 
                 <button
