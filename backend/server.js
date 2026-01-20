@@ -47,6 +47,22 @@ app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cookieParser());
 
+// DEBUG: log incoming preflight requests and optionally force permissive CORS
+// Set DEBUG_CORS=true in the backend environment to enable a temporary wildcard response for debugging.
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    console.log('DEBUG CORS: OPTIONS request', { path: req.originalUrl, origin: req.get('origin'), host: req.get('host') });
+  }
+
+  if (process.env.DEBUG_CORS === 'true') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Range, ngrok-skip-browser-warning, X-Requested-With, Accept, Origin, Cache-Control, If-None-Match');
+  }
+
+  next();
+});
+
 // ========== ADD THIS SECTION ==========
 // Increase timeout limits for video uploads
 app.use((req, res, next) => {
