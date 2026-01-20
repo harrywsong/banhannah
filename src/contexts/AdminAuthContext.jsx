@@ -2,6 +2,7 @@
 // SEPARATE authentication system for admin - completely isolated from regular users
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { apiRequest, apiEndpoint } from '../config/api';
 
 const AdminAuthContext = createContext(null);
 
@@ -9,7 +10,6 @@ export function AdminAuthProvider({ children }) {
   const [adminSession, setAdminSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = 'https://api.banhannah.dpdns.org'
 
   // Load admin session on mount
   useEffect(() => {
@@ -37,13 +37,8 @@ export function AdminAuthProvider({ children }) {
 
   const adminLogin = async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      const response = await apiRequest(apiEndpoint('auth/login'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
-        credentials: 'include',
         body: JSON.stringify({ email, password })
       });
 
@@ -104,10 +99,8 @@ export function AdminAuthProvider({ children }) {
       localStorage.removeItem('adminToken');
       
       // Call backend logout
-      await fetch(`${API_URL}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include'
-      }).catch(err => console.error('Logout error:', err));
+      await apiRequest(apiEndpoint('auth/logout'), { method: 'POST' })
+        .catch(err => console.error('Logout error:', err));
       
       setAdminSession(null);
       console.log('✅ Admin logged out successfully');
