@@ -43,7 +43,7 @@ const app = express();
 // Trust proxy - CRITICAL for ngrok + rate-limiter + X-Forwarded-For
 app.set('trust proxy', 1);
 
-// Security middleware - Custom CSP that allows iframe embedding AND PDF viewing
+// Security middleware - UPDATED CSP for iframe embedding from allowed domains
 app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: false,
@@ -52,13 +52,25 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"], // PDF.js needs inline scripts
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:", "blob:"], // blob: for PDF rendering
-      connectSrc: ["'self'", "blob:"], // blob: for PDF loading
-      fontSrc: ["'self'", "data:"], // data: for PDF fonts
-      objectSrc: ["'self'", "blob:"], // Allow PDF object/embed
-      mediaSrc: ["'self'", "blob:"], // blob: for media in PDFs
-      frameSrc: ["'self'", "blob:"], // blob: for PDF iframes
-      workerSrc: ["'self'", "blob:"], // PDF.js uses workers
-      childSrc: ["'self'", "blob:"], // PDF viewer needs this
+      connectSrc: ["'self'", "blob:"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'self'", "blob:"],
+      mediaSrc: ["'self'", "blob:"],
+      frameSrc: ["'self'", "blob:"],
+      workerSrc: ["'self'", "blob:"],
+      childSrc: ["'self'", "blob:"],
+      // CRITICAL FIX: Allow framing from your frontend domains
+      frameAncestors: [
+        "'self'",
+        "https://banhannah.pages.dev",
+        "https://*.banhannah.pages.dev", // Cloudflare preview URLs
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://banhannah.ddns.org",
+        "https://banhannah.ddns.org",
+        "http://banhannah.dpdns.org",
+        "https://banhannah.dpdns.org"
+      ]
     }
   }
 }));
@@ -455,15 +467,13 @@ app.get('/api/files/view/:filename', (req, res) => {
     // Set appropriate CSP headers
     if (allowedOrigin) {
       // Allow embedding from specific origin
-      res.setHeader('X-Frame-Options', 'ALLOWALL'); // Modern browsers prefer CSP
+      // Modern browsers use CSP, not X-Frame-Options
     } else if (process.env.NODE_ENV !== 'production') {
-      // Development mode - allow all
-      res.setHeader('X-Frame-Options', 'ALLOWALL');
+      // Development mode - X-Frame-Options not needed
     } else {
-      // Production - unknown origin - block
-      res.setHeader('X-Frame-Options', 'DENY');
+      // Production - X-Frame-Options not needed (using CSP below)
     }
-    
+
     // Safe headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
