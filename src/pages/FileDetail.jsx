@@ -1,6 +1,6 @@
-// src/pages/FileDetail.jsx - COMPLETE PDF VIEWER FIX
+// src/pages/FileDetail.jsx - WITH PDF.js
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, Download, FileText, Clock, Star, MessageCircle, X, Eye, AlertCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
@@ -21,6 +21,15 @@ export default function FileDetail() {
   const [showViewer, setShowViewer] = useState(false)
   const [viewerError, setViewerError] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  const canvasRef = useRef(null);
+  const [pdfState, setPdfState] = useState({
+    pdfDoc: null,
+    pageNum: 1,
+    numPages: 0,
+    scale: 1.5,
+    rendering: false
+  });
 
   useEffect(() => {
     if (!user) {
@@ -64,6 +73,88 @@ export default function FileDetail() {
       setReviewForm({ rating: userReview.rating, comment: userReview.comment })
     }
   }, [id, user, navigate, getReviewsByItemId, getUserReview])
+
+  // PDF.js rendering effect
+useEffect(() => {
+  if (!canvasRef.current || !file?.displayUrl || file.format?.toLowerCase() !== 'pdf') {
+    return;
+  }
+
+  const loadPDF = async () => {
+    try {
+      // Load PDF.js library dynamically
+      const pdfjsLib = window.pdfjsLib;
+      if (!pdfjsLib) {
+        console.error('PDF.js not loaded');
+        setViewerError('PDF 뷰어를 로드할 수 없습니다.');
+        return;
+      }
+
+      // Set worker
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+      console.log('📄 Loading PDF:', file.displayUrl);
+      
+      // Load PDF document
+      const loadingTask = pdfjsLib.getDocument(file.displayUrl);
+      const pdf = await loadingTask.promise;
+      
+      console.log('✅ PDF loaded, pages:', pdf.numPages);
+      
+      setPdfState(prev => ({
+        ...prev,
+        pdfDoc: pdf,
+        numPages: pdf.numPages
+      }));
+      
+      setIsLoading(false);
+      
+    } catch (error) {
+      console.error('❌ PDF load error:', error);
+      setViewerError(`PDF를 로드할 수 없습니다: ${error.message}`);
+      setIsLoading(false);
+    }
+  };
+
+  loadPDF();
+}, [file?.displayUrl, file?.format]);
+
+// Render PDF page effect
+useEffect(() => {
+  if (!pdfState.pdfDoc || !canvasRef.current || pdfState.rendering) {
+    return;
+  }
+
+  const renderPage = async () => {
+    setPdfState(prev => ({ ...prev, rendering: true }));
+    
+    try {
+      const page = await pdfState.pdfDoc.getPage(pdfState.pageNum);
+      const viewport = page.getViewport({ scale: pdfState.scale });
+      
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+      
+      await page.render(renderContext).promise;
+      console.log('✅ Page rendered:', pdfState.pageNum);
+      
+    } catch (error) {
+      console.error('❌ Page render error:', error);
+    } finally {
+      setPdfState(prev => ({ ...prev, rendering: false }));
+    }
+  };
+
+  renderPage();
+}, [pdfState.pdfDoc, pdfState.pageNum, pdfState.scale]);
 
   if (!user) {
     return null
@@ -342,42 +433,80 @@ export default function FileDetail() {
                 </div>
               </div>
             ) : file.displayUrl && (
-              <div className="relative w-full bg-gray-100" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
-                {file.format?.toLowerCase() === 'pdf' ? (
-                  // PDF.js viewer for better compatibility
-                  <iframe
-                    key={file.displayUrl}
-                    src={`${file.displayUrl}#view=FitH&toolbar=1&navpanes=0`}
-                    className="w-full h-full border-0"
-                    title={`${file.title} 뷰어`}
-                    onLoad={(e) => {
-                      console.log('✅ PDF loaded successfully');
-                      setIsLoading(false);
-                    }}
-                    onError={(e) => {
-                      console.error('❌ PDF load error:', e);
-                      setViewerError('PDF를 로드할 수 없습니다. 다운로드하여 확인해주세요.');
-                    }}
-                  />
-                ) : (
-                  // Regular iframe for other formats
-                  <iframe
-                    key={file.displayUrl}
-                    src={file.displayUrl}
-                    className="w-full h-full border-0"
-                    title={`${file.title} 뷰어`}
-                    onLoad={() => {
-                      console.log('✅ File loaded successfully');
-                      setIsLoading(false);
-                    }}
-                    onError={(e) => {
-                      console.error('❌ File load error:', e);
-                      setViewerError('파일을 로드할 수 없습니다. 다운로드하여 확인해주세요.');
-                    }}
-                  />
-                )}
-              </div>
-            )}
+  <div className="relative w-full bg-gray-900" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
+    {file.format?.toLowerCase() === 'pdf' ? (
+      // PDF.js Canvas Renderer
+      <div className="w-full h-full overflow-auto bg-gray-900 flex flex-col">
+        {/* PDF Controls */}
+        <div className="bg-gray-800 p-3 flex items-center justify-between text-white sticky top-0 z-10">
+          <button
+            onClick={() => {
+              if (pdfState.pageNum > 1) {
+                setPdfState(prev => ({ ...prev, pageNum: prev.pageNum - 1 }));
+              }
+            }}
+            disabled={pdfState.pageNum <= 1}
+            className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            ← 이전
+          </button>
+          
+          <span className="text-sm">
+            페이지 {pdfState.pageNum} / {pdfState.numPages}
+          </span>
+          
+          <button
+            onClick={() => {
+              if (pdfState.pageNum < pdfState.numPages) {
+                setPdfState(prev => ({ ...prev, pageNum: prev.pageNum + 1 }));
+              }
+            }}
+            disabled={pdfState.pageNum >= pdfState.numPages}
+            className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            다음 →
+          </button>
+          
+          <select
+            value={pdfState.scale}
+            onChange={(e) => setPdfState(prev => ({ ...prev, scale: parseFloat(e.target.value) }))}
+            className="px-3 py-2 bg-gray-700 rounded text-white"
+          >
+            <option value="0.75">75%</option>
+            <option value="1">100%</option>
+            <option value="1.25">125%</option>
+            <option value="1.5">150%</option>
+            <option value="2">200%</option>
+          </select>
+        </div>
+
+        {/* PDF Canvas */}
+        <div className="flex-1 overflow-auto flex items-start justify-center p-4">
+          <canvas 
+            ref={canvasRef} 
+            className="shadow-2xl"
+          />
+        </div>
+      </div>
+    ) : (
+      // Regular iframe for other formats
+      <iframe
+        key={file.displayUrl}
+        src={file.displayUrl}
+        className="w-full h-full border-0"
+        title={`${file.title} 뷰어`}
+        onLoad={() => {
+          console.log('✅ File loaded successfully');
+          setIsLoading(false);
+        }}
+        onError={(e) => {
+          console.error('❌ File load error:', e);
+          setViewerError('파일을 로드할 수 없습니다. 다운로드하여 확인해주세요.');
+        }}
+      />
+    )}
+  </div>
+)}
           </div>
         )}
 
