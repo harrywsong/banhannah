@@ -43,21 +43,20 @@ const app = express();
 // Trust proxy - CRITICAL for ngrok + rate-limiter + X-Forwarded-For
 app.set('trust proxy', 1);
 
-// Security middleware
+// Security middleware - Custom CSP that allows iframe embedding
 app.use(helmet({
   contentSecurityPolicy: {
+    useDefaults: false,
     directives: {
-      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      "frame-ancestors": [
-        "'self'", 
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://banhannah.pages.dev",
-        "http://banhannah.ddns.org",
-        "https://banhannah.ddns.org",
-        "http://banhannah.dpdns.org",
-        "https://banhannah.dpdns.org"
-      ]
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      // DO NOT set frame-ancestors - allow all
     }
   }
 }));
