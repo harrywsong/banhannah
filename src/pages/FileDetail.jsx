@@ -1,4 +1,4 @@
-// src/pages/FileDetail.jsx - FIXED VERSION
+// src/pages/FileDetail.jsx - COMPLETE FIXED VERSION
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Download, FileText, Clock, Star, MessageCircle, X, Eye } from 'lucide-react'
@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
 import { apiEndpoint, apiRequest } from '../config/api'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+const API_URL = 'https://api.banhannah.dpdns.org'
 
 export default function FileDetail() {
   const { id } = useParams()
@@ -67,7 +67,6 @@ export default function FileDetail() {
     return null
   }
 
-  // ========== FIXED: Increment access count ==========
   const incrementAccessCount = async () => {
     if (!file || !file.id) return
 
@@ -87,147 +86,53 @@ export default function FileDetail() {
     }
   }
 
-  // ========== FIXED: Extract filename from URL ==========
-  const getFilenameFromUrl = (fileUrl) => {
-    if (!fileUrl) return null
-    
-    // If it's already a full URL, extract filename
-    if (fileUrl.startsWith('http')) {
-      const urlParts = fileUrl.split('/')
-      return urlParts[urlParts.length - 1]
-    }
-    
-    // If it's a path like /api/files/view/filename.pdf
-    if (fileUrl.includes('/api/files/view/')) {
-      return fileUrl.split('/api/files/view/')[1]
-    }
-    
-    // If it's a path like /api/files/download/filename.pdf
-    if (fileUrl.includes('/api/files/download/')) {
-      return fileUrl.split('/api/files/download/')[1]
-    }
-    
-    // Otherwise assume it's just the filename
-    return fileUrl
-  }
-
-  // ========== FIXED: Build proper file URL ==========
   const buildFileUrl = (fileUrl, action = 'view') => {
-  if (!fileUrl) return null;
-  
-  // Extract filename from URL
-  const getFilename = (url) => {
-    if (url.includes('/api/files/view/')) {
-      return url.split('/api/files/view/')[1];
-    }
-    if (url.includes('/api/files/download/')) {
-      return url.split('/api/files/download/')[1];
-    }
-    // If it's just a filename or a full URL, extract the last part
-    const parts = url.split('/');
-    return parts[parts.length - 1];
-  };
-  
-  const filename = getFilename(fileUrl);
-  if (!filename) return null;
-  
-  // Decode if already encoded, then re-encode properly
-  const cleanFilename = decodeURIComponent(filename);
-  const encodedFilename = encodeURIComponent(cleanFilename);
-  
-  return `${API_URL}/api/files/${action}/${encodedFilename}`;
-};
-
-  // ========== FIXED: Download handler ==========
-  const handleDownload = () => {
-  if (!file || !file.fileUrl) {
-    alert('❌ 파일 URL이 설정되지 않았습니다.\n\n관리자 패널에서 파일을 업로드하고 URL을 설정해주세요.');
-    return;
-  }
-  
-  const downloadUrl = buildFileUrl(file.fileUrl, 'download');
-  
-  if (!downloadUrl) {
-    alert('❌ 파일 URL 생성에 실패했습니다.');
-    return;
-  }
-  
-  console.log('🔗 Download URL:', downloadUrl);
-  
-  // Method 1: Try direct window.open (works for most files)
-  const newWindow = window.open(downloadUrl, '_blank');
-  
-  // Fallback: If popup blocked, use fetch + blob
-  if (!newWindow) {
-    console.log('📥 Popup blocked, using fetch download...');
+    if (!fileUrl) return null;
     
-    fetch(downloadUrl, {
-      headers: {
-        'ngrok-skip-browser-warning': 'true'
+    const getFilename = (url) => {
+      if (url.includes('/api/files/view/')) {
+        return url.split('/api/files/view/')[1];
       }
-    })
-      .then(response => {
-        if (!response.ok) throw new Error('Download failed');
-        return response.blob();
-      })
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.title || 'download';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        console.log('✅ Download triggered via blob');
-      })
-      .catch(error => {
-        console.error('Download error:', error);
-        alert('다운로드에 실패했습니다. 다시 시도해주세요.');
-      });
-  }
-  
-  // Save to user's downloads
-  const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]');
-  const fileToSave = {
-    id: file.id,
-    title: file.title,
-    format: file.format,
-    size: file.size,
-    downloadedAt: new Date().toISOString()
+      if (url.includes('/api/files/download/')) {
+        return url.split('/api/files/download/')[1];
+      }
+      const parts = url.split('/');
+      return parts[parts.length - 1];
+    };
+    
+    const filename = getFilename(fileUrl);
+    if (!filename) return null;
+    
+    const cleanFilename = decodeURIComponent(filename);
+    const encodedFilename = encodeURIComponent(cleanFilename);
+    
+    return `${API_URL}/api/files/${action}/${encodedFilename}`;
   };
-  
-  if (!myResources.find(f => f.id === file.id)) {
-    myResources.push(fileToSave);
-    localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources));
-  }
 
-  incrementAccessCount();
-};
-
-  // ========== FIXED: View in browser handler ==========
-  const handleViewInBrowser = () => {
-  if (!file || !file.fileUrl) {
-    alert('❌ 파일 URL이 설정되지 않았습니다.\n\n관리자 패널에서 파일을 업로드하고 URL을 설정해주세요.');
-    return;
-  }
-  
-  const viewUrl = buildFileUrl(file.fileUrl, 'view');
-  
-  if (!viewUrl) {
-    alert('❌ 파일 URL 생성에 실패했습니다.');
-    return;
-  }
-  
-  console.log('🔗 View URL:', viewUrl);
-  
-  setShowViewer(true);
-  setFile(prev => ({ ...prev, displayUrl: viewUrl }));
-  
-  incrementAccessCount();
-  
-  // Save to user's resources
-  if (user) {
+  const handleDownload = () => {
+    if (!file || !file.fileUrl) {
+      alert('❌ 파일 URL이 설정되지 않았습니다.');
+      return;
+    }
+    
+    const downloadUrl = buildFileUrl(file.fileUrl, 'download');
+    if (!downloadUrl) {
+      alert('❌ 파일 URL 생성에 실패했습니다.');
+      return;
+    }
+    
+    console.log('🔗 Download URL:', downloadUrl);
+    
+    // Create hidden link and trigger download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = file.title || 'download';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Save to user's downloads
     const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]');
     const fileToSave = {
       id: file.id,
@@ -241,8 +146,47 @@ export default function FileDetail() {
       myResources.push(fileToSave);
       localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources));
     }
-  }
-};
+
+    incrementAccessCount();
+  };
+
+  const handleViewInBrowser = () => {
+    if (!file || !file.fileUrl) {
+      alert('❌ 파일 URL이 설정되지 않았습니다.');
+      return;
+    }
+    
+    const viewUrl = buildFileUrl(file.fileUrl, 'view');
+    if (!viewUrl) {
+      alert('❌ 파일 URL 생성에 실패했습니다.');
+      return;
+    }
+    
+    console.log('🔗 View URL:', viewUrl);
+    
+    // Update file with display URL and show viewer
+    setFile(prev => ({ ...prev, displayUrl: viewUrl }));
+    setShowViewer(true);
+    
+    incrementAccessCount();
+    
+    // Save to user's resources
+    if (user) {
+      const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]');
+      const fileToSave = {
+        id: file.id,
+        title: file.title,
+        format: file.format,
+        size: file.size,
+        downloadedAt: new Date().toISOString()
+      };
+      
+      if (!myResources.find(f => f.id === file.id)) {
+        myResources.push(fileToSave);
+        localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources));
+      }
+    }
+  };
 
   const handleReviewSubmit = (e) => {
     e.preventDefault()
@@ -322,23 +266,27 @@ export default function FileDetail() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* File Viewer - Full width when shown */}
+        {/* File Viewer - FIXED: Always render when showViewer is true */}
         {showViewer && file.displayUrl && (
-          <div className="bg-white rounded-xl shadow-md mb-8">
-            <div className="flex items-center justify-between p-4 border-b">
+          <div className="bg-white rounded-xl shadow-md mb-8 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b bg-gray-50">
               <h2 className="text-xl font-bold text-gray-900">{file.title}</h2>
               <button
                 onClick={() => setShowViewer(false)}
                 className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                title="뷰어 닫기"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="w-full" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
+            <div className="w-full bg-gray-100" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
               <iframe
+                key={file.displayUrl}
                 src={file.displayUrl}
                 className="w-full h-full border-0"
                 title={`${file.title} 뷰어`}
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                onLoad={() => console.log('✅ Iframe loaded successfully')}
                 onError={(e) => {
                   console.error('❌ Iframe load error:', e)
                   alert('파일을 로드할 수 없습니다. 파일이 존재하는지 확인하세요.')
@@ -350,11 +298,11 @@ export default function FileDetail() {
 
         {/* Grid layout for normal view */}
         {!showViewer && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            {/* File Header */}
-            <div className="bg-white rounded-xl shadow-md p-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-2">
+              {/* File Header */}
+              <div className="bg-white rounded-xl shadow-md p-8 mb-8">
                 {/* File Preview */}
                 <div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
                   {file.previewImage ? (
@@ -379,210 +327,202 @@ export default function FileDetail() {
                   </div>
                 </div>
 
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                {file.title}
-              </h1>
-              <p className="text-xl text-gray-600 mb-6">{file.description}</p>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                  {file.title}
+                </h1>
+                <p className="text-xl text-gray-600 mb-6">{file.description}</p>
 
-              <div className="flex flex-wrap items-center gap-6 mb-6 text-gray-600">
-                <div className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5" />
-                  <span>{file.format}</span>
-                </div>
-                {file.size && (
+                <div className="flex flex-wrap items-center gap-6 mb-6 text-gray-600">
                   <div className="flex items-center space-x-2">
-                    <Download className="h-5 w-5" />
-                    <span>{file.size}</span>
-                  </div>
-                )}
-                {file.pages && (
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-5 w-5" />
-                    <span>{file.pages}</span>
-                  </div>
-                )}
-                <div>
-                  <span>접근 횟수: {file.downloads?.toLocaleString() || 0}</span>
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">파일 소개</h2>
-                <p className="text-gray-700 leading-relaxed">{file.fullDescription || file.description}</p>
-              </div>
-            </div>
-
-            {/* Reviews Section */}
-            <div className="bg-white rounded-xl shadow-md p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">리뷰</h2>
-                  {reviews.length > 0 && (
-                    <div className="flex items-center space-x-2 mt-2">
-                      <div className="flex text-yellow-400">
-                        <Star className="h-5 w-5 fill-current" />
-                      </div>
-                      <span className="text-lg font-semibold text-gray-900">{averageRating}</span>
-                      <span className="text-gray-600">({reviews.length}개 리뷰)</span>
-                    </div>
-                  )}
-                </div>
-                {user && (
-                  <button
-                    onClick={editingReview ? handleEditReview : () => setShowReviewForm(!showReviewForm)}
-                    className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    <span>{editingReview ? '리뷰 수정' : '리뷰 작성'}</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Review Form */}
-              {showReviewForm && (
-                <div className="mb-6 p-6 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-semibold text-gray-900">{editingReview ? '리뷰 수정' : '리뷰 작성'}</h3>
-                    <button onClick={() => setShowReviewForm(false)} className="text-gray-400 hover:text-gray-600">
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-                  <form onSubmit={handleReviewSubmit} className="space-y-4">
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                      <p className="text-sm text-blue-800">
-                        <strong>개인정보 보호:</strong> 리뷰 작성 시 이름의 첫 글자와 마지막 글자만 표시되며, 나머지는 별표(*)로 처리됩니다.
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
-                      <div className="flex space-x-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setReviewForm({ ...reviewForm, rating: star })}
-                            className="focus:outline-none"
-                          >
-                            <Star
-                              className={`h-8 w-8 ${
-                                star <= reviewForm.rating
-                                  ? 'text-yellow-400 fill-yellow-400'
-                                  : 'text-gray-300'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">리뷰 내용</label>
-                      <textarea
-                        required
-                        rows="4"
-                        value={reviewForm.comment}
-                        onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        placeholder="이 파일에 대한 리뷰를 작성해주세요..."
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
-                    >
-                      {editingReview ? '리뷰 수정' : '리뷰 등록'}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* Reviews List */}
-              {reviews.length > 0 ? (
-                <div className="space-y-6">
-                  {reviews.map((review) => (
-                    <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-gray-900">{review.userName}</p>
-                          <p className="text-sm text-gray-500">
-                            {new Date(review.createdAt).toLocaleDateString('ko-KR')}
-                            {review.updatedAt && review.updatedAt !== review.createdAt && (
-                              <span className="ml-2">(수정됨)</span>
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex text-yellow-400">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-gray-700">{review.comment}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-md p-6 sticky top-24">
-              <div className="mb-6">
-                <div className="text-3xl font-bold text-green-600 mb-2">무료</div>
-                <p className="text-gray-600">모든 파일은 무료로 제공됩니다</p>
-              </div>
-
-              <button
-                onClick={handleViewInBrowser}
-                className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors mb-3 flex items-center justify-center space-x-2"
-              >
-                <Eye className="h-5 w-5" />
-                <span>브라우저에서 보기</span>
-              </button>
-
-              <button
-                onClick={handleDownload}
-                className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors mb-4 flex items-center justify-center space-x-2"
-              >
-                <Download className="h-5 w-5" />
-                <span>다운로드</span>
-              </button>
-
-              <div className="border-t mt-6 pt-6">
-                <h3 className="font-semibold text-gray-900 mb-4">파일 정보:</h3>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <div className="flex justify-between">
-                    <span>형식:</span>
-                    <span className="font-semibold">{file.format}</span>
+                    <FileText className="h-5 w-5" />
+                    <span>{file.format}</span>
                   </div>
                   {file.size && (
-                    <div className="flex justify-between">
-                      <span>크기:</span>
-                      <span className="font-semibold">{file.size}</span>
+                    <div className="flex items-center space-x-2">
+                      <Download className="h-5 w-5" />
+                      <span>{file.size}</span>
                     </div>
                   )}
                   {file.pages && (
-                    <div className="flex justify-between">
-                      <span>페이지:</span>
-                      <span className="font-semibold">{file.pages}</span>
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-5 w-5" />
+                      <span>{file.pages}</span>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span>접근 횟수:</span>
-                    <span className="font-semibold">{file.downloads?.toLocaleString() || 0}</span>
+                  <div>
+                    <span>접근 횟수: {file.downloads?.toLocaleString() || 0}</span>
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">파일 소개</h2>
+                  <p className="text-gray-700 leading-relaxed">{file.fullDescription || file.description}</p>
+                </div>
+              </div>
+
+              {/* Reviews Section */}
+              <div className="bg-white rounded-xl shadow-md p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">리뷰</h2>
+                    {reviews.length > 0 && (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <div className="flex text-yellow-400">
+                          <Star className="h-5 w-5 fill-current" />
+                        </div>
+                        <span className="text-lg font-semibold text-gray-900">{averageRating}</span>
+                        <span className="text-gray-600">({reviews.length}개 리뷰)</span>
+                      </div>
+                    )}
+                  </div>
+                  {user && (
+                    <button
+                      onClick={editingReview ? handleEditReview : () => setShowReviewForm(!showReviewForm)}
+                      className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-2"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <span>{editingReview ? '리뷰 수정' : '리뷰 작성'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Review Form */}
+                {showReviewForm && (
+                  <div className="mb-6 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-semibold text-gray-900">{editingReview ? '리뷰 수정' : '리뷰 작성'}</h3>
+                      <button onClick={() => setShowReviewForm(false)} className="text-gray-400 hover:text-gray-600">
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <form onSubmit={handleReviewSubmit} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
+                        <div className="flex space-x-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                              className="focus:outline-none"
+                            >
+                              <Star
+                                className={`h-8 w-8 ${
+                                  star <= reviewForm.rating
+                                    ? 'text-yellow-400 fill-yellow-400'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">리뷰 내용</label>
+                        <textarea
+                          required
+                          rows="4"
+                          value={reviewForm.comment}
+                          onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          placeholder="이 파일에 대한 리뷰를 작성해주세요..."
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+                      >
+                        {editingReview ? '리뷰 수정' : '리뷰 등록'}
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {/* Reviews List */}
+                {reviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <p className="font-semibold text-gray-900">{review.userName}</p>
+                            <p className="text-sm text-gray-500">
+                              {new Date(review.createdAt).toLocaleDateString('ko-KR')}
+                            </p>
+                          </div>
+                          <div className="flex text-yellow-400">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-gray-700">{review.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-md p-6 sticky top-24">
+                <div className="mb-6">
+                  <div className="text-3xl font-bold text-green-600 mb-2">무료</div>
+                  <p className="text-gray-600">모든 파일은 무료로 제공됩니다</p>
+                </div>
+
+                <button
+                  onClick={handleViewInBrowser}
+                  className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors mb-3 flex items-center justify-center space-x-2"
+                >
+                  <Eye className="h-5 w-5" />
+                  <span>브라우저에서 보기</span>
+                </button>
+
+                <button
+                  onClick={handleDownload}
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors mb-4 flex items-center justify-center space-x-2"
+                >
+                  <Download className="h-5 w-5" />
+                  <span>다운로드</span>
+                </button>
+
+                <div className="border-t mt-6 pt-6">
+                  <h3 className="font-semibold text-gray-900 mb-4">파일 정보:</h3>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex justify-between">
+                      <span>형식:</span>
+                      <span className="font-semibold">{file.format}</span>
+                    </div>
+                    {file.size && (
+                      <div className="flex justify-between">
+                        <span>크기:</span>
+                        <span className="font-semibold">{file.size}</span>
+                      </div>
+                    )}
+                    {file.pages && (
+                      <div className="flex justify-between">
+                        <span>페이지:</span>
+                        <span className="font-semibold">{file.pages}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>접근 횟수:</span>
+                      <span className="font-semibold">{file.downloads?.toLocaleString() || 0}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
         )}
       </div>
     </div>
