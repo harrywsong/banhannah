@@ -356,6 +356,7 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
 // View/download endpoints
 app.get('/api/files/view/:filename', (req, res) => {
   try {
+    console.log('DEBUG /api/files/view', { method: req.method, url: req.originalUrl, host: req.get('host'), origin: req.get('origin'), referer: req.get('referer'), ua: req.get('user-agent') });
     const safeFilename = path.basename(req.params.filename);
     const filePath = path.join(uploadsDir, safeFilename);
     
@@ -372,6 +373,7 @@ app.get('/api/files/view/:filename', (req, res) => {
 
 app.get('/api/files/download/:filename', (req, res) => {
   try {
+    console.log('DEBUG /api/files/download', { method: req.method, url: req.originalUrl, host: req.get('host'), origin: req.get('origin'), referer: req.get('referer'), ua: req.get('user-agent') });
     const safeFilename = path.basename(req.params.filename);
     const filePath = path.join(uploadsDir, safeFilename);
     
@@ -388,6 +390,7 @@ app.get('/api/files/download/:filename', (req, res) => {
 
 app.get('/api/files/preview/:filename', (req, res) => {
   try {
+    console.log('DEBUG /api/files/preview', { method: req.method, url: req.originalUrl, host: req.get('host'), origin: req.get('origin'), referer: req.get('referer'), ua: req.get('user-agent') });
     const safeFilename = path.basename(req.params.filename);
     const filePath = path.join(previewsDir, safeFilename);
     
