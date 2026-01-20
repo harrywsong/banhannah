@@ -189,11 +189,25 @@ async function initializeAdmin() {
           email: adminEmail,
           name: adminName,
           password: hashedPassword,
-          role: 'ADMIN'
+          role: 'ADMIN',
+          emailVerified: true
         }
       });
-      console.log('✓ Admin user created:', adminEmail);
-      console.log('⚠ IMPORTANT: Change the admin password immediately!');
+      console.log('✓ Admin user created (verified):', adminEmail);
+      console.log('⚠ IMPORTANT: Change the admin password in production immediately!');
+    } else {
+      // Ensure existing admin matches .env credentials and is verified
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      await prisma.user.update({
+        where: { id: existingAdmin.id },
+        data: {
+          password: hashedPassword,
+          role: 'ADMIN',
+          name: adminName,
+          emailVerified: true
+        }
+      });
+      console.log('✓ Admin user updated/verified from .env:', adminEmail);
     }
   } catch (error) {
     console.error('Failed to initialize admin:', error);

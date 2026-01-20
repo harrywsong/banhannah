@@ -4,7 +4,7 @@ import { Calendar, Clock, Video, Users, ExternalLink, UserCheck, Star, MessageCi
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
 
-export default function LiveClasses() {
+export default function LiveClasses({ hideHeader = false }) {
   const { user } = useAuth()
   const { getReviewsByItemId, addReview, updateReview, getUserReview } = useReviews()
   const [classes, setClasses] = useState([])
@@ -186,13 +186,14 @@ export default function LiveClasses() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">라이브 클래스</h1>
-          <p className="text-xl text-primary-100">전문 강사들과 함께하는 인터랙티브 라이브 세션에 참여하세요</p>
+      {!hideHeader && (
+        <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">라이브 클래스</h1>
+            <p className="text-xl text-primary-100">전문 강사들과 함께하는 인터랙티브 라이브 세션에 참여하세요</p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Upcoming Classes */}

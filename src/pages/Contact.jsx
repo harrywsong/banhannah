@@ -9,68 +9,55 @@ export default function Contact() {
     message: ''
   })
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
+    setLoading(true)
     
-    // Store contact form submission in localStorage
-    const submissions = JSON.parse(localStorage.getItem('contactSubmissions') || '[]')
-    const newSubmission = {
-      ...formData,
-      submittedAt: new Date().toISOString(),
-      id: Date.now()
-    }
-    submissions.push(newSubmission)
-    localStorage.setItem('contactSubmissions', JSON.stringify(submissions))
-    
-    // In production, this should send an actual email via backend API
-    // Options:
-    // 1. Backend API endpoint (recommended): POST /api/contact with email service (Nodemailer, SendGrid, etc.)
-    // 2. Third-party service: EmailJS, Formspree, SendGrid, etc.
-    // 
-    // Example backend API call (uncomment when backend is ready):
-    /*
     try {
-      const response = await fetch('/api/contact', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+      const response = await fetch(`${API_URL}/api/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
         },
-        body: JSON.stringify({
-          to: 'hwstestcontact@gmail.com',
-          subject: `[문의] ${formData.subject}`,
-          name: formData.name,
-          email: formData.email,
-          message: formData.message
-        })
+        credentials: 'include',
+        body: JSON.stringify(formData)
       })
-      
-      if (!response.ok) {
-        throw new Error('이메일 전송에 실패했습니다.')
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Store locally for record keeping (optional)
+        const submissions = JSON.parse(localStorage.getItem('contactSubmissions') || '[]')
+        submissions.push({
+          ...formData,
+          submittedAt: new Date().toISOString(),
+          id: Date.now(),
+          emailSent: data.emailSent
+        })
+        localStorage.setItem('contactSubmissions', JSON.stringify(submissions))
+        
+        setSubmitted(true)
+        setFormData({ name: '', email: '', subject: '', message: '' })
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setSubmitted(false)
+        }, 5000)
+      } else {
+        setError(data.error || '문의 전송에 실패했습니다. 다시 시도해주세요.')
       }
-      
-      // Success
-      setSubmitted(true)
-      setFormData({ name: '', email: '', subject: '', message: '' })
-      setTimeout(() => setSubmitted(false), 5000)
     } catch (error) {
-      alert('메시지 전송 중 오류가 발생했습니다. 나중에 다시 시도해주세요.')
       console.error('Contact form error:', error)
+      setError('서버와 연결할 수 없습니다. 나중에 다시 시도해주세요.')
+    } finally {
+      setLoading(false)
     }
-    */
-    
-    // For demo: Store submission and show success
-    // TODO: Replace with actual email sending via backend API
-    console.log('Contact form submitted (demo mode - email not actually sent):', newSubmission)
-    console.log('Backend API integration needed to send email to: hwstestcontact@gmail.com')
-    
-    setSubmitted(true)
-    setFormData({ name: '', email: '', subject: '', message: '' })
-    
-    // Clear success message after 5 seconds
-    setTimeout(() => {
-      setSubmitted(false)
-    }, 5000)
   }
 
   return (
@@ -146,6 +133,12 @@ export default function Contact() {
                 </div>
               )}
 
+              {error && (
+                <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -209,10 +202,23 @@ export default function Contact() {
 
                 <button
                   type="submit"
-                  className="w-full bg-primary-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
+                  disabled={loading}
+                  className="w-full bg-primary-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2 disabled:bg-primary-400 disabled:cursor-not-wait"
                 >
-                  <Send className="h-5 w-5" />
-                  <span>메시지 보내기</span>
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span>전송 중...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-5 w-5" />
+                      <span>메시지 보내기</span>
+                    </>
+                  )}
                 </button>
               </form>
             </div>
