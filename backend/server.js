@@ -664,11 +664,13 @@ function maskName(name) {
 }
 
 // Start server
-const PORT = process.env.PORT || 3001;
+// Default to 3002 (updated per deployment change)
+const PORT = process.env.PORT || 3002;
 const HOST = process.env.HOST || '0.0.0.0';
 
 app.listen(PORT, HOST, async () => {
-  console.log(`✓ Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+  const displayHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
+  console.log(`✓ Server running on http://${displayHost}:${PORT}`);
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✓ CORS allowed origins: All origins allowed (development mode)`);
   
