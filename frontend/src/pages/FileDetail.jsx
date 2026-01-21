@@ -684,23 +684,30 @@ useEffect(() => {
   {file.previewImage ? (
     <img 
       src={(() => {
-        // If it's a full URL (starts with http), use it directly
+        console.log('🖼️ Building preview URL from:', file.previewImage);
+        
+        // If it's a full URL (starts with http), convert to local in dev mode
         if (file.previewImage.startsWith('http')) {
-          // But replace production URL with local dev URL if in dev mode
-          if (import.meta.env.MODE === 'development' && file.previewImage.includes('api.banhannah.dpdns.org')) {
-            const filename = file.previewImage.split('/').pop()
-            return `http://localhost:3002/api/files/view/${filename}`
+          if (import.meta.env.MODE === 'development') {
+            const filename = file.previewImage.split('/').pop();
+            const localUrl = `http://localhost:3002/api/files/view/${filename}`;
+            console.log('🔄 Converting production URL to local:', localUrl);
+            return localUrl;
           }
-          return file.previewImage
+          return file.previewImage;
         }
-        // Otherwise, build the URL from filename
-        return buildFileUrl(file.previewImage, 'view')
+        
+        // Otherwise, it's just a filename - build the full URL
+        const builtUrl = buildFileUrl(file.previewImage, 'view');
+        console.log('🏗️ Built URL from filename:', builtUrl);
+        return builtUrl;
       })()}
       alt={`${file.title} 미리보기`}
       className="w-full h-full object-cover"
       onError={(e) => {
-        console.error('❌ Preview image failed to load:', file.previewImage)
-        e.target.style.display = 'none'
+        console.error('❌ Preview image failed to load:', file.previewImage);
+        console.error('Attempted URL:', e.target.src);
+        e.target.style.display = 'none';
       }}
     />
   ) : (

@@ -744,8 +744,6 @@ if (data.success) {
     }
   }
 
-// In AdminPanel.jsx - Update the handleFilePreviewUpload function
-
 const handleFilePreviewUpload = async (e) => {
   const file = e.target.files[0]
   if (!file) return
@@ -817,7 +815,6 @@ const handleFilePreviewUpload = async (e) => {
     setUploadProgress(null)
   }
 }
-
   // Handle class preview image upload
   const handleClassPreviewUpload = async (e) => {
     const file = e.target.files[0]
