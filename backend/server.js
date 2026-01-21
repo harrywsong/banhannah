@@ -180,7 +180,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  aallowedHeaders: [
+  allowedHeaders: [
     'Content-Type',
     'Authorization',
     'Range',
@@ -190,7 +190,7 @@ app.use(cors({
     'Origin',
     'Cache-Control',
     'If-None-Match',
-    'pragma'  // ← ADD THIS
+    'pragma'
   ],
   exposedHeaders: [
     'Content-Length',
@@ -498,7 +498,7 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
 
 app.get('/api/files/view/:filename', (req, res) => {
   try {
-    console.log('DEBUG /api/files/view', { 
+    console.log('🔍 DEBUG /api/files/view', { 
       method: req.method, 
       url: req.originalUrl, 
       rawFilename: req.params.filename,
@@ -506,61 +506,48 @@ app.get('/api/files/view/:filename', (req, res) => {
       referer: req.get('referer')
     });
     
+    // ========== CRITICAL: Set CORS headers FIRST ==========
+    let requestOrigin = req.get('origin');
+    
+    if (!requestOrigin && req.get('referer')) {
+      try {
+        const refererUrl = new URL(req.get('referer'));
+        requestOrigin = refererUrl.origin;
+        console.log('🔄 Extracted origin from referer:', requestOrigin);
+      } catch (e) {
+        console.error('❌ Error parsing referer:', e);
+      }
+    }
+    
+    if (requestOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept, Origin');
+      console.log('✅ Setting CORS for origin:', requestOrigin);
+    } else {
+      // Fallback for production when no origin/referer
+      res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      console.log('⚠️ No origin/referer, defaulting to localhost:5173');
+    }
+    // ======================================================
+    
     // CRITICAL: Decode ONLY ONCE to avoid double-decoding issues
     const safeFilename = path.basename(decodeURIComponent(req.params.filename));
     const filePath = path.join(uploadsDir, safeFilename);
     
-    console.log('Looking for file at:', filePath);
-    console.log('Safe filename:', safeFilename);
+    console.log('📂 Looking for file at:', filePath);
+    console.log('📝 Safe filename:', safeFilename);
     
     if (!fs.existsSync(filePath)) {
       console.error('❌ File not found:', filePath);
-      console.error('Available files:', fs.readdirSync(uploadsDir).slice(0, 5));
+      console.error('📋 Available files:', fs.readdirSync(uploadsDir).slice(0, 5));
       return res.status(404).json({ error: 'File not found' });
     }
     
-    // ========== CRITICAL FIX: Dynamic CSP based on origin ==========
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'https://banhannah.pages.dev',
-      'http://banhannah.ddns.org',
-      'https://banhannah.ddns.org',
-      'http://banhannah.dpdns.org',
-      'https://banhannah.dpdns.org'
-    ];
-    
-    const origin = req.get('origin');
-    const referer = req.get('referer');
-    
-    // Check if request is from allowed origin
-    let allowedOrigin = null;
-    if (origin && allowedOrigins.some(allowed => origin.includes(allowed))) {
-      allowedOrigin = origin;
-    } else if (referer) {
-      try {
-        const refererOrigin = new URL(referer).origin;
-        if (allowedOrigins.some(allowed => refererOrigin.includes(allowed))) {
-          allowedOrigin = refererOrigin;
-        }
-      } catch (e) {
-        console.error('Error parsing referer:', e);
-      }
-    }
-    
-    // Set appropriate CSP headers
-    if (allowedOrigin) {
-      // Allow embedding from specific origin
-      // Modern browsers use CSP, not X-Frame-Options
-    } else if (process.env.NODE_ENV !== 'production') {
-      // Development mode - X-Frame-Options not needed
-    } else {
-      // Production - X-Frame-Options not needed (using CSP below)
-    }
-
     // Safe headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept');
     
     // ========== Content Type Detection ==========
     const ext = path.extname(safeFilename).toLowerCase();

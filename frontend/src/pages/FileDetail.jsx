@@ -683,11 +683,11 @@ useEffect(() => {
 <div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
   {file.previewImage ? (
     <img 
-      src={file.previewImage} 
+      src={buildFileUrl(file.previewImage, 'view')}  // ✅ Use buildFileUrl to get correct local URL
       alt={`${file.title} 미리보기`}
       className="w-full h-full object-cover"
       onError={(e) => {
-        console.error('❌ Preview image failed to load:', file.previewImage)
+        console.error('❌ Preview image failed to load:', buildFileUrl(file.previewImage, 'view'))
         e.target.style.display = 'none'
       }}
     />
