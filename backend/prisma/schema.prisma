@@ -21,7 +21,12 @@ model User {
   tokenExpiry       DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  reviews           Review[]
+  
+  reviews              Review[]
+  purchases            Purchase[]
+  classRegistrations   ClassRegistration[]
+  courseProgress       CourseProgress[]
+  resourceAccess       ResourceAccess[]
 }
 
 model File {
@@ -89,4 +94,68 @@ model LiveClass {
   level             Int?     @default(1)  // ✅ ADD THIS LINE
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+// Add after existing models:
+
+model Purchase {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  courseId        Int
+  courseTitle     String
+  price           String
+  purchasedAt     DateTime @default(now())
+  accessDuration  Int?
+  transactionId   String   @unique
+  createdAt       DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([courseId])
+}
+
+model ClassRegistration {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  classId       Int
+  registeredAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, classId])
+  @@index([userId])
+  @@index([classId])
+}
+
+model CourseProgress {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  courseId    Int
+  lessonId    Int
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, courseId, lessonId])
+  @@index([userId])
+  @@index([courseId])
+}
+
+model ResourceAccess {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  resourceId   Int
+  resourceType String   // 'file' or 'course'
+  accessedAt   DateTime @default(now())
+  purchased    Boolean  @default(false)
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([resourceId])
 }

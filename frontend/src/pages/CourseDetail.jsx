@@ -5,6 +5,9 @@ import { useReviews } from '../contexts/ReviewsContext'
 import { apiEndpoint, apiRequest } from '../config/api'
 import HLSVideoPlayer from '../components/HLSVideoPlayer'
 import { ArrowLeft, PlayCircle, Video, FileText, Download, Clock, Star, MessageCircle, X, Lock, CheckCircle, ChevronRight, ChevronDown, RotateCcw, BookOpen, FileQuestion } from 'lucide-react'
+import { purchasesApi } from '../api/purchases';
+import { progressApi } from '../api/progress';
+
 
 export default function CourseDetail() {
   const { id } = useParams()
@@ -98,8 +101,7 @@ export default function CourseDetail() {
     setQuestionResults(newResults)
   }
 
-  // Helper function to check purchase status
-  const checkPurchaseStatus = (courseData) => {
+  const checkPurchaseStatus = async (courseData) => {
     if (!user || !courseData || courseData.type !== 'paid') {
       if (courseData && courseData.type === 'free') {
         setIsPurchased(true)
@@ -108,26 +110,24 @@ export default function CourseDetail() {
       return
     }
 
-    const purchases = JSON.parse(localStorage.getItem(`coursePurchases_${user.id}`) || '[]')
-    const purchase = purchases.find(p => p.courseId === courseData.id)
-    
-    if (purchase) {
-      setIsPurchased(true)
-      const purchasedAt = new Date(purchase.purchasedAt)
-      const accessDuration = courseData.accessDuration || 30
-      const expiresAt = new Date(purchasedAt.getTime() + accessDuration * 24 * 60 * 60 * 1000)
-      const now = new Date()
+    try {
+      const { purchased, expired, expiresAt } = await purchasesApi.checkPurchase(courseData.id);
       
-      if (now > expiresAt) {
-        setPurchaseExpired(true)
-        setCanAccessContent(false)
+      if (purchased) {
+        setIsPurchased(true)
+        if (expired) {
+          setPurchaseExpired(true)
+          setCanAccessContent(false)
+        } else {
+          setPurchaseExpired(false)
+          setCanAccessContent(true)
+        }
       } else {
-        setPurchaseExpired(false)
-        setCanAccessContent(true)
+        setIsPurchased(false)
+        setCanAccessContent(false)
       }
-    } else {
-      setIsPurchased(false)
-      setCanAccessContent(false)
+    } catch (error) {
+      console.error('Error checking purchase:', error);
     }
   }
 
@@ -212,86 +212,57 @@ export default function CourseDetail() {
     setReviews(itemReviews)
 
     if (user) {
-      const savedProgress = JSON.parse(localStorage.getItem(`courseProgress_${user.id}_${id}`) || '{}')
-      setProgress(savedProgress)
-
-      const userReview = getUserReview(user.id, parseInt(id), 'course')
-      if (userReview) {
-        setEditingReview(userReview)
-        setReviewForm({ rating: userReview.rating, comment: userReview.comment })
-      }
+      progressApi.getCourseProgress(id).then(({ progress }) => {
+        setProgress(progress);
+      }).catch(console.error);
     }
   }, [id, user, getReviewsByItemId, getUserReview])
 
-  const handlePurchase = () => {
+  const handlePurchase = async () => {
     if (!course || course.type !== 'paid' || !user) return
 
-    // Use file system storage to match backend
-    const purchases = JSON.parse(localStorage.getItem(`coursePurchases_${user.id}`) || '[]')
-    
-    const existingPurchase = purchases.find(p => p.courseId === course.id)
-    if (existingPurchase) {
-      const purchasedAt = new Date(existingPurchase.purchasedAt)
-      const accessDuration = course.accessDuration || 30
-      const expiresAt = new Date(purchasedAt.getTime() + accessDuration * 24 * 60 * 60 * 1000)
-      const now = new Date()
+    try {
+      // Check if already purchased
+      const { purchased, expired } = await purchasesApi.checkPurchase(course.id);
       
-      if (now <= expiresAt) {
-        const remainingDays = Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000))
-        alert(`이미 구매한 코스입니다.\n\n접근 만료일: ${expiresAt.toLocaleDateString('ko-KR')}\n남은 기간: ${remainingDays}일`)
+      if (purchased && !expired) {
+        alert('이미 구매한 코스입니다.')
         setIsPurchased(true)
         setCanAccessContent(true)
         return
-      } else {
-        // Access expired - offer renewal
-        if (window.confirm(`이 코스의 접근 기간이 만료되었습니다.\n\n만료일: ${expiresAt.toLocaleDateString('ko-KR')}\n\n${course.price}에 다시 구매하시겠습니까?`)) {
-          // Continue with purchase
-        } else {
+      }
+
+      if (purchased && expired) {
+        if (!window.confirm('이 코스의 접근 기간이 만료되었습니다.\n\n다시 구매하시겠습니까?')) {
           return
         }
       }
-    }
 
-    // Show confirmation with access duration
-    const accessDuration = course.accessDuration || 30
-    const confirmMessage = `${course.title} 구매 확인\n\n가격: ${course.price}\n접근 기간: ${accessDuration}일\n\n구매하시겠습니까?`
-    
-    if (!window.confirm(confirmMessage)) {
-      return
-    }
+      const accessDuration = course.accessDuration || 30
+      const confirmMessage = `${course.title} 구매 확인\n\n가격: ${course.price}\n접근 기간: ${accessDuration}일\n\n구매하시겠습니까?`
+      
+      if (!window.confirm(confirmMessage)) return
 
-    const purchase = {
-      courseId: course.id,
-      courseTitle: course.title,
-      price: course.price,
-      purchasedAt: new Date().toISOString(),
-      accessDuration: accessDuration,
-      transactionId: `COURSE_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+      const purchaseData = {
+        courseId: course.id,
+        courseTitle: course.title,
+        price: course.price,
+        accessDuration: accessDuration,
+        transactionId: `COURSE_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+      };
+
+      await purchasesApi.createPurchase(purchaseData);
+      
+      setIsPurchased(true)
+      setPurchaseExpired(false)
+      setCanAccessContent(true)
+      
+      const expiresAt = new Date(Date.now() + accessDuration * 24 * 60 * 60 * 1000)
+      alert(`구매가 완료되었습니다!\n\n거래 ID: ${purchaseData.transactionId}\n접근 기간: ${accessDuration}일\n접근 만료일: ${expiresAt.toLocaleDateString('ko-KR')}\n\n이제 코스를 수강할 수 있습니다.`)
+    } catch (error) {
+      console.error('Purchase error:', error);
+      alert('구매 처리 중 오류가 발생했습니다.');
     }
-    
-    // Update local storage
-    const updatedPurchases = purchases.filter(p => p.courseId !== course.id)
-    updatedPurchases.push(purchase)
-    localStorage.setItem(`coursePurchases_${user.id}`, JSON.stringify(updatedPurchases))
-    
-    // IMPORTANT: Also save to backend data directory for server-side validation
-    // This would be done via API call in production
-    fetch(`https://api.banhannah.dpdns.org/api/courses/purchase`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      credentials: 'include',
-      body: JSON.stringify(purchase)
-    }).catch(err => console.error('Failed to save purchase to backend:', err))
-    
-    setIsPurchased(true)
-    setPurchaseExpired(false)
-    setCanAccessContent(true)
-    
-    const expiresAt = new Date(Date.now() + accessDuration * 24 * 60 * 60 * 1000)
-    alert(`구매가 완료되었습니다!\n\n거래 ID: ${purchase.transactionId}\n접근 기간: ${accessDuration}일\n접근 만료일: ${expiresAt.toLocaleDateString('ko-KR')}\n\n이제 코스를 수강할 수 있습니다.`)
   }
 
   const handleLessonSelect = (lesson) => {
@@ -306,43 +277,50 @@ export default function CourseDetail() {
     }
   }
 
-  const handleMarkComplete = (lessonId) => {
-    const updatedProgress = {
-      ...progress,
-      [lessonId]: { completed: true, completedAt: new Date().toISOString() }
-    }
-    setProgress(updatedProgress)
-    localStorage.setItem(`courseProgress_${user.id}_${id}`, JSON.stringify(updatedProgress))
-    
-    // ✅ Trigger dashboard update
-    window.dispatchEvent(new Event('dashboardUpdate'))
-    
-    // ✅ Check if course is now 100% complete
-    const completableLessons = course.lessons.filter(l => l.type !== 'chapter')
-    const completedCount = completableLessons.filter(l => 
-      updatedProgress[l.id]?.completed === true
-    ).length
-    
-    if (completedCount === completableLessons.length) {
-      console.log('🎉 Course 100% complete!')
-      // Optional: Show celebration message
-      setTimeout(() => {
-        alert(`🎉 축하합니다! "${course.title}" 코스를 100% 완료했습니다!`)
-      }, 500)
+  const handleMarkComplete = async (lessonId) => {
+    try {
+      await progressApi.updateLessonProgress(id, lessonId, true);
+      
+      const updatedProgress = {
+        ...progress,
+        [lessonId]: { completed: true, completedAt: new Date().toISOString() }
+      };
+      setProgress(updatedProgress);
+      
+      window.dispatchEvent(new Event('dashboardUpdate'));
+      
+      // Check if course is 100% complete
+      const completableLessons = course.lessons.filter(l => l.type !== 'chapter');
+      const completedCount = completableLessons.filter(l => 
+        updatedProgress[l.id]?.completed === true
+      ).length;
+      
+      if (completedCount === completableLessons.length) {
+        setTimeout(() => {
+          alert(`🎉 축하합니다! "${course.title}" 코스를 100% 완료했습니다!`);
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error marking complete:', error);
+      alert('진행 상황 저장 중 오류가 발생했습니다.');
     }
   }
 
 
-  const handleMarkIncomplete = (lessonId) => {
-    const updatedProgress = { ...progress }
-    delete updatedProgress[lessonId]
-    setProgress(updatedProgress)
-    localStorage.setItem(`courseProgress_${user.id}_${id}`, JSON.stringify(updatedProgress))
-    
-    // ✅ Trigger dashboard update
-    window.dispatchEvent(new Event('dashboardUpdate'))
+  const handleMarkIncomplete = async (lessonId) => {
+    try {
+      await progressApi.updateLessonProgress(id, lessonId, false);
+      
+      const updatedProgress = { ...progress };
+      delete updatedProgress[lessonId];
+      setProgress(updatedProgress);
+      
+      window.dispatchEvent(new Event('dashboardUpdate'));
+    } catch (error) {
+      console.error('Error marking incomplete:', error);
+      alert('진행 상황 저장 중 오류가 발생했습니다.');
+    }
   }
-
 
   const handleDownloadLessonFile = (file) => {
     if (!canAccess) {

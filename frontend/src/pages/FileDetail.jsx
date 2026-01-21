@@ -5,6 +5,7 @@ import { ArrowLeft, Download, FileText, Clock, Star, MessageCircle, X, Eye, Aler
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
 import { apiEndpoint, apiRequest } from '../config/api'
+import { resourcesApi } from '../api/resources';
 
 import { API_URL } from '../config/api'
 export default function FileDetail() {
@@ -248,22 +249,22 @@ useEffect(() => {
   };
 
   const incrementAccessCount = async () => {
-    if (!file || !file.id) return
+    if (!file || !file.id) return;
 
     try {
+      // Record access in database
+      await resourcesApi.recordAccess(file.id, 'file', false);
+      
+      // Update file metadata
       const response = await apiRequest(apiEndpoint(`files/metadata/${file.id}/increment`), {
         method: 'POST'
-      })
+      });
       if (response.ok) {
-        const data = await response.json()
-        // Preserve any transient client-only fields (like displayUrl)
-        setFile(prev => ({ ...data.file, displayUrl: prev?.displayUrl || data.file.displayUrl }))
-      } else {
-        setFile({ ...file, downloads: (file.downloads || 0) + 1 })
+        const data = await response.json();
+        setFile(prev => ({ ...data.file, displayUrl: prev?.displayUrl || data.file.displayUrl }));
       }
     } catch (error) {
-      console.error('❌ Error incrementing access count:', error)
-      setFile(prev => ({ ...prev, downloads: (prev?.downloads || file?.downloads || 0) + 1 }))
+      console.error('Error incrementing access count:', error);
     }
   }
 

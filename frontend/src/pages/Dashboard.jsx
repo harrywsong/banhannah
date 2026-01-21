@@ -2,6 +2,9 @@ import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { BookOpen, Download, Video, Clock, Award, Target, ExternalLink, FileText } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { registrationsApi } from '../api/registrations';
+import { resourcesApi } from '../api/resources';
+import { progressApi } from '../api/progress';
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -11,96 +14,60 @@ export default function Dashboard() {
   const [onlineCourses, setOnlineCourses] = useState([])
 
   useEffect(() => {
-    const loadData = () => {
-      if (user) {
-        // Load user's downloaded resources
-        const savedResources = localStorage.getItem(`resources_${user.id}`) || '[]'
-        setMyResources(JSON.parse(savedResources))
+    const loadData = async () => {
+      if (!user) return;
+      
+      try {
+        // Load accessed resources
+        const { resources } = await resourcesApi.getAccessedResources();
+        setMyResources(resources);
 
-        // Load registered classes
-        const savedRegistrations = localStorage.getItem(`registrations_${user.id}`) || '[]'
-        const registrations = JSON.parse(savedRegistrations)
-        
-        console.log('📋 Loaded registrations:', registrations) // DEBUG
+        // Load class registrations
+        const { registrations } = await registrationsApi.getRegistrations();
         
         // Get class details for registered classes
-        const allClasses = JSON.parse(localStorage.getItem('liveClasses') || '[]')
-        const classes = allClasses.filter(c => registrations.some(r => r.classId === c.id))
-        
-        console.log('📚 Registered classes:', classes) // DEBUG
-        
-        setRegisteredClasses(classes)
+        const allClasses = JSON.parse(localStorage.getItem('liveClasses') || '[]');
+        const classes = allClasses.filter(c => 
+          registrations.some(r => r.classId === c.id)
+        );
+        setRegisteredClasses(classes);
 
-        // ✅ Load completed online courses
-        const allOnlineCourses = JSON.parse(localStorage.getItem('onlineCourses') || '[]')
-        setOnlineCourses(allOnlineCourses)
+        // Load completed online courses
+        const allOnlineCourses = JSON.parse(localStorage.getItem('onlineCourses') || '[]');
+        setOnlineCourses(allOnlineCourses);
         
-        console.log('📊 Calculating completed courses...')
-        console.log('Total courses:', allOnlineCourses.length)
-        
-        // Calculate completed courses (100% progress)
-        const completed = allOnlineCourses.filter(course => {
-          const progressKey = `courseProgress_${user.id}_${course.id}`
-          const progress = JSON.parse(localStorage.getItem(progressKey) || '{}')
-          
-          // Get only non-chapter lessons
-          const completableLessons = (course.lessons || []).filter(l => l.type !== 'chapter')
-          
-          if (completableLessons.length === 0) {
-            return false
+        // Calculate completed courses
+        const completedPromises = allOnlineCourses.map(async (course) => {
+          try {
+            const { progress } = await progressApi.getCourseProgress(course.id);
+            const completableLessons = (course.lessons || []).filter(l => l.type !== 'chapter');
+            
+            if (completableLessons.length === 0) return null;
+            
+            const completedLessons = completableLessons.filter(l => progress[l.id]?.completed === true);
+            const isFullyCompleted = completedLessons.length === completableLessons.length;
+            
+            return isFullyCompleted ? course : null;
+          } catch (error) {
+            console.error('Error loading progress for course', course.id, error);
+            return null;
           }
-          
-          // Count completed lessons
-          const completedLessons = completableLessons.filter(l => progress[l.id]?.completed === true)
-          
-          const isFullyCompleted = completedLessons.length === completableLessons.length
-          
-          if (isFullyCompleted) {
-            console.log(`✅ Course "${course.title}" is complete! (${completedLessons.length}/${completableLessons.length})`)
-          }
-          
-          return isFullyCompleted
-        })
+        });
         
-        console.log('✅ Total completed courses:', completed.length, completed.map(c => c.title))
-        setCompletedCourses(completed)
+        const completed = (await Promise.all(completedPromises)).filter(c => c !== null);
+        setCompletedCourses(completed);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
       }
-    }
+    };
 
-    // Load initially
-    loadData()
+    loadData();
 
-    // ✅ Listen for storage changes (when you register or complete courses)
-    const handleStorageChange = (e) => {
-      // Reload data when relevant keys change
-      if (e.key && (
-        e.key.includes('registrations_') || 
-        e.key.includes('courseProgress_') ||
-        e.key === 'onlineCourses'
-      )) {
-        console.log('🔄 Storage changed, reloading dashboard data...', e.key)
-        loadData()
-      }
-    }
-
-    window.addEventListener('storage', handleStorageChange)
-
-    // ✅ Also listen for a custom event for same-tab updates
-    const handleCustomUpdate = () => {
-      console.log('🔄 Custom update triggered, reloading dashboard data...')
-      loadData()
-    }
-    
-    window.addEventListener('dashboardUpdate', handleCustomUpdate)
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('dashboardUpdate', handleCustomUpdate)
-    }
-  }, [user])
-
-
-
+    // Listen for updates
+    const handleUpdate = () => loadData();
+    window.addEventListener('dashboardUpdate', handleUpdate);
+    return () => window.removeEventListener('dashboardUpdate', handleUpdate);
+  }, [user]);
 
   if (!user) {
     return (

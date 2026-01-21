@@ -39,6 +39,11 @@ const authRoutes = require('./routes/auth');
 const videoRoutes = require('./routes/videos');
 const contactRoutes = require('./routes/contact');
 
+const purchaseRoutes = require('./routes/purchases');
+const registrationRoutes = require('./routes/registrations');
+const progressRoutes = require('./routes/progress');
+const resourceRoutes = require('./routes/resources');
+
 // Import middleware
 const { authenticate, requireAdmin, optionalAuth } = require('./middleware/auth');
 const { 
@@ -320,47 +325,12 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/purchases', purchaseRoutes);
+app.use('/api/registrations', registrationRoutes);
+app.use('/api/progress', progressRoutes);
+app.use('/api/resources', resourceRoutes);
 
-// ========== COURSE PURCHASE ENDPOINT ==========
-app.post('/api/courses/purchase', authenticate, async (req, res) => {
-  try {
-    const purchase = req.body;
-    const userId = req.user.id;
-    
-    // Validate purchase data
-    if (!purchase.courseId || !purchase.transactionId) {
-      return res.status(400).json({ error: 'Invalid purchase data' });
-    }
-    
-    // Save purchase to file system (in production, use database)
-    const dataDir = path.join(__dirname, 'data');
-    const purchasesFilePath = path.join(dataDir, `purchases_${userId}.json`);
-    
-    let purchases = [];
-    if (fs.existsSync(purchasesFilePath)) {
-      const purchasesData = fs.readFileSync(purchasesFilePath, 'utf-8');
-      purchases = JSON.parse(purchasesData);
-    }
-    
-    // Remove any existing purchase for this course
-    purchases = purchases.filter(p => p.courseId !== purchase.courseId);
-    
-    // Add new purchase
-    purchases.push({
-      ...purchase,
-      userId,
-      savedAt: new Date().toISOString()
-    });
-    
-    // Save to file
-    fs.writeFileSync(purchasesFilePath, JSON.stringify(purchases, null, 2));
-    
-    res.json({ success: true, message: 'Purchase saved' });
-  } catch (error) {
-    console.error('Purchase save error:', error);
-    res.status(500).json({ error: 'Failed to save purchase' });
-  }
-});
+
 
 // Add this new function before the existing upload handlers
 const handlePreviewImageUpload = async (req, res) => {

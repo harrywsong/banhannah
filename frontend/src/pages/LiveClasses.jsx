@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Calendar, Clock, Video, Users, ExternalLink, UserCheck, Star, MessageCircle, X, Filter } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
+import { registrationsApi } from '../api/registrations';
 
 export default function LiveClasses({ hideHeader = false, filterLevel: externalFilterLevel = 'all' }) {
   const { user } = useAuth()
@@ -62,71 +63,79 @@ export default function LiveClasses({ hideHeader = false, filterLevel: externalF
     return now >= start && now <= end
   }
 
-  const handleRegister = (classId) => {
+  const handleRegister = async (classId) => {
     if (!user) {
-      alert('로그인이 필요합니다')
-      return
+      alert('로그인이 필요합니다');
+      return;
     }
 
-    const classItem = classes.find(c => c.id === classId)
-    if (!classItem) return
+    const classItem = classes.find(c => c.id === classId);
+    if (!classItem) return;
 
     if (!isRegistrationOpen(classItem)) {
-      alert('현재 등록 기간이 아닙니다.')
-      return
+      alert('현재 등록 기간이 아닙니다.');
+      return;
     }
 
-    const classDateTime = getClassDateTime(classItem)
+    const classDateTime = getClassDateTime(classItem);
     if (classDateTime && classDateTime < new Date()) {
-      alert('이미 시작된 클래스입니다.')
-      return
+      alert('이미 시작된 클래스입니다.');
+      return;
     }
 
-    const newRegistration = {
-      classId,
-      userId: user.id,
-      registeredAt: new Date().toISOString()
+    try {
+      await registrationsApi.register(classId);
+      
+      // Update local state
+      const newRegistration = {
+        classId,
+        userId: user.id,
+        registeredAt: new Date().toISOString()
+      };
+      setRegistrations([...registrations, newRegistration]);
+      
+      // Update class count
+      const updatedClasses = classes.map(c =>
+        c.id === classId ? { ...c, registeredCount: (c.registeredCount || 0) + 1 } : c
+      );
+      setClasses(updatedClasses);
+      
+      alert(`${classItem.title} 클래스에 등록되었습니다!`);
+      window.dispatchEvent(new Event('dashboardUpdate'));
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert('등록 중 오류가 발생했습니다.');
     }
-
-    const updatedRegistrations = [...registrations, newRegistration]
-    setRegistrations(updatedRegistrations)
-    localStorage.setItem(`registrations_${user.id}`, JSON.stringify(updatedRegistrations))
-
-    // Update registered count
-    const updatedClasses = classes.map(c =>
-      c.id === classId ? { ...c, registeredCount: (c.registeredCount || 0) + 1 } : c
-    )
-    setClasses(updatedClasses)
-    localStorage.setItem('liveClasses', JSON.stringify(updatedClasses))
-
-    alert(`${classItem.title} 클래스에 등록되었습니다!`)
-    
-    // ✅ Trigger dashboard update
-    window.dispatchEvent(new Event('dashboardUpdate'))
   }
 
-  const handleUnregister = (classId) => {
-    if (!user) return
+  const handleUnregister = async (classId) => {
+    if (!user) return;
 
-    const classItem = classes.find(c => c.id === classId)
-    if (!classItem) return
+    const classItem = classes.find(c => c.id === classId);
+    if (!classItem) return;
 
     if (!window.confirm(`"${classItem.title}" 클래스 등록을 취소하시겠습니까?`)) {
-      return
+      return;
     }
 
-    const updatedRegistrations = registrations.filter(r => !(r.classId === classId && r.userId === user.id))
-    setRegistrations(updatedRegistrations)
-    localStorage.setItem(`registrations_${user.id}`, JSON.stringify(updatedRegistrations))
-    
-    // Update registered count
-    const updatedClasses = classes.map(c => 
-      c.id === classId ? { ...c, registeredCount: Math.max(0, (c.registeredCount || 0) - 1) } : c
-    )
-    setClasses(updatedClasses)
-    localStorage.setItem('liveClasses', JSON.stringify(updatedClasses))
-    
-    alert(`"${classItem.title}" 클래스 등록이 취소되었습니다.`)
+    try {
+      await registrationsApi.unregister(classId);
+      
+      // Update local state
+      const updatedRegistrations = registrations.filter(r => r.classId !== classId);
+      setRegistrations(updatedRegistrations);
+      
+      // Update class count
+      const updatedClasses = classes.map(c => 
+        c.id === classId ? { ...c, registeredCount: Math.max(0, (c.registeredCount || 0) - 1) } : c
+      );
+      setClasses(updatedClasses);
+      
+      alert(`"${classItem.title}" 클래스 등록이 취소되었습니다.`);
+    } catch (error) {
+      console.error('Unregister error:', error);
+      alert('등록 취소 중 오류가 발생했습니다.');
+    }
   }
 
   const isRegistered = (classId) => {
