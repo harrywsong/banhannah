@@ -21,7 +21,11 @@ export default function Resources() {
         const response = await apiRequest(apiEndpoint('files/metadata'))
         if (response.ok) {
           const data = await response.json()
-          setFiles(data.files || [])
+          const files = data.files || []
+          setFiles(files)
+          
+          // ✅ SAVE TO LOCALSTORAGE FOR DASHBOARD
+          localStorage.setItem('resourceFiles', JSON.stringify(files))
         } else {
           console.error('Failed to load files from backend')
           // Fallback to localStorage if backend fails
@@ -40,13 +44,18 @@ export default function Resources() {
       }
     }
 
+
     // Load online courses from backend API
     const loadCourses = async () => {
       try {
         const response = await apiRequest(apiEndpoint('courses/metadata'))
         if (response.ok) {
           const data = await response.json()
-          setOnlineCourses(data.courses || [])
+          const courses = data.courses || []
+          setOnlineCourses(courses)
+          
+          // ✅ SAVE TO LOCALSTORAGE FOR DASHBOARD
+          localStorage.setItem('onlineCourses', JSON.stringify(courses))
         } else {
           console.error('Failed to load courses from backend')
           // Fallback to localStorage if backend fails
@@ -65,9 +74,11 @@ export default function Resources() {
       }
     }
 
+
     loadFiles()
     loadCourses()
   }, [])
+
 
   // Filter files (all files are free, but filter UI is there for consistency)
   const filteredFiles = files
