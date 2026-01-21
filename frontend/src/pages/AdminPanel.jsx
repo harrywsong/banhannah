@@ -205,23 +205,46 @@ useEffect(() => {
   }
 }
 
-  const handleClassSubmit = (e) => {
+    const handleClassSubmit = async (e) => {
     e.preventDefault()
+
     const classData = {
-      id: editingClass?.id || Date.now(),
       ...classFormData,
       registeredCount: editingClass?.registeredCount || 0,
-      maxParticipants: parseInt(classFormData.maxParticipants)
+      maxParticipants: parseInt(classFormData.maxParticipants),
+      createdAt: editingClass?.createdAt || new Date().toISOString()
     }
-    let updatedClasses
-    if (editingClass) {
-      updatedClasses = classes.map(c => c.id === editingClass.id ? classData : c)
-    } else {
-      updatedClasses = [...classes, classData]
+
+    try {
+      let response
+      if (editingClass) {
+        response = await apiRequestAdmin(apiEndpoint(`liveclasses/metadata/${editingClass.id}`), {
+          method: 'PUT',
+          body: JSON.stringify(classData)
+        })
+      } else {
+        response = await apiRequestAdmin(apiEndpoint('liveclasses/metadata'), {
+          method: 'POST',
+          body: JSON.stringify(classData)
+        })
+      }
+
+      if (response.ok) {
+        const classesResponse = await apiRequestAdmin(apiEndpoint('liveclasses/metadata'))
+        if (classesResponse.ok) {
+          const classesData = await classesResponse.json()
+          setClasses(classesData.liveclasses || [])
+        }
+        resetClassForm()
+        alert('클래스가 성공적으로 저장되었습니다!')
+      } else {
+        const errorData = await response.json()
+        alert(`클래스 저장에 실패했습니다: ${errorData.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Class save error:', error)
+      alert(`클래스 저장에 실패했습니다: ${error.message}`)
     }
-    setClasses(updatedClasses)
-    localStorage.setItem('liveClasses', JSON.stringify(updatedClasses))
-    resetClassForm()
   }
 
   const handleClassEdit = (classItem) => {

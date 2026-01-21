@@ -854,6 +854,71 @@ app.delete('/api/courses/metadata/:id', authenticate, requireAdmin, idValidation
   }
 });
 
+// Live classes metadata routes
+app.get('/api/liveclasses/metadata', optionalAuth, async (req, res) => {
+  try {
+    const liveclasses = await prisma.liveClass.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ liveclasses });
+  } catch (error) {
+    console.error('Failed to fetch live classes:', error);
+    res.status(500).json({ error: 'Failed to fetch live classes' });
+  }
+});
+
+app.get('/api/liveclasses/metadata/:id', optionalAuth, idValidation, async (req, res) => {
+  try {
+    const liveclass = await prisma.liveClass.findUnique({
+      where: { id: parseInt(req.params.id) }
+    });
+    if (!liveclass) {
+      return res.status(404).json({ error: 'Live class not found' });
+    }
+    res.json(liveclass);
+  } catch (error) {
+    console.error('Failed to fetch live class:', error);
+    res.status(500).json({ error: 'Failed to fetch live class' });
+  }
+});
+
+app.post('/api/liveclasses/metadata', authenticate, requireAdmin, liveClassValidation, async (req, res) => {
+  try {
+    const liveclass = await prisma.liveClass.create({
+      data: req.body
+    });
+    res.json(liveclass);
+  } catch (error) {
+    console.error('Failed to create live class:', error);
+    res.status(500).json({ error: 'Failed to create live class' });
+  }
+});
+
+app.put('/api/liveclasses/metadata/:id', authenticate, requireAdmin, idValidation, liveClassValidation, async (req, res) => {
+  try {
+    const liveclass = await prisma.liveClass.update({
+      where: { id: parseInt(req.params.id) },
+      data: req.body
+    });
+    res.json(liveclass);
+  } catch (error) {
+    console.error('Failed to update live class:', error);
+    res.status(500).json({ error: 'Failed to update live class' });
+  }
+});
+
+app.delete('/api/liveclasses/metadata/:id', authenticate, requireAdmin, idValidation, async (req, res) => {
+  try {
+    await prisma.liveClass.delete({
+      where: { id: parseInt(req.params.id) }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Failed to delete live class:', error);
+    res.status(500).json({ error: 'Failed to delete live class' });
+  }
+});
+
 // ========== REVIEW ENDPOINTS ==========
 
 app.get('/api/reviews', optionalAuth, async (req, res) => {

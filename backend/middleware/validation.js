@@ -138,6 +138,24 @@ const courseValidation = [
   validate
 ];
 
+const liveClassValidation = Joi.object({
+  title: Joi.string().trim().min(2).max(200).required(),
+  description: Joi.string().trim().min(10).max(1000).optional(),
+  date: Joi.string().required(),
+  time: Joi.string().required(),
+  timezone: Joi.string().required(),
+  duration: Joi.string().required(),
+  platform: Joi.string().required(),
+  meetingLink: Joi.string().uri().required(),
+  instructor: Joi.string().required(),
+  maxParticipants: Joi.number().integer().min(1).required(),
+  registrationStart: Joi.string().required(),
+  registrationEnd: Joi.string().required(),
+  previewImage: Joi.string().uri().optional(),
+  registeredCount: Joi.number().integer().min(0).optional(),
+  createdAt: Joi.date().optional()
+});
+
 // Review validation
 const reviewValidation = [
   body('rating')
@@ -178,5 +196,6 @@ module.exports = {
   fileMetadataValidation,
   courseValidation,
   reviewValidation,
-  idValidation
+  idValidation,
+  liveClassValidation
 };
