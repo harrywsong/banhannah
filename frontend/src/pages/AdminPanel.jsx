@@ -45,8 +45,10 @@ export default function AdminPanel() {
     maxParticipants: '20',
     registrationStart: '',
     registrationEnd: '',
-    previewImage: ''
+    previewImage: '',
+    level: '1'  // ✅ ADD THIS
   })
+
   const [classPreviewFile, setClassPreviewFile] = useState(null)
   const [classPreviewUrl, setClassPreviewUrl] = useState(null)
 
@@ -57,8 +59,10 @@ export default function AdminPanel() {
     size: '',
     pages: '',
     fileUrl: '',
-    previewImage: ''
+    previewImage: '',
+    level: '1'  // ✅ ADD THIS
   })
+
   const [filePreviewFile, setFilePreviewFile] = useState(null)
   const [filePreviewUrl, setFilePreviewUrl] = useState(null)
 
@@ -69,8 +73,10 @@ export default function AdminPanel() {
     price: '',
     accessDuration: 30,
     lessons: [],
-    previewImage: ''  // Add this field
+    previewImage: '',
+    level: '1'  // ✅ ADD THIS
   });
+
 
   
 const [currentLessonForm, setCurrentLessonForm] = useState({
@@ -264,8 +270,10 @@ useEffect(() => {
       maxParticipants: (classItem.maxParticipants || 20).toString(),
       registrationStart: classItem.registrationStart || '',
       registrationEnd: classItem.registrationEnd || '',
-      previewImage: classItem.previewImage || ''  // ✅ Keep just the filename
+      previewImage: classItem.previewImage || '',
+      level: (classItem.level || '1').toString()  // ✅ ADD THIS
     })
+
     // ✅ Build the full URL for display only
     setClassPreviewUrl(classItem.previewImage ? `${apiEndpoint('files/view')}/${classItem.previewImage}` : null)
     setClassPreviewFile(null)
@@ -311,8 +319,10 @@ useEffect(() => {
       maxParticipants: '20',
       registrationStart: '',
       registrationEnd: '',
-      previewImage: ''
+      previewImage: '',
+      level: '1'  // ✅ ADD THIS
     })
+
     setClassPreviewFile(null)
     setClassPreviewUrl(null)
     setShowClassForm(false)
@@ -381,8 +391,10 @@ useEffect(() => {
       size: file.size || '',
       pages: file.pages || '',
       fileUrl: file.fileUrl || '',
-      previewImage: file.previewImage || '' // ← CRITICAL
+      previewImage: file.previewImage || '',
+      level: (file.level || '1').toString()  // ✅ ADD THIS
     })
+
     setFilePreviewUrl(file.previewImage || null)
     setFilePreviewFile(null)
     setShowFileForm(true)
@@ -423,8 +435,10 @@ useEffect(() => {
       size: '',
       pages: '',
       fileUrl: '',
-      previewImage: ''
+      previewImage: '',
+      level: '1'  // ✅ ADD THIS
     })
+
     setFilePreviewFile(null)
     setFilePreviewUrl(null)
     setShowFileForm(false)
@@ -486,8 +500,10 @@ useEffect(() => {
       price: course.type === 'paid' ? (course.price || '').replace('$', '') : '',
       accessDuration: course.accessDuration || 30,
       lessons: course.lessons || [],
-      previewImage: course.previewImage || ''  // ✅ ADD THIS LINE
+      previewImage: course.previewImage || '',
+      level: (course.level || '1').toString()  // ✅ ADD THIS
     })
+
     setShowCourseForm(true)
   }
 
@@ -526,8 +542,10 @@ useEffect(() => {
       type: 'free',
       price: '',
       accessDuration: 30,
-      lessons: []
+      lessons: [],
+      level: '1'  // ✅ ADD THIS
     })
+
     setCurrentLessonForm({
       title: '',
       description: '',
@@ -1292,6 +1310,24 @@ const handleFilePreviewUpload = async (e) => {
                       </div>
                     </div>
 
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            레벨 *
+                          </label>
+                          <select
+                            required
+                            value={classFormData.level}
+                            onChange={(e) => setClassFormData({ ...classFormData, level: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="1">레벨 1 - 초급</option>
+                            <option value="2">레벨 2 - 중급</option>
+                            <option value="3">레벨 3 - 고급</option>
+                          </select>
+                        </div>
+
+
+
                     {/* Schedule Section */}
                     <div className="border-b pb-6">
                       <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -1707,6 +1743,23 @@ const handleFilePreviewUpload = async (e) => {
                         placeholder="자료에 대한 설명..."
                       />
                     </div>
+
+                                        <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        레벨 *
+                      </label>
+                      <select
+                        required
+                        value={fileFormData.level}
+                        onChange={(e) => setFileFormData({ ...fileFormData, level: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      >
+                        <option value="1">레벨 1 - 초급</option>
+                        <option value="2">레벨 2 - 중급</option>
+                        <option value="3">레벨 3 - 고급</option>
+                      </select>
+                    </div>
+
 
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                       <p className="text-sm text-green-800">
@@ -2144,6 +2197,26 @@ const handleFilePreviewUpload = async (e) => {
           </>
         )}
       </div>
+    </div>
+  </div>
+
+  {/* Level Selection */}
+  <div className="border-b pb-4">
+    <h4 className="text-lg font-semibold mb-4">레벨</h4>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        코스 난이도 *
+      </label>
+      <select
+        required
+        value={courseFormData.level}
+        onChange={(e) => setCourseFormData({ ...courseFormData, level: e.target.value })}
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+      >
+        <option value="1">레벨 1 - 초급</option>
+        <option value="2">레벨 2 - 중급</option>
+        <option value="3">레벨 3 - 고급</option>
+      </select>
     </div>
   </div>
 
