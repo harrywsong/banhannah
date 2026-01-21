@@ -496,6 +496,8 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
 });
 
 
+// In backend/server.js - Replace the /api/files/view/:filename route
+
 app.get('/api/files/view/:filename', (req, res) => {
   try {
     console.log('🔍 DEBUG /api/files/view', { 
@@ -507,29 +509,25 @@ app.get('/api/files/view/:filename', (req, res) => {
     });
     
     // ========== CRITICAL: Set CORS headers FIRST ==========
-    let requestOrigin = req.get('origin');
+    const requestOrigin = req.get('origin') || req.get('referer');
+    const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(s => s.trim());
     
-    if (!requestOrigin && req.get('referer')) {
-      try {
-        const refererUrl = new URL(req.get('referer'));
-        requestOrigin = refererUrl.origin;
-        console.log('🔄 Extracted origin from referer:', requestOrigin);
-      } catch (e) {
-        console.error('❌ Error parsing referer:', e);
-      }
-    }
-    
-    if (requestOrigin) {
+    // In development, allow all origins
+    if (process.env.NODE_ENV !== 'production') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept, Origin');
+      console.log('✅ DEV MODE: Setting CORS to *');
+    } else if (requestOrigin && allowedOrigins.some(origin => requestOrigin.includes(origin))) {
       res.setHeader('Access-Control-Allow-Origin', requestOrigin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept, Origin');
       console.log('✅ Setting CORS for origin:', requestOrigin);
     } else {
-      // Fallback for production when no origin/referer
-      res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      console.log('⚠️ No origin/referer, defaulting to localhost:5173');
+      // Production fallback
+      res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0] || '*');
+      console.log('⚠️ No origin/referer, defaulting to:', allowedOrigins[0]);
     }
     // ======================================================
     
@@ -557,6 +555,8 @@ app.get('/api/files/view/:filename', (req, res) => {
       '.jpeg': 'image/jpeg',
       '.png': 'image/png',
       '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
       '.doc': 'application/msword',
       '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       '.xls': 'application/vnd.ms-excel',

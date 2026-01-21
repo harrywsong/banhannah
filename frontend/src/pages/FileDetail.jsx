@@ -679,15 +679,27 @@ useEffect(() => {
             <div className="lg:col-span-2">
               {/* File Header */}
               <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-                {/* File Preview - FIXED */}
+{/* File Preview - FIXED */}
 <div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
   {file.previewImage ? (
     <img 
-      src={buildFileUrl(file.previewImage, 'view')}  // ✅ Use buildFileUrl to get correct local URL
+      src={(() => {
+        // If it's a full URL (starts with http), use it directly
+        if (file.previewImage.startsWith('http')) {
+          // But replace production URL with local dev URL if in dev mode
+          if (import.meta.env.MODE === 'development' && file.previewImage.includes('api.banhannah.dpdns.org')) {
+            const filename = file.previewImage.split('/').pop()
+            return `http://localhost:3002/api/files/view/${filename}`
+          }
+          return file.previewImage
+        }
+        // Otherwise, build the URL from filename
+        return buildFileUrl(file.previewImage, 'view')
+      })()}
       alt={`${file.title} 미리보기`}
       className="w-full h-full object-cover"
       onError={(e) => {
-        console.error('❌ Preview image failed to load:', buildFileUrl(file.previewImage, 'view'))
+        console.error('❌ Preview image failed to load:', file.previewImage)
         e.target.style.display = 'none'
       }}
     />

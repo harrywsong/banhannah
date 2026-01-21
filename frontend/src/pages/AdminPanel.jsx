@@ -744,76 +744,79 @@ if (data.success) {
     }
   }
 
-  // Handle file preview image upload
-  const handleFilePreviewUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+// In AdminPanel.jsx - Update the handleFilePreviewUpload function
 
-    // Validate it's an image
-    if (!file.type.startsWith('image/')) {
-      fs.unlinkSync(req.file.path)
-      return res.status(400).json({ error: 'Only image files are allowed' })
-    }
+const handleFilePreviewUpload = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
 
-    try {
-      setUploadProgress({
-        fileName: file.name,
-        progress: 0,
-        type: 'image'
-      })
-
-      const formData = new FormData()
-      formData.append('preview', file) // CHANGED: 'file' → 'preview' for clarity
-
-      const xhr = new XMLHttpRequest()
-
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = Math.round((e.loaded / e.total) * 100)
-          setUploadProgress(prev => ({
-            ...prev,
-            progress: percentComplete
-          }))
-        }
-      })
-
-      xhr.addEventListener('load', async () => {
-        if (xhr.status === 200) {
-          const data = JSON.parse(xhr.responseText)
-          if (data.success) {
-            console.log('✅ Preview uploaded:', data.imageUrl)
-            
-            // CRITICAL FIX: Update both state objects
-            setFileFormData(prev => ({
-              ...prev,
-              previewImage: data.imageUrl
-            }))
-            setFilePreviewUrl(data.imageUrl)
-            setFilePreviewFile(file)
-            
-            alert('미리보기 이미지가 성공적으로 업로드되었습니다!')
-          }
-        } else {
-          throw new Error('Upload failed')
-        }
-        setUploadProgress(null)
-      })
-
-      xhr.addEventListener('error', () => {
-        alert('이미지 업로드에 실패했습니다.')
-        setUploadProgress(null)
-      })
-
-      xhr.open('POST', apiEndpoint('files/upload-preview'))
-      addAuthHeadersAdmin(xhr)
-      xhr.send(formData)
-
-    } catch (error) {
-      console.error('Image upload error:', error)
-      alert(`이미지 업로드에 실패했습니다: ${error.message}`)
-      setUploadProgress(null)
-    }
+  // Validate it's an image
+  if (!file.type.startsWith('image/')) {
+    alert('이미지 파일만 업로드할 수 있습니다.')
+    return
   }
+
+  try {
+    setUploadProgress({
+      fileName: file.name,
+      progress: 0,
+      type: 'image'
+    })
+
+    const formData = new FormData()
+    formData.append('preview', file)
+
+    const xhr = new XMLHttpRequest()
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percentComplete = Math.round((e.loaded / e.total) * 100)
+        setUploadProgress(prev => ({
+          ...prev,
+          progress: percentComplete
+        }))
+      }
+    })
+
+    xhr.addEventListener('load', async () => {
+      if (xhr.status === 200) {
+        const data = JSON.parse(xhr.responseText)
+        if (data.success) {
+          console.log('✅ Preview uploaded:', data.imageUrl)
+          
+          // CRITICAL FIX: Store only the filename, not the full URL
+          const filename = data.fileName || data.imageUrl.split('/').pop()
+          
+          setFileFormData(prev => ({
+            ...prev,
+            previewImage: filename  // ✅ Just the filename
+          }))
+          setFilePreviewUrl(data.imageUrl)  // For immediate display
+          setFilePreviewFile(file)
+          
+          alert('미리보기 이미지가 성공적으로 업로드되었습니다!')
+        }
+      } else {
+        throw new Error('Upload failed')
+      }
+      setUploadProgress(null)
+    })
+
+    xhr.addEventListener('error', () => {
+      alert('이미지 업로드에 실패했습니다.')
+      setUploadProgress(null)
+    })
+
+    xhr.open('POST', apiEndpoint('files/upload-preview'))
+    addAuthHeadersAdmin(xhr)
+    xhr.send(formData)
+
+  } catch (error) {
+    console.error('Image upload error:', error)
+    alert(`이미지 업로드에 실패했습니다: ${error.message}`)
+    setUploadProgress(null)
+  }
+}
 
   // Handle class preview image upload
   const handleClassPreviewUpload = async (e) => {
