@@ -21,7 +21,7 @@ services:
     ports:
       - "3002:3002"
     environment:
-      NODE_ENV: production
+      NODE_ENV: development  # ← CHANGED from production
       PORT: 3002
       HOST: 0.0.0.0
       DATABASE_URL: postgresql://hws:Thddngur1005!@postgres:5432/yewon_dev
@@ -36,7 +36,11 @@ services:
       SMTP_SECURE: false
       SMTP_USER: hwstestcontact@gmail.com
       SMTP_PASS: peqftvnhdazqhozm
-      EMAIL_FROM: "반혜나 <hwstestcontact@gmail.com>"
+      EMAIL_FROM: "반혜나"
+    volumes:  # ← ADD THESE LINES
+      - .:/app
+      - /app/node_modules
+    command: npm run dev  # ← ADD THIS LINE (uses nodemon)
     depends_on:
       - postgres
     networks:

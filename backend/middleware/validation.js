@@ -131,30 +131,87 @@ const courseValidation = [
     }),
   
   body('accessDuration')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('접근 기간은 1일 이상이어야 합니다'),
+  .optional({ checkFalsy: true }) // Allow empty/null values
+  .custom((value, { req }) => {
+    // Only require for paid courses
+    if (req.body.type === 'paid' && !value) {
+      throw new Error('유료 코스는 접근 기간을 입력해야 합니다');
+    }
+    // If provided, must be valid
+    if (value && (!Number.isInteger(Number(value)) || Number(value) < 1)) {
+      throw new Error('접근 기간은 1일 이상이어야 합니다');
+    }
+    return true;
+  }),
   
   validate
 ];
 
-const liveClassValidation = Joi.object({
-  title: Joi.string().trim().min(2).max(200).required(),
-  description: Joi.string().trim().min(10).max(1000).optional(),
-  date: Joi.string().required(),
-  time: Joi.string().required(),
-  timezone: Joi.string().required(),
-  duration: Joi.string().required(),
-  platform: Joi.string().required(),
-  meetingLink: Joi.string().uri().required(),
-  instructor: Joi.string().required(),
-  maxParticipants: Joi.number().integer().min(1).required(),
-  registrationStart: Joi.string().required(),
-  registrationEnd: Joi.string().required(),
-  previewImage: Joi.string().uri().optional(),
-  registeredCount: Joi.number().integer().min(0).optional(),
-  createdAt: Joi.date().optional()
-});
+// Live class validation
+const liveClassValidation = [
+  body('title')
+    .trim()
+    .notEmpty()
+    .withMessage('라이브 클래스 제목을 입력해주세요')
+    .isLength({ min: 2, max: 200 })
+    .withMessage('제목은 2-200자 사이여야 합니다'),
+  
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('설명은 1000자 이하여야 합니다'),
+  
+  body('date')
+    .notEmpty()
+    .withMessage('날짜를 입력해주세요'),
+  
+  body('time')
+    .notEmpty()
+    .withMessage('시간을 입력해주세요'),
+  
+  body('timezone')
+    .notEmpty()
+    .withMessage('타임존을 입력해주세요'),
+  
+  body('duration')
+    .notEmpty()
+    .withMessage('수업 시간을 입력해주세요'),
+  
+  body('platform')
+    .notEmpty()
+    .withMessage('플랫폼을 입력해주세요'),
+  
+  body('meetingLink')
+    .notEmpty()
+    .withMessage('미팅 링크를 입력해주세요')
+    .isURL()
+    .withMessage('유효한 URL을 입력해주세요'),
+  
+  body('instructor')
+    .notEmpty()
+    .withMessage('강사 이름을 입력해주세요'),
+  
+  body('maxParticipants')
+    .isInt({ min: 1 })
+    .withMessage('최대 참가자는 1명 이상이어야 합니다'),
+  
+  body('registrationStart')
+    .notEmpty()
+    .withMessage('등록 시작일을 입력해주세요'),
+  
+  body('registrationEnd')
+    .notEmpty()
+    .withMessage('등록 마감일을 입력해주세요'),
+  
+  body('previewImage')
+    .optional()
+    .isURL()
+    .withMessage('유효한 이미지 URL을 입력해주세요'),
+  
+  validate
+];
+
 
 // Review validation
 const reviewValidation = [

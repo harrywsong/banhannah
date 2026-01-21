@@ -227,12 +227,38 @@ export default function LiveClasses({ hideHeader = false }) {
                 return (
                   <div key={classItem.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                     {/* PLACEHOLDER IMAGE */}
-                    <div className="relative h-48 bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm font-semibold">[클래스 이미지 #{classItem.id}]</p>
-                        <p className="text-xs opacity-75">클래스 이미지로 교체하세요</p>
-                      </div>
+                    <div className="relative h-48 bg-gradient-to-br from-purple-400 to-pink-500 overflow-hidden">
+                      {classItem.previewImage ? (
+                        <img 
+                          src={(() => {
+                            // Build URL correctly from filename
+                            if (classItem.previewImage.startsWith('http')) {
+                              return classItem.previewImage;
+                            }
+                            
+                            // Get API URL from environment
+                            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+                            const cleanFilename = classItem.previewImage.split('/').pop();
+                            return `${API_URL}/api/files/view/${encodeURIComponent(cleanFilename)}`;
+                          })()}
+                          alt={`${classItem.title} 미리보기`}
+                          className="w-full h-full object-cover"
+                          crossOrigin="anonymous"
+                          onError={(e) => {
+                            console.error('❌ Live class preview failed for:', classItem.previewImage);
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <div className="text-center text-white">
+                            <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm font-semibold">[클래스 이미지]</p>
+                            <p className="text-xs opacity-75">미리보기 이미지가 설정되지 않았습니다</p>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="absolute top-2 right-2 bg-white text-purple-600 px-3 py-1 rounded-full text-sm font-semibold">
                         {classItem.platform}
                       </div>
@@ -357,9 +383,28 @@ export default function LiveClasses({ hideHeader = false }) {
 
                 return (
                   <div key={classItem.id} className="bg-white rounded-xl shadow-md overflow-hidden opacity-75">
-                    <div className="relative h-48 bg-gray-300 flex items-center justify-center">
-                      <Video className="h-16 w-16 text-gray-400" />
+                    <div className="relative h-48 bg-gray-300 overflow-hidden">
+                      {classItem.previewImage ? (
+                        <img 
+                          src={(() => {
+                            if (classItem.previewImage.startsWith('http')) {
+                              return classItem.previewImage;
+                            }
+                            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+                            const cleanFilename = classItem.previewImage.split('/').pop();
+                            return `${API_URL}/api/files/view/${encodeURIComponent(cleanFilename)}`;
+                          })()}
+                          alt={`${classItem.title} 미리보기`}
+                          className="w-full h-full object-cover opacity-75"
+                          crossOrigin="anonymous"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Video className="h-16 w-16 text-gray-400" />
+                        </div>
+                      )}
                     </div>
+
                     <div className="p-6">
                       <h3 className="text-xl font-bold text-gray-900 mb-2">{classItem.title}</h3>
                       <p className="text-gray-600 mb-4 line-clamp-2">{classItem.description}</p>
