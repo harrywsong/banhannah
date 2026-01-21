@@ -67,9 +67,11 @@ export default function AdminPanel() {
     description: '',
     type: 'free',
     price: '',
-    accessDuration: 30, // Days for paid courses
-    lessons: []
-  })
+    accessDuration: 30,
+    lessons: [],
+    previewImage: ''  // Add this field
+  });
+
   
 const [currentLessonForm, setCurrentLessonForm] = useState({
   title: '',
@@ -838,131 +840,137 @@ const handleFilePreviewUpload = async (e) => {
 }
   // Handle class preview image upload
   const handleClassPreviewUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-
+    const file = e.target.files[0];
+    if (!file) return;
+    
     // Validate image type
-    if (!file.type.startsWith('image/')) {
-      alert('이미지 파일만 업로드할 수 있습니다.')
-      return
+    if (!file.type.startsWith('image')) {
+      alert('이미지 파일만 업로드할 수 있습니다.');
+      return;
     }
-
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const xhr = new XMLHttpRequest()
-
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = Math.round((e.loaded / e.total) * 100)
-          setUploadProgress({
-            fileName: file.name,
-            progress: percentComplete,
-            type: 'image'
-          })
-        }
-      })
-
-      xhr.addEventListener('load', async () => {
-        if (xhr.status === 200) {
-          const data = JSON.parse(xhr.responseText)
-          if (data.success) {
-            setClassFormData({
-              ...classFormData,
-              previewImage: data.fileUrl
-            })
-            setClassPreviewUrl(data.fileUrl)
-            setClassPreviewFile(file)
-            alert('미리보기 이미지가 성공적으로 업로드되었습니다!')
-          }
-        } else {
-          throw new Error('Upload failed')
-        }
-        setUploadProgress(null)
-      })
-
-      xhr.addEventListener('error', () => {
-        alert('이미지 업로드에 실패했습니다.')
-        setUploadProgress(null)
-      })
-
-      xhr.open('POST', apiEndpoint('files/upload'))
-      addAuthHeadersAdmin(xhr)
-      xhr.send(formData)
-    } catch (error) {
-      console.error('Image upload error:', error)
-      alert(`이미지 업로드에 실패했습니다: ${error.message}`)
-      setUploadProgress(null)
-    }
-  }
-
-  const handleCoursePreviewUpload = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      alert('이미지 파일만 업로드할 수 있습니다.')
-      return
-    }
-
+    
     try {
       setUploadProgress({
         fileName: file.name,
         progress: 0,
         type: 'image'
-      })
-
-      const formData = new FormData()
-      formData.append('preview', file)
-
-      const xhr = new XMLHttpRequest()
-
+      });
+      
+      const formData = new FormData();
+      formData.append('preview', file);  // Changed from 'file' to 'preview'
+      
+      const xhr = new XMLHttpRequest();
+      
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {
-          const percentComplete = Math.round((e.loaded / e.total) * 100)
-          setUploadProgress(prev => ({
-            ...prev,
-            progress: percentComplete
-          }))
+          const percentComplete = Math.round((e.loaded / e.total) * 100);
+          setUploadProgress(prev => ({ ...prev, progress: percentComplete }));
         }
-      })
-
+      });
+      
       xhr.addEventListener('load', async () => {
         if (xhr.status === 200) {
-          const data = JSON.parse(xhr.responseText)
+          const data = JSON.parse(xhr.responseText);
           if (data.success) {
-            console.log('✅ Course preview uploaded:', data.imageUrl)
+            console.log('✅ Class preview uploaded:', data.imageUrl);
             
-            // Update course form data
+            // CRITICAL: Store only filename, not full URL
+            const filename = data.fileName || data.imageUrl.split('/').pop();
+            
+            setClassFormData(prev => ({
+              ...prev,
+              previewImage: filename  // Just the filename
+            }));
+            setClassPreviewUrl(data.imageUrl);  // For immediate display
+            setClassPreviewFile(file);
+            alert('미리보기 이미지가 업로드되었습니다!');
+          } else {
+            throw new Error('Upload failed');
+          }
+          setUploadProgress(null);
+        }
+      });
+      
+      xhr.addEventListener('error', () => {
+        alert('이미지 업로드에 실패했습니다.');
+        setUploadProgress(null);
+      });
+      
+      xhr.open('POST', apiEndpoint('files/upload-preview'));  // Changed endpoint
+      addAuthHeadersAdmin(xhr);
+      xhr.send(formData);
+    } catch (error) {
+      console.error('Image upload error:', error);
+      alert('이미지 업로드 중 오류가 발생했습니다: ' + error.message);
+      setUploadProgress(null);
+    }
+  };
+
+
+  const handleCoursePreviewUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image')) {
+      alert('이미지 파일만 업로드할 수 있습니다.');
+      return;
+    }
+    
+    try {
+      setUploadProgress({
+        fileName: file.name,
+        progress: 0,
+        type: 'image'
+      });
+      
+      const formData = new FormData();
+      formData.append('preview', file);
+      
+      const xhr = new XMLHttpRequest();
+      
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100);
+          setUploadProgress(prev => ({ ...prev, progress: percentComplete }));
+        }
+      });
+      
+      xhr.addEventListener('load', async () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText);
+          if (data.success) {
+            console.log('✅ Course preview uploaded:', data.imageUrl);
+            
+            // CRITICAL: Store only filename, not full URL
+            const filename = data.fileName || data.imageUrl.split('/').pop();
+            
             setCourseFormData(prev => ({
               ...prev,
-              previewImage: data.imageUrl
-            }))
-            
-            alert('코스 미리보기 이미지가 성공적으로 업로드되었습니다!')
+              previewImage: filename  // Just the filename
+            }));
+            alert('미리보기 이미지가 업로드되었습니다!');
+          } else {
+            throw new Error('Upload failed');
           }
-        } else {
-          throw new Error('Upload failed')
+          setUploadProgress(null);
         }
-        setUploadProgress(null)
-      })
-
+      });
+      
       xhr.addEventListener('error', () => {
-        alert('이미지 업로드에 실패했습니다.')
-        setUploadProgress(null)
-      })
-
-      xhr.open('POST', apiEndpoint('files/upload-preview'))
-      addAuthHeadersAdmin(xhr)
-      xhr.send(formData)
-
+        alert('이미지 업로드에 실패했습니다.');
+        setUploadProgress(null);
+      });
+      
+      xhr.open('POST', apiEndpoint('files/upload-preview'));
+      addAuthHeadersAdmin(xhr);
+      xhr.send(formData);
     } catch (error) {
-      console.error('Course preview upload error:', error)
-      alert(`이미지 업로드에 실패했습니다: ${error.message}`)
-      setUploadProgress(null)
+      console.error('Course preview upload error:', error);
+      alert('이미지 업로드 중 오류가 발생했습니다: ' + error.message);
+      setUploadProgress(null);
     }
-  }
+  };
+
 
 
   // Show login if not authenticated
