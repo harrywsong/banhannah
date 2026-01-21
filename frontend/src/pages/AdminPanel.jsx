@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import AdminLogin from '../components/AdminLogin'
 import { apiEndpoint, addAuthHeaders } from '../config/api'
 import { useAdminAuth } from '../contexts/AdminAuthContext';
-import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield, Download, BookOpen, FileQuestion, ChevronUp, ChevronDown } from 'lucide-react'
-import { ImageIcon } from "lucide-react";
+import { Plus, Calendar, Clock, Video, Users, Edit, Trash2, X, FileText, Upload, PlayCircle, LogOut, BarChart3, Settings, Shield, Download, BookOpen, FileQuestion, ChevronUp, ChevronDown, RotateCcw, ImageIcon } from 'lucide-react'
 
 
 export default function AdminPanel() {
@@ -1776,32 +1775,52 @@ if (data.success) {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        미리보기 이미지 URL (선택사항)
-                      </label>
-                      <input
-                        type="url"
-                        value={fileFormData.previewImage}
-                        onChange={(e) => setFileFormData({ ...fileFormData, previewImage: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="https://example.com/previews/document-preview.jpg"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        파일의 첫 페이지/표지 이미지 URL (백엔드에서 자동 생성된 미리보기 이미지 URL)
-                      </p>
-                      {fileFormData.previewImage && (
-                        <div className="mt-3">
-                          <img 
-                            src={fileFormData.previewImage} 
-                            alt="미리보기" 
-                            className="max-w-full h-32 object-cover rounded-lg border border-gray-300"
-                            onError={(e) => {
-                              e.target.style.display = 'none'
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    미리보기 이미지 (선택사항)
+  </label>
+  
+  {filePreviewUrl && (
+    <div className="relative inline-block mb-3">
+      <img 
+        src={filePreviewUrl} 
+        alt="미리보기" 
+        className="max-w-full h-48 object-cover rounded-lg border-2 border-gray-300"
+      />
+      <button
+        type="button"
+        onClick={() => {
+          setFilePreviewUrl(null)
+          setFilePreviewFile(null)
+          setFileFormData({ ...fileFormData, previewImage: '' })
+        }}
+        className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  )}
+
+  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors">
+    <ImageIcon className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+    <p className="text-sm text-gray-600 mb-2">미리보기 이미지 업로드</p>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={handleFilePreviewUpload}
+      className="hidden"
+      id="file-preview-upload"
+    />
+    <label
+      htmlFor="file-preview-upload"
+      className="cursor-pointer inline-block bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm"
+    >
+      이미지 선택
+    </label>
+    <p className="text-xs text-gray-500 mt-2">
+      권장: 800x600px, JPG/PNG (자동으로 업로드됩니다)
+    </p>
+  </div>
+</div>
 
                     <div className="flex justify-end space-x-4 pt-4 border-t">
                       <button

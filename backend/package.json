@@ -4,14 +4,14 @@
   "description": "backend for banhannah",
   "main": "server.js",
   "scripts": {
-  "start": "node -r dotenv/config server.js dotenv_config_path=.env.production",
-  "dev": "nodemon -r dotenv/config server.js dotenv_config_path=.env.development",
-  "dev:debug": "NODE_ENV=development DEBUG=* nodemon -r dotenv/config server.js dotenv_config_path=.env.development",
-  "prisma:generate": "prisma generate",
-  "prisma:migrate:dev": "dotenv -e .env.development -- prisma migrate dev",
-  "prisma:migrate:prod": "dotenv -e .env.production -- prisma migrate deploy",
-  "prisma:studio": "prisma studio",
-  "test": "NODE_ENV=test jest"
+    "start": "node -r dotenv/config server.js dotenv_config_path=.env.production",
+    "dev": "nodemon -r dotenv/config server.js dotenv_config_path=.env.development",
+    "dev:debug": "NODE_ENV=development DEBUG=* nodemon -r dotenv/config server.js dotenv_config_path=.env.development",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "dotenv -e .env.development -- prisma migrate dev",
+    "prisma:migrate:prod": "dotenv -e .env.production -- prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "test": "NODE_ENV=test jest"
   },
   "dependencies": {
     "@prisma/client": "^5.8.0",
@@ -30,6 +30,7 @@
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
+    "dotenv-cli": "^11.0.0",
     "nodemon": "^3.0.1",
     "prisma": "^5.8.0"
   }

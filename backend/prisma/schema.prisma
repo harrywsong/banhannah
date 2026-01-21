@@ -47,6 +47,7 @@ model Course {
   accessDuration Int?
   lessons        Json?
   students       Int      @default(0)
+  previewImage   String?  // Add this line
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
