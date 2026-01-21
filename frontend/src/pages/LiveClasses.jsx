@@ -21,12 +21,11 @@ export default function LiveClasses({ hideHeader = false }) {
             'ngrok-skip-browser-warning': 'true',
           },
         });
-        if (response.ok) {
-          const data = await response.json();
-          setClasses(data.liveclasses || []);
-        } else {
-          console.error('Failed to load live classes');
+        if (!response.ok) {
+          throw new Error('Failed to load live classes');
         }
+        const data = await response.json();
+        setClasses(data.liveclasses || []);
       } catch (error) {
         console.error('Error loading live classes:', error);
       }
