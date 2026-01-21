@@ -246,22 +246,18 @@ router.post('/token/:videoId', authenticate, async (req, res) => {
 
     // ========== PAID COURSE ACCESS VALIDATION ==========
     if (course.type === 'paid') {
-      // Load purchases from file system (in production, use database)
-      const purchasesFilePath = path.join(__dirname, `../data/purchases_${userId}.json`);
-      
-      let purchases = [];
+      // Load purchases from database
       try {
-        if (fs.existsSync(purchasesFilePath)) {
-          const purchasesData = await fs.promises.readFile(purchasesFilePath, 'utf-8');
-          purchases = JSON.parse(purchasesData);
-        }
+        const purchase = await prisma.purchase.findFirst({
+          where: {
+            userId: userId,
+            courseId: courseId
+          }
+        });
       } catch (error) {
         console.error('Error reading purchases:', error);
         return res.status(500).json({ error: 'Failed to verify purchase' });
       }
-
-      // Find purchase for this course
-      const purchase = purchases.find(p => p.courseId === courseId);
       
       if (!purchase) {
         return res.status(403).json({ 

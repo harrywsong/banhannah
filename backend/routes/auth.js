@@ -6,6 +6,36 @@ const { PrismaClient } = require('@prisma/client');
 const { registerValidation, loginValidation } = require('../middleware/validation');
 const { authenticate } = require('../middleware/auth');
 const { sendVerificationEmail, sendEmailChangeVerification } = require('../utils/email');
+const path = require('path')
+const multer = require('multer')
+
+// configure storage for profile pictures
+const profileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../uploads/profile-pictures'))
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) // .jpg, .png, ...
+    const safeName = `user-${req.user.id}-${Date.now()}${ext}`
+    cb(null, safeName)
+  },
+})
+
+// (optional) basic filter to allow only images
+const profileFileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true)
+  } else {
+    cb(new Error('허용되지 않는 파일 형식입니다 (이미지 파일만 업로드 가능).'))
+  }
+}
+
+// ⬇️ this is the `upload` your route is trying to use
+const upload = multer({
+  storage: profileStorage,
+  fileFilter: profileFileFilter,
+})
+
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -353,6 +383,29 @@ router.put('/profile', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: '프로필 업데이트에 실패했습니다. 다시 시도해주세요.' });
+  }
+});
+
+// Upload profile picture
+router.post('/profile-picture', authenticate, upload.single('profilePicture'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image uploaded' });
+    }
+
+    const serverUrl = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
+    const imageUrl = `${serverUrl}/api/files/view/${encodeURIComponent(req.file.filename)}`;
+
+    // Update user in database
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { profilePicture: imageUrl }
+    });
+
+    res.json({ success: true, imageUrl });
+  } catch (error) {
+    console.error('Profile picture upload error:', error);
+    res.status(500).json({ error: 'Failed to upload profile picture' });
   }
 });
 

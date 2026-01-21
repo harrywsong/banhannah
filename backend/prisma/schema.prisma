@@ -21,7 +21,7 @@ model User {
   tokenExpiry       DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  
+  profilePicture    String?  
   reviews              Review[]
   purchases            Purchase[]
   classRegistrations   ClassRegistration[]
@@ -158,4 +158,18 @@ model ResourceAccess {
   
   @@index([userId])
   @@index([resourceId])
+}
+
+model ContactSubmission {
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String
+  subject     String
+  message     String
+  emailSent   Boolean  @default(false)
+  submittedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  
+  @@index([email])
+  @@index([submittedAt])
 }

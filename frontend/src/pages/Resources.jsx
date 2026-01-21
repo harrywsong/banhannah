@@ -20,27 +20,25 @@ export default function Resources() {
       try {
         const response = await apiRequest(apiEndpoint('files/metadata'))
         if (response.ok) {
-          const data = await response.json()
-          const files = data.files || []
-          setFiles(files)
-          
-          // ✅ SAVE TO LOCALSTORAGE FOR DASHBOARD
-          localStorage.setItem('resourceFiles', JSON.stringify(files))
-        } else {
+  const data = await response.json()
+  const files = data.files || []
+  setFiles(files)
+
+  // Optional: cache files correctly (not required for showing them)
+  localStorage.setItem('resourceFiles', JSON.stringify(files))
+}
+ else {
           console.error('Failed to load files from backend')
           // Fallback to localStorage if backend fails
-          const savedFiles = localStorage.getItem('resourceFiles')
-          if (savedFiles) {
-            setFiles(JSON.parse(savedFiles))
-          }
+          // Show error message instead of fallback
+          setFiles([])
+          console.error('Failed to load files from backend - no fallback available')
         }
       } catch (error) {
         console.error('Error loading files:', error)
-        // Fallback to localStorage if backend fails
-        const savedFiles = localStorage.getItem('resourceFiles')
-        if (savedFiles) {
-          setFiles(JSON.parse(savedFiles))
-        }
+        // Show error message instead of fallback
+        setFiles([])
+        console.error('Failed to load files from backend - no fallback available')
       }
     }
 
@@ -314,7 +312,7 @@ export default function Resources() {
                         </div>
                         <div className="flex items-center space-x-1">
                           <Download className="h-4 w-4" />
-                          <span>접근 {file.downloads?.toLocaleString() || 0}</span>
+                          <span>접근 {file.downloads?.toLocaleString() || 0}번</span>
                         </div>
                       </div>
 
@@ -421,7 +419,7 @@ export default function Resources() {
                       <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                         <div className="flex items-center space-x-1">
                           <Video className="h-4 w-4" />
-                          <span>{course.lessons?.filter(l => l.type !== 'chapter').length || 0}개 레슨</span>
+                          <span>레슨 {course.lessons?.filter(l => l.type !== 'chapter').length || 0}개</span>
                         </div>
                         {course.students && (
                           <div className="flex items-center space-x-1">

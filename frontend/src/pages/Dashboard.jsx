@@ -32,8 +32,9 @@ export default function Dashboard() {
         );
         setRegisteredClasses(classes);
 
-        // Load completed online courses
-        const allOnlineCourses = JSON.parse(localStorage.getItem('onlineCourses') || '[]');
+        // Load courses from database
+        const coursesResponse = await apiRequest(apiEndpoint('courses/metadata'));
+        const allOnlineCourses = coursesResponse.ok ? (await coursesResponse.json()).courses : [];
         setOnlineCourses(allOnlineCourses);
         
         // Calculate completed courses

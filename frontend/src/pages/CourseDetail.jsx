@@ -643,13 +643,13 @@ const groupLessonsByChapters = () => {
       {stats.chapters > 0 && (
         <div className="flex items-center space-x-2">
           <BookOpen className="h-5 w-5 text-blue-600" />
-          <span>{stats.chapters}개 챕터</span>
+          <span>챕터 {stats.chapters}개</span>
         </div>
       )}
       {stats.lessons > 0 && (
         <div className="flex items-center space-x-2">
           <FileText className="h-5 w-5 text-purple-600" />
-          <span>{stats.lessons}개 레슨</span>
+          <span>레슨 {stats.lessons}개</span>
         </div>
       )}
       {stats.videos > 0 && (
