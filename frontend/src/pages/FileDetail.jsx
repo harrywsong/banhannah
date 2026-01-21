@@ -6,8 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
 import { apiEndpoint, apiRequest } from '../config/api'
 
-const API_URL = 'https://api.banhannah.dpdns.org'
-
+import { API_URL } from '../config/api'
 export default function FileDetail() {
   const { id } = useParams()
   const { user } = useAuth()

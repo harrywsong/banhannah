@@ -83,7 +83,19 @@ const fileMetadataValidation = [
     .trim()
     .notEmpty()
     .withMessage('파일 URL을 입력해주세요')
-    .isURL()
+    .custom((value) => {
+      // Allow relative URLs starting with /api/
+      if (value.startsWith('/api/')) {
+        return true;
+      }
+      // Allow full URLs
+      try {
+        new URL(value);
+        return true;
+      } catch {
+        throw new Error('유효한 URL 형식이 아닙니다');
+      }
+    })
     .withMessage('유효한 URL을 입력해주세요'),
   
   validate

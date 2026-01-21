@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  postgres:
+    container_name: hws
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: hws
+      POSTGRES_PASSWORD: Thddngur1005!
+      POSTGRES_DB: yewon_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - app-network
+
+  backend:
+    container_name: hws-backend
+    build: .
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://hws:Thddngur1005!@postgres:5432/yewon_dev
+      JWT_SECRET: dev_secret_key_change_in_production_min_32_chars
+      JWT_EXPIRES_IN: 7d
+      ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173,https://banhannah.dpdns.org,http://banhannah.dpdns.org
+      ALLOWED_DOMAINS: localhost,127.0.0.1,banhannah.dpdns.org,api.banhannah.dpdns.org
+      SERVER_URL: https://api.banhannah.dpdns.org
+      FRONTEND_URL: https://banhannah.dpdns.org
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_SECURE: false
+      SMTP_USER: hwstestcontact@gmail.com
+      SMTP_PASS: peqftvnhdazqhozm
+      EMAIL_FROM: "반혜나 <hwstestcontact@gmail.com>"
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
