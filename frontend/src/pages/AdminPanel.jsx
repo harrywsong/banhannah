@@ -1025,12 +1025,12 @@ const handleFilePreviewUpload = async (e) => {
       </div>
       <div className="text-right">
         <p className="text-3xl font-bold">{totalClasses}</p>
-        <p className="text-blue-100 text-sm">Total Classes</p>
+        <p className="text-blue-100 text-sm">수업</p>
       </div>
     </div>
     <div className="flex items-center justify-between text-sm">
       <span className="text-blue-100">라이브 클래스</span>
-      <span className="bg-white/20 px-2 py-1 rounded">Active</span>
+      <span className="bg-white/20 px-2 py-1 rounded">활성</span>
     </div>
   </div>
 
@@ -1041,12 +1041,12 @@ const handleFilePreviewUpload = async (e) => {
       </div>
       <div className="text-right">
         <p className="text-3xl font-bold">{totalFiles}</p>
-        <p className="text-green-100 text-sm">Total Files</p>
+        <p className="text-green-100 text-sm">파일</p>
       </div>
     </div>
     <div className="flex items-center justify-between text-sm">
       <span className="text-green-100">파일</span>
-      <span className="bg-white/20 px-2 py-1 rounded">{totalDownloads} views</span>
+      <span className="bg-white/20 px-2 py-1 rounded">{totalDownloads} 접근</span>
     </div>
   </div>
 
@@ -1057,12 +1057,12 @@ const handleFilePreviewUpload = async (e) => {
       </div>
       <div className="text-right">
         <p className="text-3xl font-bold">{totalCourses}</p>
-        <p className="text-purple-100 text-sm">Total Courses</p>
+        <p className="text-purple-100 text-sm">코스</p>
       </div>
     </div>
     <div className="flex items-center justify-between text-sm">
       <span className="text-purple-100">온라인 코스</span>
-      <span className="bg-white/20 px-2 py-1 rounded">Active</span>
+      <span className="bg-white/20 px-2 py-1 rounded">활성</span>
     </div>
   </div>
 
@@ -1096,7 +1096,7 @@ const handleFilePreviewUpload = async (e) => {
         }`}
       >
         <BarChart3 className="h-5 w-5" />
-        <span>Dashboard</span>
+        <span>대시보드</span>
         {activeTab === 'dashboard' && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-white rounded-t-full" />
         )}
@@ -1110,7 +1110,7 @@ const handleFilePreviewUpload = async (e) => {
         }`}
       >
         <Video className="h-5 w-5" />
-        <span>Live Classes</span>
+        <span>라이브 클래스</span>
         <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
           activeTab === 'classes' ? 'bg-white/20' : 'bg-blue-100 text-blue-600'
         }`}>
@@ -1129,7 +1129,7 @@ const handleFilePreviewUpload = async (e) => {
         }`}
       >
         <FileText className="h-5 w-5" />
-        <span>Files</span>
+        <span>파일</span>
         <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
           activeTab === 'files' ? 'bg-white/20' : 'bg-green-100 text-green-600'
         }`}>
@@ -1148,7 +1148,7 @@ const handleFilePreviewUpload = async (e) => {
         }`}
       >
         <PlayCircle className="h-5 w-5" />
-        <span>Online Courses</span>
+        <span>온라인 코스</span>
         <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
           activeTab === 'courses' ? 'bg-white/20' : 'bg-purple-100 text-purple-600'
         }`}>
@@ -2016,7 +2016,7 @@ const handleFilePreviewUpload = async (e) => {
                   {file.title}
                 </h3>
                 <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
-                  Free
+                  무료
                 </span>
               </div>
               <p className="text-gray-600 text-sm line-clamp-2 ml-11">
@@ -2060,7 +2060,7 @@ const handleFilePreviewUpload = async (e) => {
             )}
             <div className="flex items-center gap-2 text-sm">
               <Users className="h-4 w-4 text-gray-400" />
-              <span className="text-gray-700">{file.downloads || 0} views</span>
+              <span className="text-gray-700">{file.downloads || 0} 접근</span>
             </div>
           </div>
         </div>
@@ -3096,7 +3096,7 @@ const handleFilePreviewUpload = async (e) => {
                     ? 'bg-orange-100 text-orange-700' 
                     : 'bg-green-100 text-green-700'
                 }`}>
-                  {course.type === 'paid' ? 'Paid' : 'Free'}
+                  {course.type === 'paid' ? '유료' : '무료'}
                 </span>
               </div>
               <p className="text-gray-600 text-sm line-clamp-2 ml-11">
@@ -3124,7 +3124,7 @@ const handleFilePreviewUpload = async (e) => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-11">
             <div className="flex items-center gap-2 text-sm">
               <FileText className="h-4 w-4 text-gray-400" />
-              <span className="text-gray-700">{course.lessons?.length || 0} lessons</span>
+              <span className="text-gray-700">{course.lessons?.length || 0} 레슨</span>
             </div>
             {course.students && (
               <div className="flex items-center gap-2 text-sm">

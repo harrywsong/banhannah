@@ -352,6 +352,73 @@ useEffect(() => {
       return;
     }
     
+    // Check file types
+    const isPPTX = file.format?.toLowerCase() === 'pptx' || 
+                  file.fileUrl.toLowerCase().endsWith('.pptx') ||
+                  file.title?.toLowerCase().endsWith('.pptx');
+    
+    const isDOCX = file.format?.toLowerCase() === 'docx' || 
+                  file.fileUrl.toLowerCase().endsWith('.docx') ||
+                  file.title?.toLowerCase().endsWith('.docx');
+    
+    const isXLSX = file.format?.toLowerCase() === 'xlsx' || 
+                  file.fileUrl.toLowerCase().endsWith('.xlsx') ||
+                  file.title?.toLowerCase().endsWith('.xlsx');
+    
+    // Handle Office files (PPTX, DOCX, XLSX)
+    if (isPPTX || isDOCX || isXLSX) {
+      const viewUrl = buildFileUrl(file.fileUrl, 'view');
+      
+      // Check if we're in production (public HTTPS)
+      const isProduction = viewUrl.startsWith('https://') && 
+                          !viewUrl.includes('localhost') && 
+                          !viewUrl.includes('ngrok') &&
+                          !viewUrl.includes('127.0.0.1');
+      
+      if (isProduction) {
+        // ✅ PRODUCTION: Use Microsoft Office Online Viewer
+        const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(viewUrl)}`;
+        
+        setFile(prev => ({ ...prev, displayUrl: officeViewerUrl }));
+        setShowViewer(true);
+        incrementAccessCount();
+        
+        console.log('📄 Opening Office file in production viewer:', officeViewerUrl);
+      } else {
+        // ✅ DEVELOPMENT: Prompt to download
+        const fileType = isPPTX ? 'PowerPoint' : isDOCX ? 'Word' : 'Excel';
+        const userChoice = window.confirm(
+          `${fileType} 파일은 로컬 개발 환경에서 브라우저에서 볼 수 없습니다.\n\n` +
+          '파일을 다운로드하시겠습니까?\n\n' +
+          '💡 프로덕션 배포 후에는 브라우저에서 바로 볼 수 있습니다.'
+        );
+        
+        if (userChoice) {
+          handleDownload();
+        }
+        return;
+      }
+      
+      // Save to resources (for both production and dev)
+      if (user) {
+        const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]');
+        const fileToSave = {
+          id: file.id,
+          title: file.title,
+          format: file.format,
+          size: file.size,
+          downloadedAt: new Date().toISOString()
+        };
+        
+        if (!myResources.find(f => f.id === file.id)) {
+          myResources.push(fileToSave);
+          localStorage.setItem(`resources_${user.id}`, JSON.stringify(myResources));
+        }
+      }
+      return;
+    }
+    
+    // For PDFs and other supported formats (images, etc.)
     setViewerError(null);
     setIsLoading(true);
     
@@ -405,6 +472,8 @@ useEffect(() => {
       setIsLoading(false);
     }
   };
+
+
 
   const handleReviewSubmit = (e) => {
     e.preventDefault()

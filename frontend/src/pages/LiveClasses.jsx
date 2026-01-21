@@ -64,7 +64,7 @@ export default function LiveClasses({ hideHeader = false, filterLevel: externalF
 
   const handleRegister = (classId) => {
     if (!user) {
-      alert('라이브 클래스 등록을 위해 로그인해주세요')
+      alert('로그인이 필요합니다')
       return
     }
 
@@ -72,13 +72,13 @@ export default function LiveClasses({ hideHeader = false, filterLevel: externalF
     if (!classItem) return
 
     if (!isRegistrationOpen(classItem)) {
-      alert('등록 기간이 아닙니다.')
+      alert('현재 등록 기간이 아닙니다.')
       return
     }
 
     const classDateTime = getClassDateTime(classItem)
     if (classDateTime && classDateTime < new Date()) {
-      alert('이미 지난 클래스입니다.')
+      alert('이미 시작된 클래스입니다.')
       return
     }
 
@@ -91,15 +91,18 @@ export default function LiveClasses({ hideHeader = false, filterLevel: externalF
     const updatedRegistrations = [...registrations, newRegistration]
     setRegistrations(updatedRegistrations)
     localStorage.setItem(`registrations_${user.id}`, JSON.stringify(updatedRegistrations))
-    
+
     // Update registered count
-    const updatedClasses = classes.map(c => 
+    const updatedClasses = classes.map(c =>
       c.id === classId ? { ...c, registeredCount: (c.registeredCount || 0) + 1 } : c
     )
     setClasses(updatedClasses)
     localStorage.setItem('liveClasses', JSON.stringify(updatedClasses))
+
+    alert(`${classItem.title} 클래스에 등록되었습니다!`)
     
-    alert(`"${classItem.title}" 클래스 등록이 완료되었습니다! 대시보드에서 미팅 정보를 확인하세요.`)
+    // ✅ Trigger dashboard update
+    window.dispatchEvent(new Event('dashboardUpdate'))
   }
 
   const handleUnregister = (classId) => {

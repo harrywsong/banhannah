@@ -7,23 +7,100 @@ export default function Dashboard() {
   const { user } = useAuth()
   const [myResources, setMyResources] = useState([])
   const [registeredClasses, setRegisteredClasses] = useState([])
+  const [completedCourses, setCompletedCourses] = useState([])
+  const [onlineCourses, setOnlineCourses] = useState([])
 
   useEffect(() => {
-    if (user) {
-      // Load user's downloaded resources
-      const savedResources = localStorage.getItem(`resources_${user.id}`) || '[]'
-      setMyResources(JSON.parse(savedResources))
+    const loadData = () => {
+      if (user) {
+        // Load user's downloaded resources
+        const savedResources = localStorage.getItem(`resources_${user.id}`) || '[]'
+        setMyResources(JSON.parse(savedResources))
 
-      // Load registered classes
-      const savedRegistrations = localStorage.getItem(`registrations_${user.id}`) || '[]'
-      const registrations = JSON.parse(savedRegistrations)
-      
-      // Get class details for registered classes
-      const allClasses = JSON.parse(localStorage.getItem('liveClasses') || '[]')
-      const classes = allClasses.filter(c => registrations.some(r => r.classId === c.id))
-      setRegisteredClasses(classes)
+        // Load registered classes
+        const savedRegistrations = localStorage.getItem(`registrations_${user.id}`) || '[]'
+        const registrations = JSON.parse(savedRegistrations)
+        
+        console.log('📋 Loaded registrations:', registrations) // DEBUG
+        
+        // Get class details for registered classes
+        const allClasses = JSON.parse(localStorage.getItem('liveClasses') || '[]')
+        const classes = allClasses.filter(c => registrations.some(r => r.classId === c.id))
+        
+        console.log('📚 Registered classes:', classes) // DEBUG
+        
+        setRegisteredClasses(classes)
+
+        // ✅ Load completed online courses
+        const allOnlineCourses = JSON.parse(localStorage.getItem('onlineCourses') || '[]')
+        setOnlineCourses(allOnlineCourses)
+        
+        console.log('📊 Calculating completed courses...')
+        console.log('Total courses:', allOnlineCourses.length)
+        
+        // Calculate completed courses (100% progress)
+        const completed = allOnlineCourses.filter(course => {
+          const progressKey = `courseProgress_${user.id}_${course.id}`
+          const progress = JSON.parse(localStorage.getItem(progressKey) || '{}')
+          
+          // Get only non-chapter lessons
+          const completableLessons = (course.lessons || []).filter(l => l.type !== 'chapter')
+          
+          if (completableLessons.length === 0) {
+            return false
+          }
+          
+          // Count completed lessons
+          const completedLessons = completableLessons.filter(l => progress[l.id]?.completed === true)
+          
+          const isFullyCompleted = completedLessons.length === completableLessons.length
+          
+          if (isFullyCompleted) {
+            console.log(`✅ Course "${course.title}" is complete! (${completedLessons.length}/${completableLessons.length})`)
+          }
+          
+          return isFullyCompleted
+        })
+        
+        console.log('✅ Total completed courses:', completed.length, completed.map(c => c.title))
+        setCompletedCourses(completed)
+      }
+    }
+
+    // Load initially
+    loadData()
+
+    // ✅ Listen for storage changes (when you register or complete courses)
+    const handleStorageChange = (e) => {
+      // Reload data when relevant keys change
+      if (e.key && (
+        e.key.includes('registrations_') || 
+        e.key.includes('courseProgress_') ||
+        e.key === 'onlineCourses'
+      )) {
+        console.log('🔄 Storage changed, reloading dashboard data...', e.key)
+        loadData()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+
+    // ✅ Also listen for a custom event for same-tab updates
+    const handleCustomUpdate = () => {
+      console.log('🔄 Custom update triggered, reloading dashboard data...')
+      loadData()
+    }
+    
+    window.addEventListener('dashboardUpdate', handleCustomUpdate)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('dashboardUpdate', handleCustomUpdate)
     }
   }, [user])
+
+
+
 
   if (!user) {
     return (
@@ -41,6 +118,7 @@ export default function Dashboard() {
   const stats = [
     { label: '다운로드한 자료', value: myResources.length.toString(), icon: <Download className="h-6 w-6" />, color: 'bg-blue-500' },
     { label: '등록한 클래스', value: registeredClasses.length.toString(), icon: <Video className="h-6 w-6" />, color: 'bg-purple-500' },
+    { label: '완료한 코스', value: completedCourses.length.toString(), icon: <Award className="h-6 w-6" />, color: 'bg-green-500' },
     { label: '예정된 클래스', value: registeredClasses.filter(c => new Date(c.date) >= new Date()).length.toString(), icon: <Clock className="h-6 w-6" />, color: 'bg-orange-500' },
   ]
 
@@ -251,6 +329,33 @@ export default function Dashboard() {
                       : '다음 라이브 클래스를 기대해주세요!'}
                   </p>
                 </div>
+
+                {/* Online Courses Progress */}
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Award className="h-5 w-5 text-green-600" />
+                    <h3 className="font-semibold text-gray-900">완료한 온라인 코스</h3>
+                  </div>
+                  <p className="text-2xl font-bold text-green-600">{completedCourses.length}개</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {completedCourses.length === 0 
+                      ? '첫 코스를 완료해보세요!'
+                      : completedCourses.length === 1
+                      ? '첫 코스 완료! 축하합니다 🎉'
+                      : completedCourses.length < 5
+                      ? `훌륭해요! ${completedCourses.length}개 코스 완료 🌟`
+                      : `놀라워요! ${completedCourses.length}개 코스 완료 🏆`}
+                  </p>
+                  {completedCourses.length > 0 && (
+                    <Link 
+                      to="/resources"
+                      className="text-sm text-green-600 hover:text-green-700 font-semibold mt-2 inline-block"
+                    >
+                      더 많은 코스 보기 →
+                    </Link>
+                  )}
+                </div>
+
               </div>
             </div>
 

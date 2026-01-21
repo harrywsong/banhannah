@@ -410,7 +410,7 @@ export default function Resources() {
                       <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                         <div className="flex items-center space-x-1">
                           <Video className="h-4 w-4" />
-                          <span>{course.lessons?.length || 0}개 레슨</span>
+                          <span>{course.lessons?.filter(l => l.type !== 'chapter').length || 0}개 레슨</span>
                         </div>
                         {course.students && (
                           <div className="flex items-center space-x-1">

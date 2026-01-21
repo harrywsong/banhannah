@@ -313,14 +313,36 @@ export default function CourseDetail() {
     }
     setProgress(updatedProgress)
     localStorage.setItem(`courseProgress_${user.id}_${id}`, JSON.stringify(updatedProgress))
+    
+    // ✅ Trigger dashboard update
+    window.dispatchEvent(new Event('dashboardUpdate'))
+    
+    // ✅ Check if course is now 100% complete
+    const completableLessons = course.lessons.filter(l => l.type !== 'chapter')
+    const completedCount = completableLessons.filter(l => 
+      updatedProgress[l.id]?.completed === true
+    ).length
+    
+    if (completedCount === completableLessons.length) {
+      console.log('🎉 Course 100% complete!')
+      // Optional: Show celebration message
+      setTimeout(() => {
+        alert(`🎉 축하합니다! "${course.title}" 코스를 100% 완료했습니다!`)
+      }, 500)
+    }
   }
+
 
   const handleMarkIncomplete = (lessonId) => {
     const updatedProgress = { ...progress }
     delete updatedProgress[lessonId]
     setProgress(updatedProgress)
     localStorage.setItem(`courseProgress_${user.id}_${id}`, JSON.stringify(updatedProgress))
+    
+    // ✅ Trigger dashboard update
+    window.dispatchEvent(new Event('dashboardUpdate'))
   }
+
 
   const handleDownloadLessonFile = (file) => {
     if (!canAccess) {
@@ -891,13 +913,19 @@ if (block.type === 'text' && block.data.content) {
             <button
               onClick={() => {
                 if (block.data.url) {
-                  window.open(block.data.url, '_blank');
+                  // ✅ FIX: Check if it's a Zoom link - open in same tab to prevent download
+                  if (block.data.url.includes('zoom.us') || block.data.url.includes('zoom.com')) {
+                    window.location.href = block.data.url;
+                  } else {
+                    window.open(block.data.url, '_blank');
+                  }
                 } else {
                   alert(`파일 다운로드: ${block.data.name}\n\n(URL이 설정되지 않았습니다)`);
                 }
               }}
               className="w-full flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors group"
             >
+
               <div className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-gray-400 group-hover:text-primary-600" />
                 <span className="font-medium text-gray-900">{block.data.name}</span>
