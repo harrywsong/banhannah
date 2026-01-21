@@ -206,8 +206,29 @@ const liveClassValidation = [
   
   body('previewImage')
     .optional()
-    .isURL()
-    .withMessage('유효한 이미지 URL을 입력해주세요'),
+    .custom((value) => {
+      if (!value) return true; // Allow empty
+      
+      // Allow filenames (just the filename, not full URL)
+      if (!value.includes('://')) {
+        return true;
+      }
+      
+      // Allow relative URLs starting with /api/
+      if (value.startsWith('/api/')) {
+        return true;
+      }
+      
+      // Allow full URLs
+      try {
+        new URL(value);
+        return true;
+      } catch {
+        throw new Error('유효한 이미지 파일명 또는 URL을 입력해주세요');
+      }
+    })
+    .withMessage('유효한 이미지 파일명 또는 URL을 입력해주세요'),
+
   
   validate
 ];

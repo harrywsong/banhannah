@@ -264,12 +264,14 @@ useEffect(() => {
       maxParticipants: (classItem.maxParticipants || 20).toString(),
       registrationStart: classItem.registrationStart || '',
       registrationEnd: classItem.registrationEnd || '',
-      previewImage: classItem.previewImage || ''
+      previewImage: classItem.previewImage || ''  // ✅ Keep just the filename
     })
-    setClassPreviewUrl(classItem.previewImage || null)
+    // ✅ Build the full URL for display only
+    setClassPreviewUrl(classItem.previewImage ? `${apiEndpoint('files/view')}/${classItem.previewImage}` : null)
     setClassPreviewFile(null)
     setShowClassForm(true)
   }
+
 
   const handleClassDelete = async (id) => {
     if (!window.confirm('이 클래스를 삭제하시겠습니까?')) return
@@ -483,10 +485,12 @@ useEffect(() => {
       type: course.type || 'free',
       price: course.type === 'paid' ? (course.price || '').replace('$', '') : '',
       accessDuration: course.accessDuration || 30,
-      lessons: course.lessons || []
+      lessons: course.lessons || [],
+      previewImage: course.previewImage || ''  // ✅ ADD THIS LINE
     })
     setShowCourseForm(true)
   }
+
 
   const handleCourseDelete = async (id) => {
     if (!window.confirm('이 온라인 코스를 삭제하시겠습니까?')) {
@@ -694,17 +698,6 @@ useEffect(() => {
 
       const formData = new FormData()
       formData.append('video', file)
-      
-      // Add course ID if editing an existing course
-      if (editingCourse && editingCourse.id) {
-        formData.append('courseId', editingCourse.id)
-      }
-      
-      // Add lesson ID if editing an existing lesson
-      if (editingLesson && editingLesson.id) {
-        formData.append('lessonId', editingLesson.id)
-      }
-
 
       const xhr = new XMLHttpRequest()
 
@@ -718,28 +711,18 @@ useEffect(() => {
       xhr.addEventListener('load', async () => {
         if (xhr.status === 200) {
           const data = JSON.parse(xhr.responseText);
-if (data.success) {
-  console.log('✓ Video uploaded successfully:', data);
-  
-  // CRITICAL: Extract videoId from the HLS URL for token-based playback
-  let videoId = null;
-  if (data.hlsUrl) {
-    const hlsMatch = data.hlsUrl.match(/\/api\/videos\/hls\/([^\/]+)/);
-    if (hlsMatch) {
-      videoId = hlsMatch[1];
-    }
-  }
-  
-  // Update lesson form with video URL
-  setCurrentLessonForm({
-    ...currentLessonForm,
-    videoUrl: data.hlsUrl || data.videoUrl,
-    videoId: videoId // Store the videoId for later use
-  });
+          if (data.success) {
+            console.log('✓ Video uploaded successfully:', data);
+            
+            setCurrentLessonForm({
+              ...currentLessonForm,
+              videoUrl: data.videoUrl,
+              videoFilename: data.filename
+            });
 
-  setUploadingLessonVideo(false);
-  setVideoUploadProgress(0);
-  alert('비디오가 성공적으로 업로드되었습니다!')
+            setUploadingLessonVideo(false);
+            setVideoUploadProgress(0);
+            alert('비디오가 성공적으로 업로드되었습니다!')
           } else {
             throw new Error(data.error || 'Upload failed')
           }
@@ -766,6 +749,7 @@ if (data.success) {
       setVideoUploadProgress(0)
     }
   }
+
 
 const handleFilePreviewUpload = async (e) => {
   const file = e.target.files[0]
@@ -872,14 +856,14 @@ const handleFilePreviewUpload = async (e) => {
         if (xhr.status === 200) {
           const data = JSON.parse(xhr.responseText);
           if (data.success) {
-            console.log('✅ Class preview uploaded:', data.imageUrl);
+            console.log('✅ Class preview uploaded:', data);
             
-            // CRITICAL: Store only filename, not full URL
-            const filename = data.fileName || data.imageUrl.split('/').pop();
+            // CRITICAL: Store only filename
+            const filename = data.filename || data.fileName || data.imageUrl.split('/').pop();
             
             setClassFormData(prev => ({
               ...prev,
-              previewImage: filename  // Just the filename
+              previewImage: filename  // ✅ Just the filename
             }));
             setClassPreviewUrl(data.imageUrl);  // For immediate display
             setClassPreviewFile(file);
@@ -890,6 +874,7 @@ const handleFilePreviewUpload = async (e) => {
           setUploadProgress(null);
         }
       });
+
       
       xhr.addEventListener('error', () => {
         alert('이미지 업로드에 실패했습니다.');
@@ -939,14 +924,14 @@ const handleFilePreviewUpload = async (e) => {
         if (xhr.status === 200) {
           const data = JSON.parse(xhr.responseText);
           if (data.success) {
-            console.log('✅ Course preview uploaded:', data.imageUrl);
+            console.log('✅ Course preview uploaded:', data);
             
-            // CRITICAL: Store only filename, not full URL
-            const filename = data.fileName || data.imageUrl.split('/').pop();
+            // CRITICAL: Store only filename
+            const filename = data.filename || data.fileName || data.imageUrl.split('/').pop();
             
             setCourseFormData(prev => ({
               ...prev,
-              previewImage: filename  // Just the filename
+              previewImage: filename  // ✅ Just the filename
             }));
             alert('미리보기 이미지가 업로드되었습니다!');
           } else {
@@ -955,6 +940,7 @@ const handleFilePreviewUpload = async (e) => {
           setUploadProgress(null);
         }
       });
+
       
       xhr.addEventListener('error', () => {
         alert('이미지 업로드에 실패했습니다.');
@@ -1506,10 +1492,10 @@ const handleFilePreviewUpload = async (e) => {
                       </h4>
 
                       <div className="space-y-4">
-                        {classPreviewUrl && (
+                        {(classPreviewUrl || classFormData.previewImage) && (
                           <div className="relative inline-block">
                             <img 
-                              src={classPreviewUrl} 
+                              src={classPreviewUrl || `${apiEndpoint('files/view')}/${classFormData.previewImage}`}
                               alt="미리보기" 
                               className="max-w-full h-48 object-cover rounded-lg border-2 border-gray-300"
                             />
@@ -1526,6 +1512,7 @@ const handleFilePreviewUpload = async (e) => {
                             </button>
                           </div>
                         )}
+
 
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
                           <ImageIcon className="h-12 w-12 mx-auto text-gray-400 mb-2" />
@@ -2160,6 +2147,57 @@ const handleFilePreviewUpload = async (e) => {
     </div>
   </div>
 
+    {/* Preview Image Section */}
+  <div className="border-b pb-4">
+    <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
+      <ImageIcon className="h-5 w-5 text-purple-600" />
+      미리보기 이미지
+    </h4>
+
+    <div className="space-y-4">
+      {courseFormData.previewImage && (
+        <div className="relative inline-block">
+          <img 
+            src={`${apiEndpoint('files/view')}/${courseFormData.previewImage}`}
+            alt="코스 미리보기" 
+            className="max-w-full h-48 object-cover rounded-lg border-2 border-gray-300"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setCourseFormData({ ...courseFormData, previewImage: '' })
+            }}
+            className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full hover:bg-red-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition-colors">
+        <ImageIcon className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+        <p className="text-sm text-gray-600 mb-2">코스 미리보기 이미지 업로드 (선택사항)</p>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleCoursePreviewUpload}
+          className="hidden"
+          id="course-preview-upload-input"
+        />
+        <label
+          htmlFor="course-preview-upload-input"
+          className="cursor-pointer inline-block bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm"
+        >
+          이미지 선택
+        </label>
+        <p className="text-xs text-gray-500 mt-2">
+          권장: 800x600px, JPG/PNG
+        </p>
+      </div>
+    </div>
+  </div>
+
+
   {/* Lessons/Chapters Management */}
   <div>
     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2577,21 +2615,12 @@ const handleFilePreviewUpload = async (e) => {
                               if (data.success) {
                                 console.log('✓ Block video uploaded:', data);
                                 
-                                // Extract videoId from HLS URL
-                                let videoId = null;
-                                if (data.hlsUrl) {
-                                  const hlsMatch = data.hlsUrl.match(/\/api\/videos\/hls\/([^\/]+)/);
-                                  if (hlsMatch) {
-                                    videoId = hlsMatch[1];
-                                  }
-                                }
-                                
                                 const newContent = [...currentLessonForm.content];
                                 newContent[blockIndex] = {
                                   ...block,
                                   data: { 
-                                    url: data.hlsUrl || data.videoUrl,
-                                    videoId: videoId // Store videoId for token-based access
+                                    url: data.videoUrl,
+                                    filename: data.filename
                                   }
                                 };
                                 setCurrentLessonForm({ ...currentLessonForm, content: newContent });
@@ -2601,6 +2630,7 @@ const handleFilePreviewUpload = async (e) => {
                               }
                             }
                           });
+
 
                           xhr.addEventListener('error', () => {
                             alert('비디오 업로드에 실패했습니다.');
@@ -2625,11 +2655,12 @@ const handleFilePreviewUpload = async (e) => {
                         업로드 중... {videoUploadProgress}%
                       </div>
                     )}
-                    {block.data.url && (block.videoSourceType || videoSourceType) === 'upload' && (
+                    {block.data.filename && (block.videoSourceType || videoSourceType) === 'upload' && (
                       <div className="mt-1 text-xs text-green-600">
-                        ✓ 비디오 업로드 완료
+                        ✓ 비디오 업로드 완료: {block.data.filename}
                       </div>
                     )}
+
                   </div>
                 ) : (
                   <div>
