@@ -81,17 +81,23 @@ const [currentLessonForm, setCurrentLessonForm] = useState({
   duration: ''
 })
 
-  // Load data when authenticated
   useEffect(() => {
     if (!adminSession) return
 
-    // Load classes (still using localStorage for now)
-    const savedClasses = localStorage.getItem('liveClasses')
-    if (savedClasses) {
-      setClasses(JSON.parse(savedClasses))
+    const loadClasses = async () => {
+      try {
+        const response = await apiRequestAdmin(apiEndpoint('liveclasses/metadata'))
+        if (response.ok) {
+          const data = await response.json()
+          setClasses(data.liveclasses || [])
+        } else {
+          console.error('Failed to load live classes')
+        }
+      } catch (error) {
+        console.error('Error loading live classes:', error)
+      }
     }
 
-    // Load files from backend API
     const loadFiles = async () => {
       try {
         const response = await apiRequestAdmin(apiEndpoint('files/metadata'))
@@ -99,24 +105,13 @@ const [currentLessonForm, setCurrentLessonForm] = useState({
           const data = await response.json()
           setFiles(data.files || [])
         } else {
-          console.error('Failed to load files from backend')
-          // Fallback to localStorage if backend fails
-          const savedFiles = localStorage.getItem('resourceFiles')
-          if (savedFiles) {
-            setFiles(JSON.parse(savedFiles))
-          }
+          console.error('Failed to load files')
         }
       } catch (error) {
         console.error('Error loading files:', error)
-        // Fallback to localStorage if backend fails
-        const savedFiles = localStorage.getItem('resourceFiles')
-        if (savedFiles) {
-          setFiles(JSON.parse(savedFiles))
-        }
       }
     }
 
-    // Load courses from backend API
     const loadCourses = async () => {
       try {
         const response = await apiRequestAdmin(apiEndpoint('courses/metadata'))
@@ -124,23 +119,14 @@ const [currentLessonForm, setCurrentLessonForm] = useState({
           const data = await response.json()
           setOnlineCourses(data.courses || [])
         } else {
-          console.error('Failed to load courses from backend')
-          // Fallback to localStorage if backend fails
-          const savedCourses = localStorage.getItem('onlineCourses')
-          if (savedCourses) {
-            setOnlineCourses(JSON.parse(savedCourses))
-          }
+          console.error('Failed to load courses')
         }
       } catch (error) {
         console.error('Error loading courses:', error)
-        // Fallback to localStorage if backend fails
-        const savedCourses = localStorage.getItem('onlineCourses')
-        if (savedCourses) {
-          setOnlineCourses(JSON.parse(savedCourses))
-        }
       }
     }
 
+    loadClasses()
     loadFiles()
     loadCourses()
   }, [adminSession])
@@ -219,24 +205,20 @@ useEffect(() => {
   }
 }
 
-  // Class handlers
   const handleClassSubmit = (e) => {
     e.preventDefault()
-
     const classData = {
       id: editingClass?.id || Date.now(),
       ...classFormData,
       registeredCount: editingClass?.registeredCount || 0,
       maxParticipants: parseInt(classFormData.maxParticipants)
     }
-
     let updatedClasses
     if (editingClass) {
       updatedClasses = classes.map(c => c.id === editingClass.id ? classData : c)
     } else {
       updatedClasses = [...classes, classData]
     }
-
     setClasses(updatedClasses)
     localStorage.setItem('liveClasses', JSON.stringify(updatedClasses))
     resetClassForm()
@@ -264,11 +246,27 @@ useEffect(() => {
     setShowClassForm(true)
   }
 
-  const handleClassDelete = (id) => {
-    if (window.confirm('이 클래스를 삭제하시겠습니까?')) {
-      const updatedClasses = classes.filter(c => c.id !== id)
-      setClasses(updatedClasses)
-      localStorage.setItem('liveClasses', JSON.stringify(updatedClasses))
+  const handleClassDelete = async (id) => {
+    if (!window.confirm('이 클래스를 삭제하시겠습니까?')) return
+
+    try {
+      const response = await apiRequestAdmin(apiEndpoint(`liveclasses/metadata/${id}`), {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        // Refresh list
+        const res = await apiRequestAdmin(apiEndpoint('liveclasses/metadata'))
+        if (res.ok) {
+          const data = await res.json()
+          setClasses(data.liveclasses || [])
+        }
+      } else {
+        const err = await response.json()
+        alert(`Failed: ${err.error || 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error(error)
+      alert(`Error: ${error.message}`)
     }
   }
 

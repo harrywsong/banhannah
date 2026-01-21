@@ -314,9 +314,72 @@ app.get('/api/health', (req, res) => {
 });
 
 // Auth routes
+// Route mounting
 app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/contact', contactRoutes);
+
+// Live classes endpoints (public read, admin write)
+app.get('/api/liveclasses/metadata', optionalAuth, async (req, res) => {
+  try {
+    const liveclasses = await prisma.liveClass.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ liveclasses });
+  } catch (error) {
+    console.error('Error fetching live classes:', error);
+    res.status(500).json({ error: 'Failed to fetch live classes' });
+  }
+});
+
+app.get('/api/liveclasses/metadata/:id', optionalAuth, idValidation, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const liveclass = await prisma.liveClass.findUnique({
+      where: { id: parseInt(id) },
+    });
+    if (!liveclass) return res.status(404).json({ error: 'Live class not found' });
+    res.json(liveclass);
+  } catch (error) {
+    console.error('Error fetching live class:', error);
+    res.status(500).json({ error: 'Failed to fetch live class' });
+  }
+});
+
+app.post('/api/liveclasses/metadata', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const liveclass = await prisma.liveClass.create({ data: req.body });
+    res.json(liveclass);
+  } catch (error) {
+    console.error('Error creating live class:', error);
+    res.status(500).json({ error: 'Failed to create live class' });
+  }
+});
+
+app.put('/api/liveclasses/metadata/:id', authenticate, requireAdmin, idValidation, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const liveclass = await prisma.liveClass.update({
+      where: { id: parseInt(id) },
+      data: req.body,
+    });
+    res.json(liveclass);
+  } catch (error) {
+    console.error('Error updating live class:', error);
+    res.status(500).json({ error: 'Failed to update live class' });
+  }
+});
+
+app.delete('/api/liveclasses/metadata/:id', authenticate, requireAdmin, idValidation, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.liveClass.delete({ where: { id: parseInt(id) } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting live class:', error);
+    res.status(500).json({ error: 'Failed to delete live class' });
+  }
+});
 
 // ========== COURSE PURCHASE ENDPOINT ==========
 app.post('/api/courses/purchase', authenticate, async (req, res) => {

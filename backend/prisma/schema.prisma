@@ -67,3 +67,23 @@ model Review {
   
   @@unique([userId, itemId, itemType])
 }
+
+model LiveClass {
+  id                Int      @id @default(autoincrement())
+  title             String
+  description       String?
+  date              String
+  time              String
+  timezone          String?  @default("Asia/Seoul")
+  duration          String?
+  platform          String?  @default("Zoom")
+  meetingLink       String?
+  instructor        String?
+  maxParticipants   Int?     @default(20)
+  registrationStart String?
+  registrationEnd   String?
+  previewImage      String?
+  registeredCount   Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

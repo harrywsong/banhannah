@@ -14,14 +14,27 @@ export default function LiveClasses({ hideHeader = false }) {
   const [editingReview, setEditingReview] = useState(null)
 
   useEffect(() => {
-    const savedClasses = localStorage.getItem('liveClasses') || '[]'
-    setClasses(JSON.parse(savedClasses))
+    const loadClasses = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/liveclasses/metadata`, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true',
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setClasses(data.liveclasses || []);
+        } else {
+          console.error('Failed to load live classes');
+        }
+      } catch (error) {
+        console.error('Error loading live classes:', error);
+      }
+    };
 
-    if (user) {
-      const savedRegistrations = localStorage.getItem(`registrations_${user.id}`) || '[]'
-      setRegistrations(JSON.parse(savedRegistrations))
-    }
-  }, [user])
+    loadClasses();
+    // … (keep any other logic in your useEffect)
+  }, [user]);
 
   // Helper to create proper date object from date string (YYYY-MM-DD)
   const getClassDateTime = (classItem) => {
