@@ -4,11 +4,14 @@
   "description": "backend for banhannah",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+  "start": "node -r dotenv/config server.js dotenv_config_path=.env.production",
+  "dev": "nodemon -r dotenv/config server.js dotenv_config_path=.env.development",
+  "dev:debug": "NODE_ENV=development DEBUG=* nodemon -r dotenv/config server.js dotenv_config_path=.env.development",
+  "prisma:generate": "prisma generate",
+  "prisma:migrate:dev": "dotenv -e .env.development -- prisma migrate dev",
+  "prisma:migrate:prod": "dotenv -e .env.production -- prisma migrate deploy",
+  "prisma:studio": "prisma studio",
+  "test": "NODE_ENV=test jest"
   },
   "dependencies": {
     "@prisma/client": "^5.8.0",

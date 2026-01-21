@@ -1,11 +1,27 @@
 // src/config/api.js
 // API Configuration with improved security
 
+// Environment-based API URL configuration
+const isDevelopment = import.meta.env.MODE === 'development';
+const isProduction = import.meta.env.MODE === 'production';
+
 // Get API URL from environment variable
-// Always use production API
-// Use empty base in development so Vite's dev proxy (`/api` -> backend) is used.
-// In production, use the real API URL.
-export const API_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || 'https://api.banhannah.dpdns.org');
+export const API_URL = import.meta.env.VITE_API_URL || 
+  (isDevelopment ? 'http://localhost:3002' : 'https://api.banhannah.dpdns.org');
+
+// Environment info (useful for debugging)
+export const ENV = {
+  mode: import.meta.env.MODE,
+  isDevelopment,
+  isProduction,
+  apiUrl: API_URL
+};
+
+// Log environment info in development
+if (isDevelopment) {
+  console.log('🔧 Development Mode');
+  console.log('📡 API URL:', API_URL);
+}
 
 // Helper function to build API endpoints
 export const apiEndpoint = (path) => {

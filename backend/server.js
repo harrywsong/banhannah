@@ -1,8 +1,20 @@
-require('dotenv').config();
-
-// Load path safely before using it in dotenv config
+// Environment configuration - loads .env.development or .env.production based on NODE_ENV
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+const envFile = process.env.NODE_ENV === 'production' 
+  ? '.env.production' 
+  : '.env.development';
+
+require('dotenv').config({ path: path.resolve(__dirname, envFile) });
+
+// Validate critical environment variables
+const requiredEnvVars = ['JWT_SECRET', 'DATABASE_URL'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingEnvVars.join(', '));
+  console.error(`💡 Make sure ${envFile} exists and contains all required variables`);
+  process.exit(1);
+}
 
 // Debug environment loading (remove after testing)
 console.log('JWT_SECRET loaded?', !!process.env.JWT_SECRET);
@@ -836,9 +848,15 @@ const HOST = process.env.HOST || '0.0.0.0';
 
 app.listen(PORT, HOST, async () => {
   const displayHost = HOST === '0.0.0.0' ? 'localhost' : HOST;
+  console.log('\n' + '='.repeat(60));
   console.log(`✓ Server running on http://${displayHost}:${PORT}`);
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`✓ CORS allowed origins: All origins allowed (development mode)`);
+  console.log(`✓ Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+  console.log(`✓ CORS Origins: ${process.env.ALLOWED_ORIGINS || 'Development mode - all origins'}`);
+  console.log(`✓ Frontend URL: ${process.env.FRONTEND_URL || 'Not configured'}`);
+  console.log(`✓ Server URL: ${process.env.SERVER_URL || 'Not configured'}`);
+  console.log(`✓ Email: ${process.env.SMTP_HOST ? 'Configured' : 'Disabled (emails will be simulated)'}`);
+  console.log('='.repeat(60) + '\n');
   
   // Warm up SMTP connection for instant emails
   const { warmupTransporter } = require('./utils/email');
