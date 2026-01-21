@@ -180,7 +180,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: [
+  aallowedHeaders: [
     'Content-Type',
     'Authorization',
     'Range',
@@ -189,7 +189,8 @@ app.use(cors({
     'Accept',
     'Origin',
     'Cache-Control',
-    'If-None-Match'
+    'If-None-Match',
+    'pragma'  // ← ADD THIS
   ],
   exposedHeaders: [
     'Content-Length',
@@ -208,7 +209,7 @@ app.options('*', (req, res) => {
     res.header('Access-Control-Allow-Origin', req.get('origin') || '*');
   }
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Range, ngrok-skip-browser-warning, Origin, Accept, X-Requested-With');
+  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Range, ngrok-skip-browser-warning, Origin, Accept, X-Requested-With, pragma');  // ← ADD pragma here
   res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.status(204).end();
