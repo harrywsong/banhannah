@@ -679,46 +679,54 @@ useEffect(() => {
             <div className="lg:col-span-2">
               {/* File Header */}
               <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-{/* File Preview - FIXED */}
-<div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
-  {file.previewImage ? (
-  <img 
-    src={(() => {
-      console.log('🖼️ Building preview URL from:', file.previewImage);
-      
-      // If it's a full URL, use it as-is
-      if (file.previewImage.startsWith('http')) {
-        return file.previewImage;
-      }
-      
-      // Otherwise, it's just a filename - build the full URL
-      const builtUrl = buildFileUrl(file.previewImage, 'view');
-      console.log('🏗️ Built URL from filename:', builtUrl);
-      return builtUrl;
-    })()}
-    alt={`${file.title} 미리보기`}
-    className="w-full h-full object-cover"
-    onError={(e) => {
-      console.error('❌ Preview image failed to load:', file.previewImage);
-      console.error('Attempted URL:', e.target.src);
-      e.target.style.display = 'none';
-    }}
-  />
-) : (
-    <div className="w-full h-full flex items-center justify-center">
-      <div className="text-center text-white">
-        <FileText className="h-24 w-24 mx-auto mb-2 opacity-50" />
-        <p className="text-lg font-semibold">[파일 미리보기]</p>
-        <p className="text-sm opacity-75">미리보기 이미지가 설정되지 않았습니다</p>
-      </div>
-    </div>
-  )}
-  <div className="absolute top-4 right-4">
-    <div className="bg-white text-green-600 px-4 py-2 rounded-full font-semibold">
-      무료
-    </div>
-  </div>
-</div>
+                {/* File Preview - FIXED */}
+                <div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
+                  {file.previewImage ? (
+                    <img 
+                      src={(() => {
+                        console.log('🖼️ Building preview URL from:', file.previewImage);
+                        
+                        // CRITICAL FIX: If previewImage is just a filename, build the full URL
+                        // If it's already a full URL, use it as-is
+                        if (file.previewImage.startsWith('http')) {
+                          console.log('Using full URL:', file.previewImage);
+                          return file.previewImage;
+                        }
+                        
+                        // It's just a filename - build the URL properly
+                        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+                        const cleanFilename = file.previewImage.split('/').pop(); // Get just the filename
+                        const builtUrl = `${API_URL}/api/files/view/${encodeURIComponent(cleanFilename)}`;
+                        console.log('🏗️ Built URL from filename:', builtUrl);
+                        return builtUrl;
+                      })()}
+                      alt={`${file.title} 미리보기`}
+                      className="w-full h-full object-cover"
+                      crossOrigin="anonymous"
+                      onLoad={(e) => {
+                        console.log('✅ Preview image loaded successfully');
+                      }}
+                      onError={(e) => {
+                        console.error('❌ Preview image failed to load:', file.previewImage);
+                        console.error('Attempted URL:', e.target.src);
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-center text-white">
+                        <FileText className="h-24 w-24 mx-auto mb-2 opacity-50" />
+                        <p className="text-lg font-semibold">[파일 미리보기]</p>
+                        <p className="text-sm opacity-75">미리보기 이미지가 설정되지 않았습니다</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="absolute top-4 right-4">
+                    <div className="bg-white text-green-600 px-4 py-2 rounded-full font-semibold">
+                      무료
+                    </div>
+                  </div>
+                </div>
 
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                   {file.title}

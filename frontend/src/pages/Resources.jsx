@@ -222,13 +222,28 @@ export default function Resources() {
                     key={file.id}
                     className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow group"
                   >
-                    {/* Document Preview */}
+                    {/* Document Preview - FIXED */}
                     <div className="relative h-48 bg-gradient-to-br from-primary-400 to-primary-600 overflow-hidden">
                       {file.previewImage ? (
                         <img 
-                          src={file.previewImage} 
+                          src={(() => {
+                            // CRITICAL FIX: Build URL correctly from filename
+                            if (file.previewImage.startsWith('http')) {
+                              return file.previewImage;
+                            }
+                            
+                            // Get API URL from environment
+                            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+                            const cleanFilename = file.previewImage.split('/').pop();
+                            return `${API_URL}/api/files/view/${encodeURIComponent(cleanFilename)}`;
+                          })()}
                           alt={`${file.title} 미리보기`}
                           className="w-full h-full object-cover"
+                          crossOrigin="anonymous"
+                          onError={(e) => {
+                            console.error('❌ Preview failed for:', file.previewImage);
+                            e.target.style.display = 'none';
+                          }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
@@ -314,13 +329,36 @@ export default function Resources() {
                     key={course.id}
                     className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow group"
                   >
-                    {/* Course Preview */}
-                    <div className="relative h-48 bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm font-semibold">[클래스 이미지 #{course.id}]</p>
-                        <p className="text-xs opacity-75">클래스 이미지로 교체하세요</p>
-                      </div>
+                    {/* Course Preview - FIXED */}
+                    <div className="relative h-48 bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center overflow-hidden">
+                      {course.previewImage ? (
+                        <img 
+                          src={(() => {
+                            // CRITICAL FIX: Build URL correctly from filename
+                            if (course.previewImage.startsWith('http')) {
+                              return course.previewImage;
+                            }
+                            
+                            // Get API URL from environment
+                            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+                            const cleanFilename = course.previewImage.split('/').pop();
+                            return `${API_URL}/api/files/view/${encodeURIComponent(cleanFilename)}`;
+                          })()}
+                          alt={`${course.title} 미리보기`}
+                          className="w-full h-full object-cover"
+                          crossOrigin="anonymous"
+                          onError={(e) => {
+                            console.error('❌ Course preview failed for:', course.previewImage);
+                            e.target.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="text-center text-white">
+                          <Video className="h-16 w-16 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm font-semibold">[클래스 이미지 #{course.id}]</p>
+                          <p className="text-xs opacity-75">클래스 이미지로 교체하세요</p>
+                        </div>
+                      )}
                       <div className="absolute top-2 right-2">
                         {course.type === 'paid' ? (
                           <div className="bg-white text-orange-600 px-3 py-1 rounded-full text-sm font-semibold">

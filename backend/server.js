@@ -496,8 +496,6 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
 });
 
 
-// In backend/server.js - Replace the /api/files/view/:filename route
-
 app.get('/api/files/view/:filename', (req, res) => {
   try {
     // Decode ONLY ONCE to avoid double-decoding issues
@@ -509,20 +507,9 @@ app.get('/api/files/view/:filename', (req, res) => {
     
     if (!fs.existsSync(filePath)) {
       console.error('❌ File not found:', filePath);
-      return res.status(404).json({ error: 'File not found' });
-    }
-    
-    console.log('📂 Looking for file at:', filePath);
-    console.log('📝 Safe filename:', safeFilename);
-    
-    if (!fs.existsSync(filePath)) {
-      console.error('❌ File not found:', filePath);
       console.error('📋 Available files:', fs.readdirSync(uploadsDir).slice(0, 5));
       return res.status(404).json({ error: 'File not found' });
     }
-    
-    // Safe headers
-    res.setHeader('X-Content-Type-Options', 'nosniff');
     
     // ========== Content Type Detection ==========
     const ext = path.extname(safeFilename).toLowerCase();
@@ -541,6 +528,21 @@ app.get('/api/files/view/:filename', (req, res) => {
     };
     
     const contentType = contentTypes[ext] || 'application/octet-stream';
+    const isImage = contentType.startsWith('image/');
+    
+    // ========== CRITICAL: Allow CORS for images ==========
+    const allowedOrigin = req.get('origin');
+    const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(s => s.trim());
+    
+    if (allowedOrigin && allowedOrigins.some(domain => allowedOrigin.includes(domain))) {
+      res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    } else if (process.env.NODE_ENV !== 'production') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    
+    // Safe headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Type', contentType);
     
     // ========== CRITICAL: Inline disposition for viewing in browser ==========
@@ -551,7 +553,7 @@ app.get('/api/files/view/:filename', (req, res) => {
     const fileSize = stat.size;
     const range = req.headers.range;
     
-    if (range) {
+    if (range && !isImage) {
       // Handle partial content request (required for PDF viewers)
       const parts = range.replace(/bytes=/, "").split("-");
       const start = parseInt(parts[0], 10);
@@ -570,7 +572,9 @@ app.get('/api/files/view/:filename', (req, res) => {
     } else {
       // Send entire file
       res.setHeader('Content-Length', fileSize);
-      res.setHeader('Accept-Ranges', 'bytes');
+      if (!isImage) {
+        res.setHeader('Accept-Ranges', 'bytes');
+      }
       res.setHeader('Cache-Control', 'public, max-age=3600');
       
       console.log('✅ Sending complete file:', safeFilename, 'Type:', contentType);
