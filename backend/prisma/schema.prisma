@@ -32,7 +32,7 @@ model File {
   size         String?
   pages        String?
   fileUrl      String
-  previewImage String?
+  previewImage String?  // ← MUST BE HERE
   type         String?  @default("file")
   downloads    Int      @default(0)
   createdAt    DateTime @default(now())

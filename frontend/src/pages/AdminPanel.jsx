@@ -296,25 +296,27 @@ useEffect(() => {
 
   // File handlers (all files are free)
   const handleFileSubmit = async (e) => {
-    e.preventDefault()
+  e.preventDefault()
 
-    const fileData = {
+  // CRITICAL: Ensure previewImage is included in the data
+  const fileData = {
       ...fileFormData,
       type: 'file',
       downloads: editingFile?.downloads || 0,
+      previewImage: fileFormData.previewImage || null, // ← ENSURE THIS IS SET
       createdAt: editingFile?.createdAt || new Date().toISOString()
     }
+
+    console.log('💾 Saving file with data:', fileData)
 
     try {
       let response
       if (editingFile) {
-        // Update existing file
         response = await apiRequestAdmin(apiEndpoint(`files/metadata/${editingFile.id}`), {
           method: 'PUT',
           body: JSON.stringify(fileData)
         })
       } else {
-        // Create new file
         response = await apiRequestAdmin(apiEndpoint('files/metadata'), {
           method: 'POST',
           body: JSON.stringify(fileData)
@@ -322,13 +324,13 @@ useEffect(() => {
       }
 
       if (response.ok) {
-        // Reload files from backend
         const filesResponse = await apiRequestAdmin(apiEndpoint('files/metadata'))
         if (filesResponse.ok) {
           const filesData = await filesResponse.json()
           setFiles(filesData.files || [])
         }
         resetFileForm()
+        alert('파일이 성공적으로 저장되었습니다!')
       } else {
         const errorData = await response.json()
         alert(`파일 저장에 실패했습니다: ${errorData.error || 'Unknown error'}`)
@@ -340,6 +342,12 @@ useEffect(() => {
   }
 
   const handleFileEdit = (file) => {
+    console.log('📝 Editing file:', {
+      id: file.id,
+      title: file.title,
+      previewImage: file.previewImage
+    })
+    
     setEditingFile(file)
     setFileFormData({
       title: file.title || '',
@@ -348,7 +356,7 @@ useEffect(() => {
       size: file.size || '',
       pages: file.pages || '',
       fileUrl: file.fileUrl || '',
-      previewImage: file.previewImage || ''
+      previewImage: file.previewImage || '' // ← CRITICAL
     })
     setFilePreviewUrl(file.previewImage || null)
     setFilePreviewFile(null)
@@ -741,26 +749,31 @@ if (data.success) {
     const file = e.target.files[0]
     if (!file) return
 
-    // Validate image type
+    // Validate it's an image
     if (!file.type.startsWith('image/')) {
-      alert('이미지 파일만 업로드할 수 있습니다.')
-      return
+      fs.unlinkSync(req.file.path)
+      return res.status(400).json({ error: 'Only image files are allowed' })
     }
 
     try {
+      setUploadProgress({
+        fileName: file.name,
+        progress: 0,
+        type: 'image'
+      })
+
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('preview', file) // CHANGED: 'file' → 'preview' for clarity
 
       const xhr = new XMLHttpRequest()
 
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {
           const percentComplete = Math.round((e.loaded / e.total) * 100)
-          setUploadProgress({
-            fileName: file.name,
-            progress: percentComplete,
-            type: 'image'
-          })
+          setUploadProgress(prev => ({
+            ...prev,
+            progress: percentComplete
+          }))
         }
       })
 
@@ -768,12 +781,16 @@ if (data.success) {
         if (xhr.status === 200) {
           const data = JSON.parse(xhr.responseText)
           if (data.success) {
-            setFileFormData({
-              ...fileFormData,
-              previewImage: data.fileUrl
-            })
-            setFilePreviewUrl(data.fileUrl)
+            console.log('✅ Preview uploaded:', data.imageUrl)
+            
+            // CRITICAL FIX: Update both state objects
+            setFileFormData(prev => ({
+              ...prev,
+              previewImage: data.imageUrl
+            }))
+            setFilePreviewUrl(data.imageUrl)
             setFilePreviewFile(file)
+            
             alert('미리보기 이미지가 성공적으로 업로드되었습니다!')
           }
         } else {
@@ -787,9 +804,10 @@ if (data.success) {
         setUploadProgress(null)
       })
 
-      xhr.open('POST', apiEndpoint('files/upload'))
+      xhr.open('POST', apiEndpoint('files/upload-preview'))
       addAuthHeadersAdmin(xhr)
       xhr.send(formData)
+
     } catch (error) {
       console.error('Image upload error:', error)
       alert(`이미지 업로드에 실패했습니다: ${error.message}`)
@@ -857,6 +875,74 @@ if (data.success) {
       setUploadProgress(null)
     }
   }
+
+  const handleCoursePreviewUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드할 수 있습니다.')
+      return
+    }
+
+    try {
+      setUploadProgress({
+        fileName: file.name,
+        progress: 0,
+        type: 'image'
+      })
+
+      const formData = new FormData()
+      formData.append('preview', file)
+
+      const xhr = new XMLHttpRequest()
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100)
+          setUploadProgress(prev => ({
+            ...prev,
+            progress: percentComplete
+          }))
+        }
+      })
+
+      xhr.addEventListener('load', async () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText)
+          if (data.success) {
+            console.log('✅ Course preview uploaded:', data.imageUrl)
+            
+            // Update course form data
+            setCourseFormData(prev => ({
+              ...prev,
+              previewImage: data.imageUrl
+            }))
+            
+            alert('코스 미리보기 이미지가 성공적으로 업로드되었습니다!')
+          }
+        } else {
+          throw new Error('Upload failed')
+        }
+        setUploadProgress(null)
+      })
+
+      xhr.addEventListener('error', () => {
+        alert('이미지 업로드에 실패했습니다.')
+        setUploadProgress(null)
+      })
+
+      xhr.open('POST', apiEndpoint('files/upload-preview'))
+      addAuthHeadersAdmin(xhr)
+      xhr.send(formData)
+
+    } catch (error) {
+      console.error('Course preview upload error:', error)
+      alert(`이미지 업로드에 실패했습니다: ${error.message}`)
+      setUploadProgress(null)
+    }
+  }
+
 
   // Show login if not authenticated
   if (!adminSession) {

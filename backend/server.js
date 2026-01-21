@@ -389,8 +389,37 @@ const handlePreviewImageUpload = async (req, res) => {
 };
 
 // Add this route
-app.post('/api/files/upload-preview', authenticate, requireAdmin, upload.single('preview'), handlePreviewImageUpload);
+app.post('/api/files/upload-preview', authenticate, requireAdmin, upload.single('preview'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image uploaded' });
+    }
 
+    // Validate it's an image
+    if (!req.file.mimetype.startsWith('image/')) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ error: 'Only image files are allowed' });
+    }
+
+    const serverUrl = process.env.SERVER_URL || `${req.protocol}://${req.get('host')}`;
+    const encodedFilename = encodeURIComponent(req.file.filename);
+    const imageUrl = `${serverUrl}/api/files/view/${encodedFilename}`;
+
+    console.log('✅ Preview image uploaded:', {
+      filename: req.file.filename,
+      url: imageUrl
+    });
+
+    res.json({
+      success: true,
+      imageUrl,
+      fileName: req.file.filename
+    });
+  } catch (error) {
+    console.error('Preview image upload error:', error);
+    res.status(500).json({ error: 'Image upload failed' });
+  }
+});
 // ========== FILE UPLOAD ENDPOINTS ==========
 
 app.post('/api/files/upload', authenticate, upload.single('file'), async (req, res) => {

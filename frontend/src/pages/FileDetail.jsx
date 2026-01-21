@@ -679,29 +679,33 @@ useEffect(() => {
             <div className="lg:col-span-2">
               {/* File Header */}
               <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-                {/* File Preview */}
-                <div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
-                  {file.previewImage ? (
-                    <img 
-                      src={file.previewImage} 
-                      alt={`${file.title} 미리보기`}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <div className="text-center text-white">
-                        <FileText className="h-24 w-24 mx-auto mb-2 opacity-50" />
-                        <p className="text-lg font-semibold">[파일 미리보기]</p>
-                        <p className="text-sm opacity-75">미리보기 이미지가 설정되지 않았습니다</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="absolute top-4 right-4">
-                    <div className="bg-white text-green-600 px-4 py-2 rounded-full font-semibold">
-                      무료
-                    </div>
-                  </div>
-                </div>
+                {/* File Preview - FIXED */}
+<div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
+  {file.previewImage ? (
+    <img 
+      src={file.previewImage} 
+      alt={`${file.title} 미리보기`}
+      className="w-full h-full object-cover"
+      onError={(e) => {
+        console.error('❌ Preview image failed to load:', file.previewImage)
+        e.target.style.display = 'none'
+      }}
+    />
+  ) : (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="text-center text-white">
+        <FileText className="h-24 w-24 mx-auto mb-2 opacity-50" />
+        <p className="text-lg font-semibold">[파일 미리보기]</p>
+        <p className="text-sm opacity-75">미리보기 이미지가 설정되지 않았습니다</p>
+      </div>
+    </div>
+  )}
+  <div className="absolute top-4 right-4">
+    <div className="bg-white text-green-600 px-4 py-2 rounded-full font-semibold">
+      무료
+    </div>
+  </div>
+</div>
 
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                   {file.title}
