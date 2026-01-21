@@ -672,12 +672,12 @@ app.get('/api/files/metadata/:id', idValidation, optionalAuth, async (req, res) 
 
 app.post('/api/files/metadata', authenticate, requireAdmin, fileMetadataValidation, async (req, res) => {
   try {
-    const file = await prisma.file.create({
-      data: {
-        ...req.body,
-        downloads: 0
-      }
-    });
+    const data = { ...req.body, downloads: 0 };
+    if (data.level !== undefined && data.level !== null) {
+      data.level = parseInt(data.level, 10);
+    }
+    
+    const file = await prisma.file.create({ data });
     res.json({ success: true, file });
   } catch (error) {
     console.error('Create file error:', error);
@@ -685,11 +685,17 @@ app.post('/api/files/metadata', authenticate, requireAdmin, fileMetadataValidati
   }
 });
 
+
 app.put('/api/files/metadata/:id', authenticate, requireAdmin, idValidation, async (req, res) => {
   try {
+    const data = { ...req.body };
+    if (data.level !== undefined && data.level !== null) {
+      data.level = parseInt(data.level, 10);
+    }
+    
     const file = await prisma.file.update({
       where: { id: parseInt(req.params.id) },
-      data: req.body
+      data
     });
     res.json({ success: true, file });
   } catch (error) {
@@ -697,6 +703,7 @@ app.put('/api/files/metadata/:id', authenticate, requireAdmin, idValidation, asy
     res.status(500).json({ error: 'Failed to update file' });
   }
 });
+
 
 app.delete('/api/files/metadata/:id', authenticate, requireAdmin, idValidation, async (req, res) => {
   try {
@@ -756,12 +763,12 @@ app.get('/api/courses/metadata/:id', idValidation, optionalAuth, async (req, res
 
 app.post('/api/courses/metadata', authenticate, requireAdmin, courseValidation, async (req, res) => {
   try {
-    const course = await prisma.course.create({
-      data: {
-        ...req.body,
-        students: 0
-      }
-    });
+    const data = { ...req.body, students: 0 };
+    if (data.level !== undefined && data.level !== null) {
+      data.level = parseInt(data.level, 10);
+    }
+    
+    const course = await prisma.course.create({ data });
     res.json({ success: true, course });
   } catch (error) {
     console.error('Create course error:', error);
@@ -769,11 +776,18 @@ app.post('/api/courses/metadata', authenticate, requireAdmin, courseValidation, 
   }
 });
 
+
 app.put('/api/courses/metadata/:id', authenticate, requireAdmin, idValidation, async (req, res) => {
   try {
+    // ✅ Convert level string to integer
+    const data = { ...req.body };
+    if (data.level !== undefined && data.level !== null) {
+      data.level = parseInt(data.level, 10);
+    }
+    
     const course = await prisma.course.update({
       where: { id: parseInt(req.params.id) },
-      data: req.body
+      data  // ✅ Use transformed data
     });
     res.json({ success: true, course });
   } catch (error) {
@@ -781,6 +795,7 @@ app.put('/api/courses/metadata/:id', authenticate, requireAdmin, idValidation, a
     res.status(500).json({ error: 'Failed to update course' });
   }
 });
+
 
 app.delete('/api/courses/metadata/:id', authenticate, requireAdmin, idValidation, async (req, res) => {
   try {
@@ -824,9 +839,12 @@ app.get('/api/liveclasses/metadata/:id', optionalAuth, idValidation, async (req,
 
 app.post('/api/liveclasses/metadata', authenticate, requireAdmin, liveClassValidation, async (req, res) => {
   try {
-    const liveclass = await prisma.liveClass.create({
-      data: req.body
-    });
+    const data = { ...req.body };
+    if (data.level !== undefined && data.level !== null) {
+      data.level = parseInt(data.level, 10);
+    }
+    
+    const liveclass = await prisma.liveClass.create({ data });
     res.json(liveclass);
   } catch (error) {
     console.error('Failed to create live class:', error);
@@ -834,11 +852,17 @@ app.post('/api/liveclasses/metadata', authenticate, requireAdmin, liveClassValid
   }
 });
 
+
 app.put('/api/liveclasses/metadata/:id', authenticate, requireAdmin, idValidation, liveClassValidation, async (req, res) => {
   try {
+    const data = { ...req.body };
+    if (data.level !== undefined && data.level !== null) {
+      data.level = parseInt(data.level, 10);
+    }
+    
     const liveclass = await prisma.liveClass.update({
       where: { id: parseInt(req.params.id) },
-      data: req.body
+      data
     });
     res.json(liveclass);
   } catch (error) {
@@ -846,6 +870,7 @@ app.put('/api/liveclasses/metadata/:id', authenticate, requireAdmin, idValidatio
     res.status(500).json({ error: 'Failed to update live class' });
   }
 });
+
 
 app.delete('/api/liveclasses/metadata/:id', authenticate, requireAdmin, idValidation, async (req, res) => {
   try {

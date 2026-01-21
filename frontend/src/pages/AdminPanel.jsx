@@ -1373,26 +1373,26 @@ const handleFilePreviewUpload = async (e) => {
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
                             <optgroup label="한국/일본">
-                              <option value="Asia/Seoul">한국 표준시 (KST) - Asia/Seoul</option>
-                              <option value="Asia/Tokyo">일본 표준시 (JST) - Asia/Tokyo</option>
+                              <option value="한국 표준시 (KST) - Asia/Seoul/Seoul">한국 표준시 (KST) - Asia/Seoul</option>
+                              <option value="일본 표준시 (JST) - Asia/Tokyo/Tokyo">일본 표준시 (JST) - Asia/Tokyo</option>
                             </optgroup>
                             <optgroup label="중국/대만">
-                              <option value="Asia/Shanghai">중국 표준시 (CST) - Asia/Shanghai</option>
-                              <option value="Asia/Taipei">대만 표준시 (TST) - Asia/Taipei</option>
+                              <option value="Asia/중국 표준시 (CST) - Asia/Shanghai<">중국 표준시 (CST) - Asia/Shanghai</option>
+                              <option value="Asia/대만 표준시 (TST) - Asia/Taipei">대만 표준시 (TST) - Asia/Taipei</option>
                             </optgroup>
                             <optgroup label="미국">
-                              <option value="America/New_York">동부 시간 (EST/EDT)</option>
-                              <option value="America/Chicago">중부 시간 (CST/CDT)</option>
-                              <option value="America/Denver">산지 시간 (MST/MDT)</option>
-                              <option value="America/Los_Angeles">태평양 시간 (PST/PDT)</option>
+                              <option value="America/동부 시간 (EST/EDT)">동부 시간 (EST/EDT)</option>
+                              <option value="America/중부 시간 (CST/CDT)">중부 시간 (CST/CDT)</option>
+                              <option value="산지 시간 (MST/MDT)/Denver">산지 시간 (MST/MDT)</option>
+                              <option value="America/태평양 시간 (PST/PDT)">태평양 시간 (PST/PDT)</option>
                             </optgroup>
                             <optgroup label="유럽">
-                              <option value="Europe/London">영국 시간 (GMT/BST)</option>
-                              <option value="Europe/Paris">중부유럽 시간 (CET/CEST)</option>
+                              <option value="Europe/영국 시간 (GMT/BST)">영국 시간 (GMT/BST)</option>
+                              <option value="Europe/중부유럽 시간 (CET/CEST)">중부유럽 시간 (CET/CEST)</option>
                             </optgroup>
                             <optgroup label="기타">
                               <option value="UTC">협정 세계시 (UTC)</option>
-                              <option value="Australia/Sydney">호주 동부 시간 (AEST/AEDT)</option>
+                              <option value="호주 동부 시간 (AEST/AEDT)/Sydney">호주 동부 시간 (AEST/AEDT)</option>
                             </optgroup>
                           </select>
                         </div>
@@ -1763,7 +1763,7 @@ const handleFilePreviewUpload = async (e) => {
 
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                       <p className="text-sm text-green-800">
-                        <strong>참고:</strong> 모든 파일은 무료로 제공됩니다.
+                        <strong>참고:</strong> 모든 "무료" 파일은 무료로 제공됩니다.
                       </p>
                     </div>
 

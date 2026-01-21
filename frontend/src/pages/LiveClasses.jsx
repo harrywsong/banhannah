@@ -1,17 +1,26 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, Clock, Video, Users, ExternalLink, UserCheck, Star, MessageCircle, X } from 'lucide-react'
+import { Calendar, Clock, Video, Users, ExternalLink, UserCheck, Star, MessageCircle, X, Filter } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useReviews } from '../contexts/ReviewsContext'
 
-export default function LiveClasses({ hideHeader = false }) {
+export default function LiveClasses({ hideHeader = false, filterLevel: externalFilterLevel = 'all' }) {
   const { user } = useAuth()
   const { getReviewsByItemId, addReview, updateReview, getUserReview } = useReviews()
   const [classes, setClasses] = useState([])
   const [registrations, setRegistrations] = useState([])
+  const [filterLevel, setFilterLevel] = useState(externalFilterLevel)
   const [selectedClassForReview, setSelectedClassForReview] = useState(null)
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' })
   const [editingReview, setEditingReview] = useState(null)
+
+  // Sync with external filter when provided
+  useEffect(() => {
+    if (externalFilterLevel) {
+      setFilterLevel(externalFilterLevel)
+    }
+  }, [externalFilterLevel])
+
 
   useEffect(() => {
     const loadClasses = async () => {
@@ -176,9 +185,15 @@ export default function LiveClasses({ hideHeader = false }) {
     }
   }
 
+  // ✅ FIRST: Filter by level
+  const levelFilteredClasses = classes.filter(c => {
+    if (filterLevel === 'all') return true
+    return c.level === parseInt(filterLevel)
+  })
+
   // Filter classes by date properly
   const now = new Date()
-  const upcomingClasses = classes.filter(c => {
+  const upcomingClasses = levelFilteredClasses.filter(c => {  // ✅ Changed from 'classes' to 'levelFilteredClasses'
     const classDateTime = getClassDateTime(c)
     return classDateTime && classDateTime >= now
   }).sort((a, b) => {
@@ -186,8 +201,8 @@ export default function LiveClasses({ hideHeader = false }) {
     const dateB = getClassDateTime(b)
     return dateA - dateB
   })
-  
-  const pastClasses = classes.filter(c => {
+
+  const pastClasses = levelFilteredClasses.filter(c => {  // ✅ Changed from 'classes' to 'levelFilteredClasses'
     const classDateTime = getClassDateTime(c)
     return classDateTime && classDateTime < now
   }).sort((a, b) => {
@@ -195,6 +210,7 @@ export default function LiveClasses({ hideHeader = false }) {
     const dateB = getClassDateTime(b)
     return dateB - dateA // Most recent first
   })
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -207,10 +223,32 @@ export default function LiveClasses({ hideHeader = false }) {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        
+        {/* ✅ ADD LEVEL FILTER - Only show when not embedded in Resources */}
+        {!hideHeader && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div className="flex items-center space-x-2 mb-2">
+              <Filter className="h-5 w-5 text-gray-600" />
+              <label className="text-sm font-medium text-gray-700">레벨 필터</label>
+            </div>
+            <select
+              value={filterLevel}
+              onChange={(e) => setFilterLevel(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none bg-white"
+            >
+              <option value="all">모든 레벨</option>
+              <option value="1">레벨 1 - 초급</option>
+              <option value="2">레벨 2 - 중급</option>
+              <option value="3">레벨 3 - 고급</option>
+            </select>
+          </div>
+        )}
+
         {/* Upcoming Classes */}
         <div className="mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-8">예정된 클래스</h2>
+
           
           {upcomingClasses.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

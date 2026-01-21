@@ -78,6 +78,11 @@ const fileMetadataValidation = [
     .withMessage('파일 형식을 입력해주세요')
     .isIn(['PDF', 'ZIP', 'ZIP (MP3 + PDF)', 'DOCX', 'PPTX', '기타'])
     .withMessage('유효한 파일 형식을 선택해주세요'),
+
+  body('level')
+    .optional()
+    .isIn(['1', '2', '3', 1, 2, 3])
+    .withMessage('유효한 레벨을 선택해주세요 (1, 2, 또는 3)'),
   
   body('fileUrl')
     .trim()
@@ -143,6 +148,11 @@ const courseValidation = [
     }
     return true;
   }),
+
+  body('level')
+    .optional()
+    .isIn(['1', '2', '3', 1, 2, 3])
+    .withMessage('유효한 레벨을 선택해주세요 (1, 2, 또는 3)'),
   
   validate
 ];
@@ -229,6 +239,10 @@ const liveClassValidation = [
     })
     .withMessage('유효한 이미지 파일명 또는 URL을 입력해주세요'),
 
+  body('level')
+    .optional()
+    .isIn(['1', '2', '3', 1, 2, 3])
+    .withMessage('유효한 레벨을 선택해주세요 (1, 2, 또는 3)'),
   
   validate
 ];

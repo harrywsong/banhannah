@@ -42,7 +42,6 @@ export default function Dashboard() {
     { label: '다운로드한 자료', value: myResources.length.toString(), icon: <Download className="h-6 w-6" />, color: 'bg-blue-500' },
     { label: '등록한 클래스', value: registeredClasses.length.toString(), icon: <Video className="h-6 w-6" />, color: 'bg-purple-500' },
     { label: '예정된 클래스', value: registeredClasses.filter(c => new Date(c.date) >= new Date()).length.toString(), icon: <Clock className="h-6 w-6" />, color: 'bg-orange-500' },
-    { label: '총 다운로드', value: '12', icon: <FileText className="h-6 w-6" />, color: 'bg-green-500' },
   ]
 
   const upcomingClasses = registeredClasses
@@ -109,11 +108,12 @@ export default function Dashboard() {
                           </div>
                         </div>
                         <Link
-                          to={`/resources/${resource.id}`}
+                          to={`/files/${resource.id}`}  // ✅ Changed from /resources/ to /files/
                           className="text-primary-600 hover:text-primary-700 font-semibold text-sm"
                         >
                           View →
                         </Link>
+
                       </div>
                     </div>
                   ))}
@@ -211,37 +211,49 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Learning Goals */}
+            {/* Learning Progress */}
             <div className="bg-white rounded-xl shadow-md p-6">
               <div className="flex items-center space-x-2 mb-6">
-                <Target className="h-6 w-6 text-primary-600" />
-                <h2 className="text-xl font-bold text-gray-900">이번 주 목표</h2>
+                <Award className="h-6 w-6 text-primary-600" />
+                <h2 className="text-xl font-bold text-gray-900">학습 진행 상황</h2>
               </div>
-              <div className="bg-primary-50 rounded-lg p-4">
-                <p className="text-gray-700 mb-3">
-                  이번 주에 새 자료 3개 다운로드하기
-                </p>
-                <div className="mb-2">
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-gray-600">진행도</span>
-                    <span className="font-semibold text-gray-900">
-                      {myResources.length}/3
-                    </span>
+              <div className="space-y-4">
+                {/* Resources Progress */}
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    <h3 className="font-semibold text-gray-900">다운로드한 자료</h3>
                   </div>
-                  <div className="w-full bg-primary-200 rounded-full h-2">
-                    <div
-                      className="bg-primary-600 h-2 rounded-full"
-                      style={{ width: `${Math.min((myResources.length / 3) * 100, 100)}%` }}
-                    ></div>
-                  </div>
+                  <p className="text-2xl font-bold text-blue-600">{myResources.length}개</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {myResources.length === 0 
+                      ? '첫 자료를 다운로드해보세요!'
+                      : myResources.length < 5
+                      ? '좋은 시작입니다! 계속 학습하세요 📚'
+                      : myResources.length < 10
+                      ? '훌륭해요! 꾸준히 학습 중이시네요 🌟'
+                      : '대단합니다! 열정적인 학습자세요 🎉'}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600 mt-3">
-                  {myResources.length < 3 
-                    ? `목표까지 ${3 - myResources.length}개 더 필요합니다! 🎯`
-                    : '목표 달성! 🎉'}
-                </p>
+
+                {/* Classes Progress */}
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Video className="h-5 w-5 text-purple-600" />
+                    <h3 className="font-semibold text-gray-900">등록한 클래스</h3>
+                  </div>
+                  <p className="text-2xl font-bold text-purple-600">{registeredClasses.length}개</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {registeredClasses.length === 0 
+                      ? '첫 클래스에 등록해보세요!'
+                      : upcomingClasses.length > 0
+                      ? `다음 클래스: ${upcomingClasses[0]?.title || '곧 시작'}`
+                      : '다음 라이브 클래스를 기대해주세요!'}
+                  </p>
+                </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>

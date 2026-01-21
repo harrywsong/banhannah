@@ -1,5 +1,6 @@
-import { Mail, Phone, MapPin, Send } from 'lucide-react'
+import { Mail, Phone, MapPin, Send, Instagram } from 'lucide-react'
 import { useState } from 'react'
+import { apiEndpoint, apiRequest } from '../config/api'  // ✅ ADD THIS
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -18,14 +19,12 @@ export default function Contact() {
     setLoading(true)
     
     try {
-      const API_URL = 'https://api.banhannah.dpdns.org'
-      const response = await fetch(`${API_URL}/api/contact`, {
+      // ✅ USE apiRequest helper instead of hardcoded URL
+      const response = await apiRequest(apiEndpoint('contact'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
         },
-        credentials: 'include',
         body: JSON.stringify(formData)
       })
 
@@ -60,12 +59,13 @@ export default function Contact() {
     }
   }
 
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">연락하기</h1>
-          <p className="text-xl text-primary-100">질문이나 의견이 있으시면 언제든지 연락 주세요.</p>
+          <p className="text-xl text-primary-100">질문이 있으시면 언제든지 연락 주세요!</p>
         </div>
       </div>
 
@@ -77,7 +77,7 @@ export default function Contact() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">연락처</h2>
                 <p className="text-gray-600 mb-6">
-                  질문이나 도움이 필요하신가요? 언제든지 연락 주세요!
+                  질문이 있으시거나 도움이 필요하신가요?
                 </p>
               </div>
 
@@ -109,13 +109,18 @@ export default function Contact() {
                 </div>
 
                 <div className="flex items-start space-x-4">
-                  <MapPin className="h-6 w-6 text-primary-600 flex-shrink-0 mt-1" />
+                  <Instagram className="h-6 w-6 text-primary-600 flex-shrink-0 mt-1" />
                   <div>
-                    <h3 className="font-semibold text-gray-900">주소</h3>
-                    <p className="text-gray-600">
-                      123 Education Street<br />
-                      Learning City, LC 12345
-                    </p>
+                    <h3 className="font-semibold text-gray-900">인스타그램</h3>
+                    <a 
+                      href="https://www.instagram.com/banhanna_h/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary-600 hover:text-primary-700"
+                    >
+                      @banhanna_h
+                    </a>
+                    <p className="text-xs text-gray-500 mt-1">DM으로 문의 가능합니다</p>
                   </div>
                 </div>
               </div>

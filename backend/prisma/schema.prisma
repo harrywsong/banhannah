@@ -32,9 +32,10 @@ model File {
   size         String?
   pages        String?
   fileUrl      String
-  previewImage String?  // ← MUST BE HERE
+  previewImage String?
   type         String?  @default("file")
   downloads    Int      @default(0)
+  level        Int?     @default(1)  // ✅ ADD THIS LINE
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -48,7 +49,8 @@ model Course {
   accessDuration Int?
   lessons        Json?
   students       Int      @default(0)
-  previewImage   String?  // Add this line
+  previewImage   String?
+  level          Int?     @default(1)  // ✅ ADD THIS LINE
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -84,6 +86,7 @@ model LiveClass {
   registrationEnd   String?
   previewImage      String?
   registeredCount   Int      @default(0)
+  level             Int?     @default(1)  // ✅ ADD THIS LINE
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }

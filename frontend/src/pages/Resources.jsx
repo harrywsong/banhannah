@@ -9,6 +9,7 @@ export default function Resources() {
   const [activeTab, setActiveTab] = useState('files') // 'files', 'classes' or 'live'
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all') // 'all', 'free', 'paid'
+  const [filterLevel, setFilterLevel] = useState('all') // ✅ ADD THIS
   const [files, setFiles] = useState([])
   const [onlineCourses, setOnlineCourses] = useState([])
   const { user } = useAuth()
@@ -72,9 +73,11 @@ export default function Resources() {
   const filteredFiles = files
     .filter(file => {
       const matchesSearch = file.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           file.description.toLowerCase().includes(searchTerm.toLowerCase())
+                          file.description.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesType = filterType === 'all' || filterType === 'free' // All files are free
-      return matchesSearch && matchesType
+      // ✅ ADD LEVEL FILTER
+      const matchesLevel = filterLevel === 'all' || file.level === parseInt(filterLevel)
+      return matchesSearch && matchesType && matchesLevel
     })
     .sort((a, b) => {
       const aDate = a.createdAt ? new Date(a.createdAt) : new Date(a.id)
@@ -82,19 +85,23 @@ export default function Resources() {
       return bDate - aDate
     })
 
+
   // Filter courses
   const filteredCourses = onlineCourses
     .filter(course => {
       const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           course.description.toLowerCase().includes(searchTerm.toLowerCase())
+                          course.description.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesType = filterType === 'all' || course.type === filterType
-      return matchesSearch && matchesType
+      // ✅ ADD LEVEL FILTER
+      const matchesLevel = filterLevel === 'all' || course.level === parseInt(filterLevel)
+      return matchesSearch && matchesType && matchesLevel
     })
     .sort((a, b) => {
       const aDate = a.createdAt ? new Date(a.createdAt) : new Date(a.id)
       const bDate = b.createdAt ? new Date(b.createdAt) : new Date(b.id)
       return bDate - aDate
     })
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -175,18 +182,23 @@ export default function Resources() {
 
         {/* Search and Filter */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <input
                 type="text"
-                placeholder={activeTab === 'files' ? '파일 검색...' : '온라인 클래스 검색...'}
+                placeholder={
+                  activeTab === 'files' ? '파일 검색...' : 
+                  activeTab === 'classes' ? '온라인 코스 검색...' : 
+                  '라이브 클래스 검색...'  // ✅ Changed from 온라인 코스 to 라이브 클래스
+                }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
+
             </div>
-            <div className="relative">
+                        <div className="relative">
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <select
                 value={filterType}
@@ -198,6 +210,21 @@ export default function Resources() {
                 {activeTab === 'classes' && <option value="paid">유료</option>}
               </select>
             </div>
+            {/* ✅ ADD THIS LEVEL FILTER */}
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <select
+                value={filterLevel}
+                onChange={(e) => setFilterLevel(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent appearance-none bg-white"
+              >
+                <option value="all">모든 레벨</option>
+                <option value="1">레벨 1 - 초급</option>
+                <option value="2">레벨 2 - 중급</option>
+                <option value="3">레벨 3 - 고급</option>
+              </select>
+            </div>
+
           </div>
         </div>
 
@@ -420,7 +447,7 @@ export default function Resources() {
         {/* Live Tab */}
         {activeTab === 'live' && (
           <div>
-            <LiveClasses hideHeader />
+            <LiveClasses hideHeader filterLevel={filterLevel} />
           </div>
         )}
       </div>

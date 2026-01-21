@@ -877,7 +877,7 @@ useEffect(() => {
               <div className="bg-white rounded-xl shadow-md p-6 sticky top-24">
                 <div className="mb-6">
                   <div className="text-3xl font-bold text-green-600 mb-2">무료</div>
-                  <p className="text-gray-600">모든 파일은 무료로 제공됩니다</p>
+                  <p className="text-gray-600">모든 "무료" 파일은 무료로 제공됩니다</p>
                 </div>
 
                 <button
