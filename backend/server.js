@@ -500,40 +500,17 @@ app.post('/api/videos/upload', authenticate, videoUpload.single('video'), async 
 
 app.get('/api/files/view/:filename', (req, res) => {
   try {
-    console.log('🔍 DEBUG /api/files/view', { 
-      method: req.method, 
-      url: req.originalUrl, 
-      rawFilename: req.params.filename,
-      origin: req.get('origin'),
-      referer: req.get('referer')
-    });
-    
-    // ========== CRITICAL: Set CORS headers FIRST ==========
-    const requestOrigin = req.get('origin') || req.get('referer');
-    const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(s => s.trim());
-    
-    // In development, allow all origins
-    if (process.env.NODE_ENV !== 'production') {
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept, Origin');
-      console.log('✅ DEV MODE: Setting CORS to *');
-    } else if (requestOrigin && allowedOrigins.some(origin => requestOrigin.includes(origin))) {
-      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type, Accept, Origin');
-      console.log('✅ Setting CORS for origin:', requestOrigin);
-    } else {
-      // Production fallback
-      res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0] || '*');
-      console.log('⚠️ No origin/referer, defaulting to:', allowedOrigins[0]);
-    }
-    // ======================================================
-    
-    // CRITICAL: Decode ONLY ONCE to avoid double-decoding issues
+    // Decode ONLY ONCE to avoid double-decoding issues
     const safeFilename = path.basename(decodeURIComponent(req.params.filename));
     const filePath = path.join(uploadsDir, safeFilename);
+    
+    console.log('📂 Looking for file at:', filePath);
+    console.log('📝 Safe filename:', safeFilename);
+    
+    if (!fs.existsSync(filePath)) {
+      console.error('❌ File not found:', filePath);
+      return res.status(404).json({ error: 'File not found' });
+    }
     
     console.log('📂 Looking for file at:', filePath);
     console.log('📝 Safe filename:', safeFilename);

@@ -682,35 +682,29 @@ useEffect(() => {
 {/* File Preview - FIXED */}
 <div className="relative h-64 rounded-lg mb-6 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
   {file.previewImage ? (
-    <img 
-      src={(() => {
-        console.log('🖼️ Building preview URL from:', file.previewImage);
-        
-        // If it's a full URL (starts with http), convert to local in dev mode
-        if (file.previewImage.startsWith('http')) {
-          if (import.meta.env.MODE === 'development') {
-            const filename = file.previewImage.split('/').pop();
-            const localUrl = `http://localhost:3002/api/files/view/${filename}`;
-            console.log('🔄 Converting production URL to local:', localUrl);
-            return localUrl;
-          }
-          return file.previewImage;
-        }
-        
-        // Otherwise, it's just a filename - build the full URL
-        const builtUrl = buildFileUrl(file.previewImage, 'view');
-        console.log('🏗️ Built URL from filename:', builtUrl);
-        return builtUrl;
-      })()}
-      alt={`${file.title} 미리보기`}
-      className="w-full h-full object-cover"
-      onError={(e) => {
-        console.error('❌ Preview image failed to load:', file.previewImage);
-        console.error('Attempted URL:', e.target.src);
-        e.target.style.display = 'none';
-      }}
-    />
-  ) : (
+  <img 
+    src={(() => {
+      console.log('🖼️ Building preview URL from:', file.previewImage);
+      
+      // If it's a full URL, use it as-is
+      if (file.previewImage.startsWith('http')) {
+        return file.previewImage;
+      }
+      
+      // Otherwise, it's just a filename - build the full URL
+      const builtUrl = buildFileUrl(file.previewImage, 'view');
+      console.log('🏗️ Built URL from filename:', builtUrl);
+      return builtUrl;
+    })()}
+    alt={`${file.title} 미리보기`}
+    className="w-full h-full object-cover"
+    onError={(e) => {
+      console.error('❌ Preview image failed to load:', file.previewImage);
+      console.error('Attempted URL:', e.target.src);
+      e.target.style.display = 'none';
+    }}
+  />
+) : (
     <div className="w-full h-full flex items-center justify-center">
       <div className="text-center text-white">
         <FileText className="h-24 w-24 mx-auto mb-2 opacity-50" />
