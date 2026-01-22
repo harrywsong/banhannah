@@ -147,7 +147,7 @@ export default function Dashboard() {
                             {resource.title}
                           </h3>
                           <p className="text-sm text-gray-600 mb-2">
-                            {new Date(resource.downloadedAt).toLocaleDateString('ko-KR')} 다운로드
+                            {new Date(resource.accessedAt).toLocaleDateString('ko-KR')} 다운로드
                           </p>
                           <div className="flex items-center space-x-4 text-sm text-gray-500">
                             <span>{resource.format}</span>

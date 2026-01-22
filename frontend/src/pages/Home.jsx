@@ -175,13 +175,6 @@ export default function Home() {
           실제 이용자들의 솔직한 후기를 확인하세요
         </p>
       </div>
-      <Link
-        to="/reviews"
-        className="bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors flex items-center space-x-2 shadow-lg"
-      >
-        <MessageCircle className="h-5 w-5" />
-        <span>모든 리뷰 보기</span>
-      </Link>
     </div>
 
     {shuffledReviews.length > 0 ? (
