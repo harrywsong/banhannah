@@ -1125,26 +1125,26 @@ if (block.type === 'text' && block.data.content) {
     </div>
     <form onSubmit={handleReviewSubmit} className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
-                        <div className="flex space-x-2">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              type="button"
-                              onClick={() => setReviewForm({ ...reviewForm, rating: star })}
-                              className="focus:outline-none"
-                            >
-                              <Star
-                                className={`h-8 w-8 ${
-                                  star <= reviewForm.rating
-                                    ? 'text-yellow-400 fill-yellow-400'
-                                    : 'text-gray-300'
-                                }`}
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
+  <div className="flex space-x-2">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button
+        key={`course-review-star-${star}`}  // ✅ FIXED: Unique key
+        type="button"
+        onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+        className="focus:outline-none"
+      >
+        <Star
+          className={`h-8 w-8 ${
+            star <= reviewForm.rating
+              ? 'text-yellow-400 fill-yellow-400'
+              : 'text-gray-300'
+          }`}
+        />
+      </button>
+    ))}
+  </div>
+</div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">리뷰 내용</label>
                         <textarea
@@ -1167,33 +1167,40 @@ if (block.type === 'text' && block.data.content) {
                 )}
 
                 {reviews.length > 0 ? (
-                  <div className="space-y-6">
-{reviews.map((review) => (
-  <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
-    <div className="flex items-start justify-between mb-2">
-      <div>
-        <p className="font-semibold text-gray-900">{review.userName}</p>
-        <p className="text-sm text-gray-500">
-          {new Date(review.createdAt).toLocaleDateString('ko-KR')}
-          {/* ✅ Show what they reviewed */}
-          <span className="ml-2 px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs">
-            {review.itemTitle || course.title}
-          </span>
-        </p>
+  <div className="space-y-6">
+    {reviews.map((review) => (
+      <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <p className="font-semibold text-gray-900">{review.userName}</p>
+            <p className="text-sm text-gray-500">
+              {new Date(review.createdAt).toLocaleDateString('ko-KR')}
+              {/* ✅ ADDED: Show what they reviewed */}
+              {review.itemTitle && (
+                <span className="ml-2 px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs">
+                  코스 리뷰 - {review.itemTitle}
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex text-yellow-400">
+            {[...Array(5)].map((_, i) => (
+              <Star 
+                key={`review-${review.id}-star-${i}`}  // ✅ FIXED: Unique key
+                className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} 
+              />
+            ))}
+          </div>
+        </div>
+        <p className="text-gray-700">{review.comment}</p>
       </div>
-      <div className="flex text-yellow-400">
-        {[...Array(5)].map((_, i) => (
-          <Star key={i} className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
-        ))}
-      </div>
-    </div>
-    <p className="text-gray-700">{review.comment}</p>
+    ))}
   </div>
-))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!</div>
-                )}
+) : (
+  <div className="text-center py-8 text-gray-500">
+    아직 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!
+  </div>
+)}
               </div>
             )}
           </div>

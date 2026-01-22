@@ -476,6 +476,8 @@ useEffect(() => {
 
 
 
+// Around line 130-160 in handleReviewSubmit
+
   const handleReviewSubmit = (e) => {
     e.preventDefault()
     if (!user) {
@@ -495,6 +497,7 @@ useEffect(() => {
       const updatedReview = updateReview(editingReview.id, {
         rating: reviewForm.rating,
         comment: reviewForm.comment,
+        itemTitle: file.title,  // ✅ ADD THIS - Update title too
         userName: user.name
       })
       
@@ -507,7 +510,7 @@ useEffect(() => {
       const newReview = addReview({
         itemId: parseInt(id),
         itemType: 'file',
-        itemTitle: file.title,  // ✅ Add this
+        itemTitle: file.title,  // ✅ CRITICAL: This must be here!
         userId: user.id,
         userName: user.name,
         rating: reviewForm.rating,
@@ -868,26 +871,26 @@ useEffect(() => {
                     </div>
                     <form onSubmit={handleReviewSubmit} className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
-                        <div className="flex space-x-2">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={`rating-star-${star}`}  // ✅ More specific key
-                              type="button"
-                              onClick={() => setReviewForm({ ...reviewForm, rating: star })}
-                              className="focus:outline-none"
-                            >
-                              <Star
-                                className={`h-8 w-8 ${
-                                  star <= reviewForm.rating
-                                    ? 'text-yellow-400 fill-yellow-400'
-                                    : 'text-gray-300'
-                                }`}
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
+  <div className="flex space-x-2">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button
+        key={`review-form-star-${star}`}  // ✅ FIXED: Added unique key
+        type="button"
+        onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+        className="focus:outline-none"
+      >
+        <Star
+          className={`h-8 w-8 ${
+            star <= reviewForm.rating
+              ? 'text-yellow-400 fill-yellow-400'
+              : 'text-gray-300'
+          }`}
+        />
+      </button>
+    ))}
+  </div>
+</div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">리뷰 내용</label>
                         <textarea
@@ -919,12 +922,18 @@ useEffect(() => {
             <p className="font-semibold text-gray-900">{review.userName}</p>
             <p className="text-sm text-gray-500">
               {new Date(review.createdAt).toLocaleDateString('ko-KR')}
+              {/* ✅ ADDED: Show review source */}
+              {review.itemTitle && (
+                <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                  파일 리뷰 - {review.itemTitle}
+                </span>
+              )}
             </p>
           </div>
           <div className="flex text-yellow-400">
             {[...Array(5)].map((_, i) => (
               <Star
-                key={`review-${review.id}-star-${i}`}  // ✅ More unique key
+                key={`review-${review.id}-star-${i}`}  // ✅ FIXED: More unique key
                 className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`}
               />
             ))}

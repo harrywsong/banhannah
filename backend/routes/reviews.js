@@ -1,3 +1,6 @@
+// backend/routes/reviews.js
+// Updated to handle itemTitle field
+
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate, optionalAuth } = require('../middleware/auth');
@@ -56,13 +59,14 @@ router.get('/', optionalAuth, async (req, res) => {
 // Create review
 router.post('/', authenticate, reviewValidation, async (req, res) => {
   try {
-    const { itemId, itemType, rating, comment } = req.body;
+    const { itemId, itemType, itemTitle, rating, comment } = req.body;  // ✅ Added itemTitle
     
     const review = await prisma.review.create({
       data: {
         userId: req.user.id,
         itemId,
         itemType,
+        itemTitle,  // ✅ Save itemTitle
         rating,
         comment
       },
@@ -89,7 +93,7 @@ router.post('/', authenticate, reviewValidation, async (req, res) => {
 // Update review
 router.put('/:id', authenticate, async (req, res) => {
   try {
-    const { rating, comment } = req.body;
+    const { rating, comment, itemTitle } = req.body;  // ✅ Allow updating itemTitle
     
     // Check ownership
     const existing = await prisma.review.findUnique({
@@ -100,9 +104,15 @@ router.put('/:id', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
     
+    // Build update data
+    const updateData = { rating, comment };
+    if (itemTitle !== undefined) {
+      updateData.itemTitle = itemTitle;
+    }
+    
     const review = await prisma.review.update({
       where: { id: parseInt(req.params.id) },
-      data: { rating, comment },
+      data: updateData,
       include: { user: { select: { name: true } } }
     });
     

@@ -157,57 +157,67 @@ export default function Reviews() {
 
         {/* All Reviews */}
         <div>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold text-gray-900">모든 리뷰</h2>
-            <div className="text-sm text-gray-600">
-              총 <span className="font-semibold text-primary-600">{filteredReviews.length}</span>개의 리뷰
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-3xl font-bold text-gray-900">모든 리뷰</h2>
+    <div className="text-sm text-gray-600">
+      총 <span className="font-semibold text-primary-600">{filteredReviews.length}</span>개의 리뷰
+    </div>
+  </div>
+
+  {filteredReviews.length > 0 ? (
+    <div className="space-y-6">
+      {filteredReviews.map((review) => (
+        <div key={review.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+          {/* ✅ FIXED: Item Title Display */}
+          <div className="mb-4">
+            <Link 
+              to={getItemLink(review)}
+              className="text-xl font-bold text-gray-900 hover:text-primary-600 transition-colors block"
+            >
+              {/* ✅ Show title if available, otherwise show type only */}
+              {review.itemTitle ? (
+                <>
+                  {getItemTypeLabel(review.itemType)} 리뷰 - {review.itemTitle}
+                </>
+              ) : (
+                <>
+                  {getItemTypeLabel(review.itemType)} 리뷰
+                  <span className="ml-2 text-sm text-gray-500">(제목 없음)</span>
+                </>
+              )}
+            </Link>
+          </div>
+
+          {/* Rating and User Info */}
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex-grow">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex text-yellow-400">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={`all-reviews-${review.id}-star-${i}`} className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
+                  ))}
+                </div>
+                <span className="text-lg font-semibold text-gray-900">{review.rating}.0</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-gray-600">
+                <span className="font-semibold">{review.userName}</span>
+                <span>•</span>
+                <span>{new Date(review.createdAt).toLocaleDateString('ko-KR')}</span>
+              </div>
             </div>
           </div>
 
-          {filteredReviews.length > 0 ? (
-          <div className="space-y-6">
-            {filteredReviews.map((review) => (
-              <div key={review.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
-                {/* ✅ Item Title - Format: "타입 리뷰 - 제목" */}
-                <div className="mb-4">
-                  <Link 
-                    to={getItemLink(review)}
-                    className="text-xl font-bold text-gray-900 hover:text-primary-600 transition-colors block"
-                  >
-                    {getItemTypeLabel(review.itemType)} 리뷰 - {review.itemTitle || '제목 없음'}
-                  </Link>
-                </div>
-
-                {/* Rating and User Info */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-grow">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex text-yellow-400">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`} />
-                        ))}
-                      </div>
-                      <span className="text-lg font-semibold text-gray-900">{review.rating}.0</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                      <span className="font-semibold">{review.userName}</span>
-                      <span>•</span>
-                      <span>{new Date(review.createdAt).toLocaleDateString('ko-KR')}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Review Comment */}
-                <p className="text-gray-700 leading-relaxed">{review.comment}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-white rounded-xl">
-            <MessageCircle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <p className="text-xl text-gray-600">검색 조건에 맞는 리뷰가 없습니다</p>
-          </div>
-        )}
+          {/* Review Comment */}
+          <p className="text-gray-700 leading-relaxed">{review.comment}</p>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className="text-center py-12 bg-white rounded-xl">
+      <MessageCircle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+      <p className="text-xl text-gray-600">검색 조건에 맞는 리뷰가 없습니다</p>
+    </div>
+  )}
 </div>
       </div>
     </div>

@@ -168,11 +168,11 @@ export default function LiveClasses({ hideHeader = false, filterLevel: externalF
       setSelectedClassForReview(null)
       alert('리뷰가 수정되었습니다!')
     } else {
-      // Create new review
+      // Create new review - ✅ INCLUDE itemTitle
       addReview({
-        itemId: classItem.id,
+        itemId: selectedClassForReview.id,
         itemType: 'class',
-        itemTitle: classItem.title,  // ✅ Add this
+        itemTitle: selectedClassForReview.title,  // ✅ ADD THIS
         userId: user.id,
         userName: user.name,
         rating: reviewForm.rating,
@@ -501,26 +501,26 @@ export default function LiveClasses({ hideHeader = false, filterLevel: externalF
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
-                <div className="flex space-x-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setReviewForm({ ...reviewForm, rating: star })}
-                      className="focus:outline-none"
-                    >
-                      <Star
-                        className={`h-8 w-8 ${
-                          star <= reviewForm.rating
-                            ? 'text-yellow-400 fill-yellow-400'
-                            : 'text-gray-300'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
+  <div className="flex space-x-2">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button
+        key={`class-review-star-${star}`}  // ✅ FIXED: Unique key
+        type="button"
+        onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+        className="focus:outline-none"
+      >
+        <Star
+          className={`h-8 w-8 ${
+            star <= reviewForm.rating
+              ? 'text-yellow-400 fill-yellow-400'
+              : 'text-gray-300'
+          }`}
+        />
+      </button>
+    ))}
+  </div>
+</div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">리뷰 내용</label>
                 <textarea

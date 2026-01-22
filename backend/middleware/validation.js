@@ -248,7 +248,6 @@ const liveClassValidation = [
 ];
 
 
-// Review validation
 const reviewValidation = [
   body('rating')
     .isInt({ min: 1, max: 5 })
@@ -268,6 +267,13 @@ const reviewValidation = [
   body('itemType')
     .isIn(['file', 'course', 'class'])
     .withMessage('유효한 항목 타입을 선택해주세요'),
+  
+  // ✅ ADDED: Optional itemTitle validation
+  body('itemTitle')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 500 })
+    .withMessage('항목 제목은 1-500자 사이여야 합니다'),
   
   validate
 ];

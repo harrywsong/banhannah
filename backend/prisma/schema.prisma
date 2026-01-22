@@ -1,4 +1,5 @@
-// Prisma schema file for Yewon Educational Platform
+// backend/prisma/schema.prisma
+// Updated Review model with itemTitle field
 
 generator client {
   provider      = "prisma-client-js"
@@ -40,7 +41,7 @@ model File {
   previewImage String?
   type         String?  @default("file")
   downloads    Int      @default(0)
-  level        Int?     @default(1)  // ✅ ADD THIS LINE
+  level        Int?     @default(1)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -55,7 +56,7 @@ model Course {
   lessons        Json?
   students       Int      @default(0)
   previewImage   String?
-  level          Int?     @default(1)  // ✅ ADD THIS LINE
+  level          Int?     @default(1)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -65,6 +66,7 @@ model Review {
   userId    Int
   itemId    Int
   itemType  String
+  itemTitle String?  // ✅ ADDED: Store the title of the reviewed item
   rating    Int
   comment   String
   createdAt DateTime @default(now())
@@ -91,12 +93,10 @@ model LiveClass {
   registrationEnd   String?
   previewImage      String?
   registeredCount   Int      @default(0)
-  level             Int?     @default(1)  // ✅ ADD THIS LINE
+  level             Int?     @default(1)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
-
-// Add after existing models:
 
 model Purchase {
   id              Int      @id @default(autoincrement())
@@ -133,7 +133,7 @@ model CourseProgress {
   id          Int      @id @default(autoincrement())
   userId      Int
   courseId    Int
-  lessonId    String   // ✅ Changed from Int to String
+  lessonId    String
   completed   Boolean  @default(false)
   completedAt DateTime?
   createdAt   DateTime @default(now())
@@ -150,7 +150,7 @@ model ResourceAccess {
   id           Int      @id @default(autoincrement())
   userId       Int
   resourceId   Int
-  resourceType String   // 'file' or 'course'
+  resourceType String
   accessedAt   DateTime @default(now())
   purchased    Boolean  @default(false)
   
