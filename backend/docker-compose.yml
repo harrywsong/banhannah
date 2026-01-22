@@ -1,3 +1,8 @@
+# docker-compose down
+# docker-compose up --build -d
+
+
+
 version: '3.8'
 
 services:

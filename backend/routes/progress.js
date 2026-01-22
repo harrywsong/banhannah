@@ -18,7 +18,7 @@ router.get('/course/:courseId', authenticate, async (req, res) => {
     // Convert to object format for frontend
     const progressObj = {};
     progress.forEach(p => {
-      progressObj[p.lessonId] = {
+      progressObj[p.lessonId] = {  // ✅ lessonId is now a string
         completed: p.completed,
         completedAt: p.completedAt
       };
@@ -36,12 +36,19 @@ router.post('/lesson', authenticate, async (req, res) => {
   try {
     const { courseId, lessonId, completed } = req.body;
     
+    console.log('📝 Progress update request:', {
+      userId: req.user.id,
+      courseId,
+      lessonId,
+      completed
+    });
+    
     const progress = await prisma.courseProgress.upsert({
       where: {
         userId_courseId_lessonId: {
           userId: req.user.id,
           courseId: parseInt(courseId),
-          lessonId: parseInt(lessonId)
+          lessonId: String(lessonId)  // ✅ Store as string
         }
       },
       update: {
@@ -51,16 +58,20 @@ router.post('/lesson', authenticate, async (req, res) => {
       create: {
         userId: req.user.id,
         courseId: parseInt(courseId),
-        lessonId: parseInt(lessonId),
+        lessonId: String(lessonId),  // ✅ Store as string
         completed,
         completedAt: completed ? new Date() : null
       }
     });
     
+    console.log('✅ Progress updated successfully');
     res.json({ success: true, progress });
   } catch (error) {
-    console.error('Update progress error:', error);
-    res.status(500).json({ error: 'Failed to update progress' });
+    console.error('❌ Update progress error:', error);
+    res.status(500).json({ 
+      error: 'Failed to update progress',
+      details: error.message 
+    });
   }
 });
 

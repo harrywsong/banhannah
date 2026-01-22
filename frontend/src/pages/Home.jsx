@@ -162,61 +162,121 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Reviews Section - Horizontal Scrolling */}
-      {shuffledReviews.length > 0 && (
-        <section className="py-20 bg-white overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+      {/* Reviews Section */}
+      <section className="py-20 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
                 이용 후기
               </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              <p className="text-xl text-gray-600">
                 실제 이용자들의 솔직한 후기를 확인하세요
               </p>
             </div>
+            <Link
+              to="/reviews"
+              className="bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors flex items-center space-x-2 shadow-lg"
+            >
+              <MessageCircle className="h-5 w-5" />
+              <span>모든 리뷰 보기</span>
+            </Link>
+          </div>
 
-            <div className="relative overflow-hidden">
-              {/* Scrolling Container */}
-              <div 
-                className="flex space-x-6 overflow-x-auto"
-              >
-                {shuffledReviews.map((review, index) => (
-                  <div
-                    key={`${review.id}-${index}`}
-                    className="bg-gray-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow flex-shrink-0"
-                    style={{ width: '350px' }}
+          {shuffledReviews.length > 0 ? (
+            <>
+              <div className="relative overflow-hidden">
+                {/* Scrolling Container */}
+                <div 
+                  className="flex space-x-6 overflow-x-auto pb-4"
+                  style={{ scrollbarWidth: 'thin' }}
+                >
+                  {shuffledReviews.map((review, index) => (
+                    <div
+                      key={`${review.id}-${index}`}
+                      className="bg-gray-50 p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow flex-shrink-0"
+                      style={{ width: '350px' }}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-600">{review.rating}.0</span>
+                      </div>
+                      <p className="text-gray-700 mb-4 line-clamp-3">{review.comment}</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-gray-900">{review.userName}</p>
+                          <p className="text-sm text-gray-500">
+                            {review.itemType === 'resource' || review.itemType === 'file' ? '파일' : review.itemType === 'course' ? '온라인 코스' : '라이브 클래스'} 리뷰
+                          </p>
+                        </div>
+                        <MessageCircle className="h-5 w-5 text-gray-400" />
+                      </div>
+                      {/* Item title */}
+                      {review.itemTitle && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <p className="text-xs text-gray-500 truncate">
+                            📌 {review.itemTitle}
+                          </p>
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-400 mt-2">
+                        {new Date(review.createdAt).toLocaleDateString('ko-KR')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* View All Button - Bottom */}
+              <div className="text-center mt-8">
+                <Link
+                  to="/reviews"
+                  className="inline-flex items-center space-x-2 text-primary-600 hover:text-primary-700 font-semibold text-lg"
+                >
+                  <span>더 많은 리뷰 보기</span>
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+              </div>
+            </>
+          ) : (
+            /* No Reviews Placeholder */
+            <div className="bg-gray-50 rounded-xl p-12 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="bg-gray-200 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
+                  <MessageCircle className="h-12 w-12 text-gray-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                  아직 리뷰가 없습니다
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  첫 번째 리뷰를 작성하고 다른 사용자들과 경험을 공유해보세요!
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link
+                    to="/resources"
+                    className="bg-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
                   >
-                    <div className="flex items-center mb-4">
-                      <div className="flex text-yellow-400">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-5 w-5 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`}
-                          />
-                        ))}
-                      </div>
-                      <span className="ml-2 text-sm text-gray-600">{review.rating}.0</span>
-                    </div>
-                    <p className="text-gray-700 mb-4 line-clamp-3">{review.comment}</p>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-gray-900">{review.userName}</p>
-                        <p className="text-sm text-gray-500">
-                          {review.itemType === 'resource' || review.itemType === 'file' ? '자료' : review.itemType === 'course' ? '온라인 코스' : '클래스'} 리뷰
-                        </p>
-                      </div>
-                      <MessageCircle className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <p className="text-xs text-gray-400 mt-2">
-                      {new Date(review.createdAt).toLocaleDateString('ko-KR')}
-                    </p>
-                  </div>
-                ))}
+                    자료 둘러보기
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="border-2 border-primary-600 text-primary-600 px-6 py-3 rounded-lg font-semibold hover:bg-primary-50 transition-colors"
+                  >
+                    로그인하기
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+      </section>
 
       {/* CTA Section */}
       <section className="py-20 bg-primary-600 text-white">

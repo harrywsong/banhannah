@@ -133,7 +133,7 @@ model CourseProgress {
   id          Int      @id @default(autoincrement())
   userId      Int
   courseId    Int
-  lessonId    Int
+  lessonId    String   // ✅ Changed from Int to String
   completed   Boolean  @default(false)
   completedAt DateTime?
   createdAt   DateTime @default(now())

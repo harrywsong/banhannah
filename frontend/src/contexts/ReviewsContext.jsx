@@ -1,96 +1,65 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { apiEndpoint, apiRequest } from '../config/api'
 
 const ReviewsContext = createContext(null)
 
 export function ReviewsProvider({ children }) {
   const [reviews, setReviews] = useState([])
+  const [loading, setLoading] = useState(true)
 
+  // Load reviews from database
   useEffect(() => {
-    const savedReviews = localStorage.getItem('reviews')
-    if (savedReviews) {
-      setReviews(JSON.parse(savedReviews))
-    }
+    loadReviews()
   }, [])
 
-  const maskName = (name) => {
-    if (!name) return ''
-    
-    // Split name by spaces for names like "Andrew Lee"
-    const nameParts = name.trim().split(/\s+/)
-    
-    if (nameParts.length === 1) {
-      // Single word name (Korean or single-word English)
-      const singleName = nameParts[0]
-      if (singleName.length <= 1) {
-        return singleName
+  const loadReviews = async () => {
+    try {
+      const response = await apiRequest(apiEndpoint('reviews'))
+      if (response.ok) {
+        const data = await response.json()
+        setReviews(data.reviews || [])
       }
-      if (singleName.length === 2) {
-        return singleName[0] + '*'
-      }
-      return singleName[0] + '*'.repeat(singleName.length - 2) + singleName[singleName.length - 1]
-    } else {
-      // Multi-word name (e.g., "Andrew Lee" -> "A***** **e")
-      const firstPart = nameParts[0]
-      const lastPart = nameParts[nameParts.length - 1]
-      const middleParts = nameParts.slice(1, -1)
-      
-      let masked = ''
-      // First word: first char + stars
-      if (firstPart.length > 0) {
-        masked += firstPart[0] + '*'.repeat(Math.max(0, firstPart.length - 1))
-      }
-      
-      // Middle words: all stars
-      middleParts.forEach(part => {
-        masked += ' ' + '*'.repeat(part.length)
+    } catch (error) {
+      console.error('Failed to load reviews:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const addReview = async (reviewData) => {
+    try {
+      const response = await apiRequest(apiEndpoint('reviews'), {
+        method: 'POST',
+        body: JSON.stringify(reviewData)
       })
       
-      // Last word: stars + last char
-      if (lastPart.length > 0) {
-        if (middleParts.length > 0 || firstPart.length > 0) {
-          masked += ' '
-        }
-        masked += '*'.repeat(Math.max(0, lastPart.length - 1)) + lastPart[lastPart.length - 1]
+      if (response.ok) {
+        const data = await response.json()
+        setReviews([data.review, ...reviews])
+        return data.review
       }
+    } catch (error) {
+      console.error('Failed to add review:', error)
+      throw error
+    }
+  }
+
+  const updateReview = async (reviewId, updates) => {
+    try {
+      const response = await apiRequest(apiEndpoint(`reviews/${reviewId}`), {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      })
       
-      return masked.trim()
-    }
-  }
-
-  const addReview = (review) => {
-    const maskedName = maskName(review.userName)
-    const newReview = {
-      id: Date.now(),
-      ...review,
-      userId: review.userId, // Store userId to track who wrote the review
-      userName: maskedName, // Store masked name
-      originalUserName: review.userName, // Keep original for admin purposes (optional)
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-    const updatedReviews = [newReview, ...reviews]
-    setReviews(updatedReviews)
-    localStorage.setItem('reviews', JSON.stringify(updatedReviews))
-    return newReview
-  }
-
-  const updateReview = (reviewId, updates) => {
-    const updatedReviews = reviews.map(review => {
-      if (review.id === reviewId) {
-        const maskedName = maskName(updates.userName || review.originalUserName)
-        return {
-          ...review,
-          ...updates,
-          userName: maskedName,
-          originalUserName: updates.userName || review.originalUserName,
-          updatedAt: new Date().toISOString()
-        }
+      if (response.ok) {
+        const data = await response.json()
+        setReviews(reviews.map(r => r.id === reviewId ? data.review : r))
+        return data.review
       }
-      return review
-    })
-    setReviews(updatedReviews)
-    localStorage.setItem('reviews', JSON.stringify(updatedReviews))
-    return updatedReviews.find(r => r.id === reviewId)
+    } catch (error) {
+      console.error('Failed to update review:', error)
+      throw error
+    }
   }
 
   const getUserReview = (userId, itemId, itemType) => {
@@ -113,11 +82,13 @@ export function ReviewsProvider({ children }) {
 
   const value = {
     reviews,
+    loading,
     addReview,
     updateReview,
     getUserReview,
     getReviewsByItemId,
-    getRecentReviews
+    getRecentReviews,
+    reload: loadReviews
   }
 
   return <ReviewsContext.Provider value={value}>{children}</ReviewsContext.Provider>

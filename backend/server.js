@@ -43,6 +43,8 @@ const purchaseRoutes = require('./routes/purchases');
 const registrationRoutes = require('./routes/registrations');
 const progressRoutes = require('./routes/progress');
 const resourceRoutes = require('./routes/resources');
+const reviewRoutes = require('./routes/reviews');
+
 
 // Import middleware
 const { authenticate, requireAdmin, optionalAuth } = require('./middleware/auth');
@@ -329,6 +331,7 @@ app.use('/api/purchases', purchaseRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/resources', resourceRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 
 

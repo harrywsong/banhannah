@@ -23,6 +23,7 @@ import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import Profile from './pages/Profile';
 import VerifyEmail from './pages/VerifyEmail';
+import Reviews from './pages/Reviews'
 
 function App() {
   return (
@@ -68,7 +69,9 @@ function App() {
                       <Route path="/faqs" element={<FAQs />} />
                       <Route path="/privacy" element={<Privacy />} />
                       <Route path="/terms" element={<Terms />} />
-                      <Route path="/profile" element={<Profile />} />                    </Routes>
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/reviews" element={<Reviews />} />
+                    </Routes>
                   </main>
                   <Footer />
                 </div>

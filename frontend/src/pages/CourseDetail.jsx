@@ -336,38 +336,20 @@ export default function CourseDetail() {
       alert('로그인이 필요합니다')
       return
     }
-  
-    if (!canAccess && !editingReview) {
-      alert('리뷰를 작성하려면 먼저 코스를 구매하거나 접근해야 합니다.')
+
+    const myResources = JSON.parse(localStorage.getItem(`resources_${user.id}`) || '[]')
+    const hasAccessed = myResources.find(r => r.id === course.id) || canAccess
+    
+    if (!hasAccessed && !editingReview) {
+      alert('리뷰를 작성하려면 먼저 코스를 수강해야 합니다.')
       return
     }
-  
-    // Check for duplicate reviews
-    const targetId = reviewForm.isForEntireCourse ? `course-${id}` : `lesson-${reviewForm.lessonId || selectedLesson?.id}`;
-    const existingReview = reviews.find(r => 
-      r.userId === user.id && 
-      r.targetId === targetId &&
-      (!editingReview || r.id !== editingReview.id)
-    );
-  
-    if (existingReview) {
-      alert(reviewForm.isForEntireCourse ? 
-        '이미 전체 코스에 대한 리뷰를 작성하셨습니다.' : 
-        '이미 이 레슨에 대한 리뷰를 작성하셨습니다.');
-      return;
-    }
-  
-    const reviewTarget = reviewForm.isForEntireCourse ? 
-      '전체 코스' : 
-      (selectedLesson?.title || '레슨');
-  
+
     if (editingReview) {
       const updatedReview = updateReview(editingReview.id, {
         rating: reviewForm.rating,
         comment: reviewForm.comment,
-        userName: user.name,
-        targetId: targetId,
-        targetName: reviewTarget
+        userName: user.name
       })
       
       const updatedReviews = reviews.map(r => r.id === editingReview.id ? updatedReview : r)
@@ -379,24 +361,20 @@ export default function CourseDetail() {
       const newReview = addReview({
         itemId: parseInt(id),
         itemType: 'course',
-        itemTitle: course.title,
+        itemTitle: course.title,  // ✅ Store item title
         userId: user.id,
         userName: user.name,
         rating: reviewForm.rating,
-        comment: reviewForm.comment,
-        targetId: targetId,
-        targetName: reviewTarget,
-        lessonId: reviewForm.isForEntireCourse ? null : (reviewForm.lessonId || selectedLesson?.id)
+        comment: reviewForm.comment
       })
-  
+
       setReviews([newReview, ...reviews])
       setEditingReview(newReview)
-      setReviewForm({ rating: 5, comment: '', isForEntireCourse: false, lessonId: null })
+      setReviewForm({ rating: 5, comment: '' })
       setShowReviewForm(false)
       alert('리뷰가 등록되었습니다!')
     }
   }
-
   const handleEditReview = () => {
     if (editingReview) {
       setReviewForm({ rating: editingReview.rating, comment: editingReview.comment })
@@ -1146,23 +1124,6 @@ if (block.type === 'text' && block.data.content) {
       </button>
     </div>
     <form onSubmit={handleReviewSubmit} className="space-y-4">
-      {/* Review Target Selection */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={reviewForm.isForEntireCourse || false}
-            onChange={(e) => setReviewForm({ ...reviewForm, isForEntireCourse: e.target.checked, lessonId: e.target.checked ? null : selectedLesson?.id })}
-            className="h-4 w-4 text-primary-600 rounded"
-          />
-          <span className="font-medium text-gray-900">전체 코스에 대한 리뷰</span>
-        </label>
-        {!reviewForm.isForEntireCourse && selectedLesson && (
-          <p className="text-sm text-gray-600 mt-2 ml-6">
-            현재 레슨: <span className="font-semibold">{selectedLesson.title}</span>
-          </p>
-        )}
-      </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">평점</label>
                         <div className="flex space-x-2">
@@ -1214,11 +1175,10 @@ if (block.type === 'text' && block.data.content) {
         <p className="font-semibold text-gray-900">{review.userName}</p>
         <p className="text-sm text-gray-500">
           {new Date(review.createdAt).toLocaleDateString('ko-KR')}
-          {review.targetName && (
-            <span className="ml-2 px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs">
-              {review.targetName}
-            </span>
-          )}
+          {/* ✅ Show what they reviewed */}
+          <span className="ml-2 px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs">
+            {review.itemTitle || course.title}
+          </span>
         </p>
       </div>
       <div className="flex text-yellow-400">

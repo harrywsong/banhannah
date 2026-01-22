@@ -132,6 +132,7 @@ export default function LiveClasses({ hideHeader = false, filterLevel: externalF
       setClasses(updatedClasses);
       
       alert(`"${classItem.title}" 클래스 등록이 취소되었습니다.`);
+      window.dispatchEvent(new Event('dashboardUpdate')); // ✅ ADD THIS LINE
     } catch (error) {
       console.error('Unregister error:', error);
       alert('등록 취소 중 오류가 발생했습니다.');
@@ -169,9 +170,9 @@ export default function LiveClasses({ hideHeader = false, filterLevel: externalF
     } else {
       // Create new review
       addReview({
-        itemId: selectedClassForReview.id,
+        itemId: classItem.id,
         itemType: 'class',
-        itemTitle: selectedClassForReview.title,
+        itemTitle: classItem.title,  // ✅ Add this
         userId: user.id,
         userName: user.name,
         rating: reviewForm.rating,

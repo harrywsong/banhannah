@@ -2,8 +2,8 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { sendContactFormEmail } = require('../utils/email');
-const fs = require('fs');
-const path = require('path');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 const router = express.Router();
 
@@ -44,12 +44,11 @@ router.post(
       try {
         await sendContactFormEmail({ name, email, subject, message });
         
-        // Update submission status
-        submission.emailSent = true;
-        fs.writeFileSync(
-          path.join(contactsDir, filename),
-          JSON.stringify(submission, null, 2)
-        );
+        // Update submission status in database
+        await prisma.contactSubmission.update({
+          where: { id: submission.id },
+          data: { emailSent: true }
+        });
         
         console.log('✅ Contact form email sent successfully');
         

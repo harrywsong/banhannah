@@ -2,9 +2,10 @@ import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { BookOpen, Download, Video, Clock, Award, Target, ExternalLink, FileText } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { registrationsApi } from '../api/registrations';
-import { resourcesApi } from '../api/resources';
-import { progressApi } from '../api/progress';
+import { apiEndpoint, apiRequest } from '../config/api'  // ✅ ADD THIS
+import { registrationsApi } from '../api/registrations'
+import { resourcesApi } from '../api/resources'
+import { progressApi } from '../api/progress'
 
 export default function Dashboard() {
   const { user } = useAuth()
