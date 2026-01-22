@@ -48,10 +48,9 @@ export default function Profile() {
       email: user.email || ''
     })
 
-    // Load profile picture from localStorage
-    const savedPicture = localStorage.getItem(`profilePicture_${user.id}`)
-    if (savedPicture) {
-      setProfilePicturePreview(savedPicture)
+    // Load profile picture from user object
+    if (user.profilePicture) {
+      setProfilePicturePreview(user.profilePicture)
     }
   }, [user, navigate])
 
@@ -104,7 +103,24 @@ export default function Profile() {
         
         // Save profile picture if changed
         if (profilePicture) {
-          localStorage.setItem(`profilePicture_${user.id}`, profilePicturePreview);
+          const formData = new FormData();
+          formData.append('profilePicture', profilePicture);
+          
+          try {
+            const uploadResponse = await apiRequest(apiEndpoint('auth/profile-picture'), {
+              method: 'POST',
+              body: formData
+            });
+            
+            if (uploadResponse.ok) {
+              const data = await uploadResponse.json();
+              // Update user with new profile picture URL
+              const updatedUser = { ...user, profilePicture: data.imageUrl };
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+          } catch (error) {
+            console.error('Profile picture upload failed:', error);
+          }
         }
         
         if (data.emailChanged) {

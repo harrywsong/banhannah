@@ -30,8 +30,8 @@ export default function Navbar() {
     setShowUserMenu(false)
   }
 
-  // Get profile picture from localStorage
-  const profilePicture = user ? localStorage.getItem(`profilePicture_${user.id}`) : null
+  // Get profile picture from user object (already loaded from database)
+  const profilePicture = user?.profilePicture || null
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50 border-b border-gray-100">

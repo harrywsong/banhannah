@@ -29,28 +29,16 @@ router.post(
 
       const { name, email, subject, message } = req.body;
 
-      // Save to file system as backup regardless of email success
-      const contactsDir = path.join(__dirname, '../data/contacts');
-      
-      if (!fs.existsSync(contactsDir)) {
-        fs.mkdirSync(contactsDir, { recursive: true });
-      }
-      
-      const submission = {
-        id: Date.now(),
-        name,
-        email,
-        subject,
-        message,
-        submittedAt: new Date().toISOString(),
-        emailSent: false
-      };
-      
-      const filename = `contact_${submission.id}.json`;
-      fs.writeFileSync(
-        path.join(contactsDir, filename),
-        JSON.stringify(submission, null, 2)
-      );
+      // Save to database
+      const submission = await prisma.contactSubmission.create({
+        data: {
+          name,
+          email,
+          subject,
+          message,
+          emailSent: false
+        }
+      });
 
       // Send email
       try {
