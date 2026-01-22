@@ -27,22 +27,34 @@ export function ReviewsProvider({ children }) {
   }
 
   const addReview = async (reviewData) => {
-    try {
-      const response = await apiRequest(apiEndpoint('reviews'), {
-        method: 'POST',
-        body: JSON.stringify(reviewData)
+  try {
+    console.log('📝 Submitting review with data:', reviewData); // Debug log
+    
+    const response = await apiRequest(apiEndpoint('reviews'), {
+      method: 'POST',
+      body: JSON.stringify({
+        itemId: reviewData.itemId,
+        itemType: reviewData.itemType,
+        itemTitle: reviewData.itemTitle,  // ✅ MUST INCLUDE THIS
+        rating: reviewData.rating,
+        comment: reviewData.comment
       })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setReviews([data.review, ...reviews])
-        return data.review
-      }
-    } catch (error) {
-      console.error('Failed to add review:', error)
-      throw error
+    })
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('❌ Review submission failed:', errorData);
+      throw new Error(errorData.error || 'Failed to add review');
     }
+    
+    const data = await response.json()
+    setReviews([data.review, ...reviews])
+    return data.review
+  } catch (error) {
+    console.error('Failed to add review:', error)
+    throw error
   }
+}
 
   const updateReview = async (reviewId, updates) => {
     try {

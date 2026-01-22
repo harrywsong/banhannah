@@ -69,7 +69,7 @@ const fileMetadataValidation = [
     .trim()
     .notEmpty()
     .withMessage('파일 설명을 입력해주세요')
-    .isLength({ min: 10, max: 1000 })
+    .isLength({ min: 1, max: 1000 })
     .withMessage('설명은 10-1000자 사이여야 합니다'),
   
   body('format')
@@ -119,7 +119,7 @@ const courseValidation = [
     .trim()
     .notEmpty()
     .withMessage('코스 설명을 입력해주세요')
-    .isLength({ min: 10, max: 1000 })
+    .isLength({ min: 1, max: 1000 })
     .withMessage('설명은 10-1000자 사이여야 합니다'),
   
   body('type')
@@ -257,7 +257,7 @@ const reviewValidation = [
     .trim()
     .notEmpty()
     .withMessage('리뷰 내용을 입력해주세요')
-    .isLength({ min: 10, max: 1000 })
+    .isLength({ min: 1, max: 1000 })
     .withMessage('리뷰는 10-1000자 사이여야 합니다'),
   
   body('itemId')

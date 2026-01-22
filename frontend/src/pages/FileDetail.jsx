@@ -474,10 +474,6 @@ useEffect(() => {
     }
   };
 
-
-
-// Around line 130-160 in handleReviewSubmit
-
   const handleReviewSubmit = (e) => {
     e.preventDefault()
     if (!user) {
