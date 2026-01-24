@@ -5,8 +5,10 @@ node_modules/
 
 # Testing
 /coverage
+*.lcov
+.nyc_output
 
-# Production
+# Production builds
 dist/
 dist-ssr/
 build/
@@ -31,12 +33,20 @@ lerna-debug.log*
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
 
 # OS files
 .DS_Store
@@ -48,15 +58,29 @@ ehthumbs.db
 Thumbs.db
 Desktop.ini
 
-# Backend specific
-backend/uploads/
-backend/data/
-backend/node_modules/
-
-# Netlify
-.netlify/
-
 # Temporary files
 *.tmp
 *.temp
 .cache/
+tmp/
+
+# Deployment
+.netlify/
+.vercel/
+.cloudflare/
+
+# Misc
+.npm
+.eslintcache
+.node_repl_history
+.yarn-integrity
+
+# Storybook
+storybook-static/
+
+# TypeScript
+*.tsbuildinfo
+
+# Service workers
+sw.js
+workbox-*.js
