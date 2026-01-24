@@ -1,0 +1,160 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MODEL
+// ============================================
+model User {
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  name              String
+  password          String
+  role              String    @default("STUDENT") // ADMIN or STUDENT
+  emailVerified     Boolean   @default(false)
+  verificationToken String?
+  tokenExpiry       DateTime?
+  profilePicture    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  purchases         Purchase[]
+  reviews           Review[]
+  progress          Progress[]
+
+  @@index([email])
+}
+
+// ============================================
+// COURSE MODEL
+// ============================================
+model Course {
+  id              Int      @id @default(autoincrement())
+  title           String
+  description     String   @db.Text
+  previewImage    String?
+  type            String   @default("free") // free or paid
+  price           Int?
+  discountPrice   Int?
+  level           Int      @default(1) // 1=beginner, 2=intermediate, 3=advanced
+  duration        String? // e.g., "4 weeks"
+  accessDuration  Int      @default(30) // days of access after purchase
+  published       Boolean  @default(false)
+  featured        Boolean  @default(false)
+  
+  // JSON field for lessons structure
+  lessons         Json?    // Array of lesson objects
+  
+  // Metadata
+  views           Int      @default(0)
+  enrollments     Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  purchases       Purchase[]
+  reviews         Review[]
+  progress        Progress[]
+
+  @@index([type, published])
+  @@index([featured])
+}
+
+// ============================================
+// FILE MODEL
+// ============================================
+model File {
+  id              Int      @id @default(autoincrement())
+  title           String
+  description     String   @db.Text
+  filename        String
+  originalName    String
+  fileSize        Int
+  format          String   // PDF, ZIP, DOCX, etc.
+  previewImage    String?
+  level           Int      @default(1)
+  downloads       Int      @default(0)
+  published       Boolean  @default(false)
+  featured        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  reviews         Review[]
+
+  @@index([format, published])
+  @@index([featured])
+}
+
+// ============================================
+// PURCHASE MODEL
+// ============================================
+model Purchase {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  courseId        Int
+  amount          Int
+  paymentMethod   String?  // 신용카드, 계좌이체, etc.
+  paymentStatus   String   @default("completed")
+  purchasedAt     DateTime @default(now())
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+}
+
+// ============================================
+// REVIEW MODEL
+// ============================================
+model Review {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  itemType        String   // file, course, class
+  itemId          Int
+  rating          Int      // 1-5
+  comment         String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course          Course?  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  file            File?    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemType, itemId])
+  @@index([userId])
+}
+
+// ============================================
+// PROGRESS MODEL
+// ============================================
+model Progress {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  courseId        Int
+  completedLessons Json?   // Array of completed lesson IDs
+  lastAccessedAt  DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+}
