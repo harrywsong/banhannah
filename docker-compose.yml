@@ -1,0 +1,66 @@
+# ============================================
+# docker-compose.yml (Development)
+# ============================================
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: edu_platform_db
+    environment:
+      POSTGRES_USER: eduuser
+      POSTGRES_PASSWORD: edupass
+      POSTGRES_DB: eduplatform_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - edu_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend.Dockerfile
+    container_name: edu_platform_backend
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://eduuser:edupass@postgres:5432/eduplatform_dev
+      JWT_SECRET: dev-secret-key-change-in-production
+      FRONTEND_URL: http://localhost:5173
+      SERVER_URL: http://localhost:3002
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - backend_storage:/app/storage
+    depends_on:
+      - postgres
+    networks:
+      - edu_network
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend.Dockerfile
+    container_name: edu_platform_frontend
+    environment:
+      VITE_API_URL: http://localhost:3002/api
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - edu_network
+    command: npm run dev
+
+volumes:
+  postgres_data:
+  backend_storage:
+
+networks:
+  edu_network:
+    driver: bridge
