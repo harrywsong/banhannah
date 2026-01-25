@@ -1,6 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
+// backend/prisma/schema.prisma - FIXED VERSION
 generator client {
   provider = "prisma-client-js"
 }
@@ -115,14 +113,11 @@ model Purchase {
 // ============================================
 // REVIEW MODEL
 // ============================================
-// Reviews can be for courses, files, or classes
-// We store itemType and itemId without foreign key constraints
-// This allows flexible reviews for different item types
 model Review {
   id              Int      @id @default(autoincrement())
   userId          Int
-  itemType        String   // "file", "course", or "class"
-  itemId          Int      // ID of the file, course, or class
+  itemType        String   // file, course, class
+  itemId          Int
   rating          Int      // 1-5
   comment         String   @db.Text
   createdAt       DateTime @default(now())

@@ -1,0 +1,5 @@
+-- AddForeignKey
+ALTER TABLE "Review" ADD CONSTRAINT "Review_course_fkey" FOREIGN KEY ("itemId") REFERENCES "Course"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Review" ADD CONSTRAINT "Review_file_fkey" FOREIGN KEY ("itemId") REFERENCES "File"("id") ON DELETE CASCADE ON UPDATE CASCADE;

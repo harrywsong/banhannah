@@ -1,4 +1,4 @@
-// src/controllers/files.controller.js
+// backend/src/controllers/files.controller.js - FIXED WITH AUTH
 import { prisma } from '../config/database.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import { deleteFile, getFilePath, buildFileUrl } from '../services/storage.service.js';
@@ -6,10 +6,12 @@ import path from 'path';
 import fs from 'fs';
 
 /**
- * Get all files (public)
+ * Get all files (REQUIRES AUTHENTICATION)
  */
 export async function getAllFiles(req, res, next) {
   try {
+    console.log('📁 Fetching all files');
+    // Authentication is now required - checked by middleware
     const { format, level, search, featured } = req.query;
     
     const where = { published: true };
@@ -29,19 +31,19 @@ export async function getAllFiles(req, res, next) {
       orderBy: [
         { featured: 'desc' },
         { createdAt: 'desc' }
-      ],
-      include: {
-        _count: {
-          select: { reviews: true }
-        }
-      }
+      ]
     });
     
-    // Add URLs and ratings
+    console.log(`✓ Found ${files.length} files`);
+    
+    // Add URLs and ratings - fetch reviews manually
     const filesWithData = await Promise.all(
       files.map(async (file) => {
         const reviews = await prisma.review.findMany({
-          where: { itemType: 'file', itemId: file.id }
+          where: { 
+            itemType: 'file', 
+            itemId: file.id 
+          }
         });
         
         const avgRating = reviews.length > 0
@@ -58,51 +60,64 @@ export async function getAllFiles(req, res, next) {
       })
     );
     
+    console.log('✓ Sending files data');
     res.json({ files: filesWithData });
   } catch (error) {
+    console.error('❌ ERROR in getAllFiles:');
+    console.error('Message:', error.message);
+    console.error('Stack:', error.stack);
     next(error);
   }
 }
 
 /**
- * Get file by ID
+ * Get file by ID (REQUIRES AUTHENTICATION)
  */
 export async function getFileById(req, res, next) {
   try {
+    console.log('📄 Fetching file:', req.params.id);
     const { id } = req.params;
     
     const file = await prisma.file.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        reviews: {
-          include: {
-            user: {
-              select: { id: true, name: true }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        }
-      }
+      where: { id: parseInt(id) }
     });
     
     if (!file) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'File not found' });
     }
     
+    // Manually fetch reviews for this file
+    const reviews = await prisma.review.findMany({
+      where: {
+        itemType: 'file',
+        itemId: parseInt(id)
+      },
+      include: {
+        user: {
+          select: { id: true, name: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
     // Calculate average rating
-    const avgRating = file.reviews.length > 0
-      ? file.reviews.reduce((sum, r) => sum + r.rating, 0) / file.reviews.length
+    const avgRating = reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : 0;
     
+    console.log('✓ Sending file data');
     res.json({
       file: {
         ...file,
+        reviews,
         downloadUrl: buildFileUrl(file.filename, 'uploads'),
         previewUrl: file.previewImage ? buildFileUrl(file.previewImage, 'previews') : null,
         averageRating: Math.round(avgRating * 10) / 10
       }
     });
   } catch (error) {
+    console.error('❌ ERROR in getFileById:');
+    console.error('Message:', error.message);
     next(error);
   }
 }
@@ -249,7 +264,7 @@ export async function deleteFileRecord(req, res, next) {
 }
 
 /**
- * Download file
+ * Download file (REQUIRES AUTHENTICATION)
  */
 export async function downloadFile(req, res, next) {
   try {
@@ -282,7 +297,7 @@ export async function downloadFile(req, res, next) {
 }
 
 /**
- * View file (inline)
+ * View file (inline) (REQUIRES AUTHENTICATION)
  */
 export async function viewFile(req, res, next) {
   try {
@@ -316,7 +331,7 @@ export async function viewFile(req, res, next) {
 }
 
 /**
- * View preview image
+ * View preview image (public - for course/file previews)
  */
 export async function viewPreview(req, res, next) {
   try {

@@ -1,5 +1,4 @@
-// frontend/src/pages/Profile.jsx
-// ============================================
+// src/pages/Profile.jsx - FIXED VERSION
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../api/client';

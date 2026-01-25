@@ -1,4 +1,4 @@
-// src/controllers/courses.controller.js
+// backend/src/controllers/courses.controller.js - FIXED
 import { prisma } from '../config/database.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import { deleteFile } from '../services/storage.service.js';
@@ -27,19 +27,17 @@ export async function getAllCourses(req, res, next) {
       orderBy: [
         { featured: 'desc' },
         { createdAt: 'desc' }
-      ],
-      include: {
-        _count: {
-          select: { reviews: true }
-        }
-      }
+      ]
     });
     
-    // Calculate average rating
+    // Calculate average rating for each course
     const coursesWithRatings = await Promise.all(
       courses.map(async (course) => {
         const reviews = await prisma.review.findMany({
-          where: { itemType: 'course', itemId: course.id }
+          where: { 
+            itemType: 'course', 
+            itemId: course.id 
+          }
         });
         
         const avgRating = reviews.length > 0
@@ -56,6 +54,7 @@ export async function getAllCourses(req, res, next) {
     
     res.json({ courses: coursesWithRatings });
   } catch (error) {
+    console.error('Error in getAllCourses:', error);
     next(error);
   }
 }
@@ -65,57 +64,85 @@ export async function getAllCourses(req, res, next) {
  */
 export async function getCourseById(req, res, next) {
   try {
+    console.log('📚 Fetching course:', req.params.id);
     const { id } = req.params;
+    const courseId = parseInt(id);
     
+    if (isNaN(courseId)) {
+      console.log('❌ Invalid course ID:', id);
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Invalid course ID' });
+    }
+    
+    console.log('🔍 Looking for course ID:', courseId);
+    
+    // Fetch course without relations
     const course = await prisma.course.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        reviews: {
-          include: {
-            user: {
-              select: { id: true, name: true }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        }
-      }
+      where: { id: courseId }
     });
     
     if (!course) {
+      console.log('❌ Course not found:', courseId);
       return res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Course not found' });
     }
     
+    console.log('✓ Course found:', course.title);
+    
+    // Manually fetch reviews for this course
+    const reviews = await prisma.review.findMany({
+      where: {
+        itemType: 'course',
+        itemId: courseId
+      },
+      include: {
+        user: {
+          select: { id: true, name: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    
+    console.log(`✓ Found ${reviews.length} reviews`);
+    
     // Check if user has purchased (if authenticated)
     let hasPurchased = false;
-    if (req.user && course.type === 'paid') {
+    if (req.user) {
+      console.log('🔐 Checking purchase for user:', req.user.id);
       const purchase = await prisma.purchase.findFirst({
         where: {
           userId: req.user.id,
-          courseId: course.id
+          courseId: courseId
         }
       });
       hasPurchased = !!purchase;
+      console.log('Purchase status:', hasPurchased);
     }
     
     // Increment views
     await prisma.course.update({
-      where: { id: parseInt(id) },
+      where: { id: courseId },
       data: { views: { increment: 1 } }
     });
     
     // Calculate average rating
-    const avgRating = course.reviews.length > 0
-      ? course.reviews.reduce((sum, r) => sum + r.rating, 0) / course.reviews.length
+    const avgRating = reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
       : 0;
+    
+    console.log('✓ Sending course data');
     
     res.json({
       course: {
         ...course,
+        reviews,
         averageRating: Math.round(avgRating * 10) / 10,
         hasPurchased
       }
     });
   } catch (error) {
+    console.error('❌ ERROR in getCourseById:');
+    console.error('Message:', error.message);
+    console.error('Stack:', error.stack);
+    console.error('Code:', error.code);
     next(error);
   }
 }
@@ -153,7 +180,7 @@ export async function createCourse(req, res, next) {
     }
     
     if (lessons) {
-      courseData.lessons = JSON.parse(lessons);
+      courseData.lessons = typeof lessons === 'string' ? JSON.parse(lessons) : lessons;
     }
     
     // Handle preview image
@@ -170,6 +197,7 @@ export async function createCourse(req, res, next) {
       course
     });
   } catch (error) {
+    console.error('Error in createCourse:', error);
     next(error);
   }
 }
@@ -241,6 +269,7 @@ export async function updateCourse(req, res, next) {
       course: updatedCourse
     });
   } catch (error) {
+    console.error('Error in updateCourse:', error);
     next(error);
   }
 }
@@ -271,6 +300,7 @@ export async function deleteCourse(req, res, next) {
     
     res.json({ message: 'Course deleted successfully' });
   } catch (error) {
+    console.error('Error in deleteCourse:', error);
     next(error);
   }
 }
@@ -329,6 +359,7 @@ export async function purchaseCourse(req, res, next) {
       purchase
     });
   } catch (error) {
+    console.error('Error in purchaseCourse:', error);
     next(error);
   }
 }
@@ -386,6 +417,7 @@ export async function enrollFreeCourse(req, res, next) {
       enrollment
     });
   } catch (error) {
+    console.error('Error in enrollFreeCourse:', error);
     next(error);
   }
 }
@@ -398,13 +430,7 @@ export async function getMyCourses(req, res, next) {
     const purchases = await prisma.purchase.findMany({
       where: { userId: req.user.id },
       include: {
-        course: {
-          include: {
-            _count: {
-              select: { reviews: true }
-            }
-          }
-        }
+        course: true
       },
       orderBy: { purchasedAt: 'desc' }
     });
@@ -441,6 +467,7 @@ export async function getMyCourses(req, res, next) {
     
     res.json({ courses });
   } catch (error) {
+    console.error('Error in getMyCourses:', error);
     next(error);
   }
 }
@@ -476,6 +503,7 @@ export async function updateProgress(req, res, next) {
       progress
     });
   } catch (error) {
+    console.error('Error in updateProgress:', error);
     next(error);
   }
 }

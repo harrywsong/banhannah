@@ -1,4 +1,4 @@
-// prisma/seed.js - Database seeding script
+// prisma/seed.js - FIXED DATABASE SEEDING
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -258,38 +258,39 @@ async function main() {
 
   console.log('✓ Created sample purchases');
 
-  // Create sample reviews - Fixed to handle foreign key constraints properly
-  // Create course reviews
-  await prisma.review.create({
-    data: {
-      userId: students[0].id,
-      itemType: 'course',
-      itemId: courses[0].id,
-      rating: 5,
-      comment: '정말 좋은 강의입니다! 초보자도 쉽게 따라할 수 있어요.'
-    }
-  });
+  // Create sample reviews - FIXED TO NOT USE RELATIONS
+  const courseReviews = await Promise.all([
+    prisma.review.create({
+      data: {
+        userId: students[0].id,
+        itemType: 'course',
+        itemId: courses[0].id, // Use actual course ID
+        rating: 5,
+        comment: '정말 좋은 강의입니다! 초보자도 쉽게 따라할 수 있어요.'
+      }
+    }),
+    prisma.review.create({
+      data: {
+        userId: students[1].id,
+        itemType: 'course',
+        itemId: courses[0].id, // Use actual course ID
+        rating: 4,
+        comment: '유익한 내용이 많았습니다. 추천합니다!'
+      }
+    })
+  ]);
 
-  await prisma.review.create({
-    data: {
-      userId: students[1].id,
-      itemType: 'course',
-      itemId: courses[0].id,
-      rating: 4,
-      comment: '유익한 내용이 많았습니다. 추천합니다!'
-    }
-  });
-
-  // Create file review
-  await prisma.review.create({
-    data: {
-      userId: students[0].id,
-      itemType: 'file',
-      itemId: files[0].id,
-      rating: 5,
-      comment: '필요한 내용이 잘 정리되어 있어서 좋습니다.'
-    }
-  });
+  const fileReviews = await Promise.all([
+    prisma.review.create({
+      data: {
+        userId: students[0].id,
+        itemType: 'file',
+        itemId: files[0].id, // Use actual file ID
+        rating: 5,
+        comment: '필요한 내용이 잘 정리되어 있어서 좋습니다.'
+      }
+    })
+  ]);
 
   console.log('✓ Created sample reviews');
 

@@ -1,4 +1,4 @@
-// src/routes/courses.routes.js
+// backend/src/routes/courses.routes.js - FIXED
 import express from 'express';
 import * as coursesController from '../controllers/courses.controller.js';
 import { authenticate, requireAdmin, optionalAuth } from '../middleware/auth.js';
@@ -7,11 +7,11 @@ import { courseValidation } from '../utils/validators.js';
 
 const router = express.Router();
 
-// Public routes
-router.get('/', optionalAuth, coursesController.getAllCourses);
+// Public routes (browsing)
+router.get('/', coursesController.getAllCourses);
 router.get('/:id', optionalAuth, coursesController.getCourseById);
 
-// Student routes
+// Student routes (require authentication)
 router.post('/:id/purchase', authenticate, coursesController.purchaseCourse);
 router.post('/:id/enroll', authenticate, coursesController.enrollFreeCourse);
 router.get('/my/courses', authenticate, coursesController.getMyCourses);
@@ -25,12 +25,14 @@ router.post('/',
   courseValidation,
   coursesController.createCourse
 );
+
 router.put('/:id',
   authenticate,
   requireAdmin,
   uploadPreview.single('previewImage'),
   coursesController.updateCourse
 );
+
 router.delete('/:id',
   authenticate,
   requireAdmin,

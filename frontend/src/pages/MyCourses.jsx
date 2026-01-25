@@ -1,5 +1,4 @@
-// frontend/src/pages/MyCourses.jsx
-// ============================================
+// src/pages/MyCourses.jsx - FIXED VERSION
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../api/client';

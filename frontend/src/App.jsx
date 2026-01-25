@@ -1,4 +1,4 @@
-// src/App.jsx
+// src/App.jsx - FIXED with future flags
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
@@ -13,7 +13,7 @@ import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
 import MyCourses from './pages/MyCourses';
 import Files from './pages/Files';
-import Profile from "./pages/MyProfile.jsx";
+import Profile from './pages/Profile';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminFiles from './pages/admin/AdminFiles';
@@ -44,18 +44,32 @@ function ProtectedRoute({ children, adminOnly = false }) {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          
+          {/* Browse pages - public but show different content when logged in */}
           <Route path="/courses" element={<Courses />} />
           <Route path="/courses/:id" element={<CourseDetail />} />
-          <Route path="/files" element={<Files />} />
 
-          {/* Protected Routes */}
+          {/* Protected Routes - Login Required */}
+          <Route
+            path="/files"
+            element={
+              <ProtectedRoute>
+                <Files />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={
