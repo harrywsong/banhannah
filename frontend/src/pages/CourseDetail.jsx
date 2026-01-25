@@ -293,9 +293,12 @@ export default function CourseDetail() {
                 <div className="bg-white text-gray-900 rounded-lg p-6 shadow-xl">
                   {course.previewImage && (
                     <img
-                      src={`/api/files/preview/${course.previewImage}`}
+                      src={`${import.meta.env.VITE_API_URL}/files/preview/${course.previewImage}`}
                       alt={course.title}
                       className="w-full h-48 object-cover rounded mb-4"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
                     />
                   )}
                   {course.type === 'paid' && (

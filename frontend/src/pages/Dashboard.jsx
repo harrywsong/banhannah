@@ -109,13 +109,21 @@ export default function Dashboard() {
                 >
                   {course.previewImage ? (
                     <img
-                      src={`/api/files/preview/${course.previewImage}`}
+                      src={`${import.meta.env.VITE_API_URL}/files/preview/${course.previewImage}`}
                       alt={course.title}
                       className="w-full h-48 object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
                     />
-                  ) : (
-                    <div className="w-full h-48 bg-gradient-to-br from-blue-500 to-purple-600" />
-                  )}
+                  ) : null}
+                  <div 
+                    className="w-full h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold"
+                    style={{ display: course.previewImage ? 'none' : 'flex' }}
+                  >
+                    {course.previewImage ? '이미지 로드 실패' : '미리보기 없음'}
+                  </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-lg mb-2">{course.title}</h3>
                     <p className="text-sm text-gray-600 line-clamp-2 mb-3">

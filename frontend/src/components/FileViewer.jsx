@@ -11,7 +11,7 @@ export default function FileViewer({ file, onClose }) {
   };
 
   const getViewerUrl = () => {
-    const baseUrl = `/api/files/view/${file.filename}`;
+    const baseUrl = `${import.meta.env.VITE_API_URL}/files/view/${file.filename}`;
     
     // For PDF, use browser's built-in viewer
     if (file.format === 'PDF') {
