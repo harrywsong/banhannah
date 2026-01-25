@@ -507,3 +507,35 @@ export async function updateProgress(req, res, next) {
     next(error);
   }
 }
+
+/**
+ * Get course progress for current user
+ */
+export async function getProgress(req, res, next) {
+  try {
+    const { id } = req.params;
+    const courseId = parseInt(id);
+
+    console.log('📊 Getting progress for course:', courseId, 'user:', req.user.id);
+
+    const progress = await prisma.progress.findUnique({
+      where: {
+        userId_courseId: {
+          userId: req.user.id,
+          courseId: courseId
+        }
+      }
+    });
+
+    console.log('Found progress:', progress);
+
+    if (!progress) {
+      return res.json({ progress: null });
+    }
+
+    res.json({ progress });
+  } catch (error) {
+    console.error('Error in getProgress:', error);
+    next(error);
+  }
+}

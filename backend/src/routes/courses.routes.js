@@ -1,4 +1,3 @@
-// backend/src/routes/courses.routes.js - FIXED
 import express from 'express';
 import * as coursesController from '../controllers/courses.controller.js';
 import { authenticate, requireAdmin, optionalAuth } from '../middleware/auth.js';
@@ -15,6 +14,9 @@ router.get('/:id', optionalAuth, coursesController.getCourseById);
 router.post('/:id/purchase', authenticate, coursesController.purchaseCourse);
 router.post('/:id/enroll', authenticate, coursesController.enrollFreeCourse);
 router.get('/my/courses', authenticate, coursesController.getMyCourses);
+
+// Progress routes - ADD THESE
+router.get('/:id/progress', authenticate, coursesController.getProgress);  // ← ADD THIS
 router.put('/:id/progress', authenticate, coursesController.updateProgress);
 
 // Admin routes

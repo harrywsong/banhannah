@@ -1,12 +1,12 @@
-// frontend/src/pages/CourseDetail.jsx - FIXED for student access
+// frontend/src/pages/CourseDetail.jsx - UPDATED for English Learning
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../api/client';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import VideoPlayer from '../components/VideoPlayer';
-import { Star, Clock, BookOpen, Users, CheckCircle, PlayCircle, FileText, Lock } from 'lucide-react';
+import CourseContentViewer from '../components/CourseContentViewer';
+import { Star, Clock, BookOpen, Users, CheckCircle, PlayCircle, Lock } from 'lucide-react';
 
 export default function CourseDetail() {
   const { id } = useParams();
@@ -17,6 +17,7 @@ export default function CourseDetail() {
   const [enrolling, setEnrolling] = useState(false);
   const [currentLesson, setCurrentLesson] = useState(null);
   const [completedLessons, setCompletedLessons] = useState([]);
+  const [quizScores, setQuizScores] = useState({});
 
   useEffect(() => {
     fetchCourse();
@@ -43,11 +44,15 @@ export default function CourseDetail() {
         // Load saved progress
         try {
           const progressResponse = await apiClient.get(`/courses/${id}/progress`);
+          console.log('Progress response:', progressResponse.data);
           if (progressResponse.data.progress?.completedLessons) {
-            setCompletedLessons(progressResponse.data.progress.completedLessons);
+            const completed = progressResponse.data.progress.completedLessons;
+            console.log('Loaded completed lessons:', completed);
+            setCompletedLessons(Array.isArray(completed) ? completed : []);
           }
         } catch (err) {
-          console.log('No saved progress yet');
+          console.log('No saved progress yet or error loading:', err);
+          setCompletedLessons([]);
         }
       }
     } catch (error) {
@@ -75,7 +80,6 @@ export default function CourseDetail() {
         });
         alert('강의를 구매했습니다!');
       }
-      // Reload course data to get updated hasPurchased status
       await fetchCourse();
     } catch (error) {
       alert(error.response?.data?.error || '등록에 실패했습니다');
@@ -93,8 +97,24 @@ export default function CourseDetail() {
         await apiClient.put(`/courses/${id}/progress`, {
           completedLessons: newCompleted
         });
+        console.log('Progress saved:', newCompleted);
       } catch (error) {
         console.error('Failed to update progress:', error);
+        alert('진행 상황을 저장하지 못했습니다');
+      }
+    } else {
+      // Uncomplete the lesson
+      const newCompleted = completedLessons.filter(id => id !== lessonId);
+      setCompletedLessons(newCompleted);
+      
+      try {
+        await apiClient.put(`/courses/${id}/progress`, {
+          completedLessons: newCompleted
+        });
+        console.log('Progress updated:', newCompleted);
+      } catch (error) {
+        console.error('Failed to update progress:', error);
+        alert('진행 상황을 저장하지 못했습니다');
       }
     }
   };
@@ -108,64 +128,12 @@ export default function CourseDetail() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const renderLessonContent = (content) => {
-    if (!content || !Array.isArray(content)) {
-      return (
-        <div className="text-center py-8 text-gray-500">
-          <p>이 레슨에는 아직 콘텐츠가 없습니다</p>
-        </div>
-      );
-    }
-
-    return content.map((block, index) => {
-      switch (block.type) {
-        case 'text':
-          return (
-            <div key={index} className="prose max-w-none mb-6">
-              <p className="text-gray-700 whitespace-pre-wrap">{block.data}</p>
-            </div>
-          );
-        
-        case 'video':
-          return (
-            <div key={index} className="mb-6">
-              <VideoPlayer
-                videoId={block.data.videoId}
-                onError={(err) => console.error('Video error:', err)}
-              />
-              {block.data.title && (
-                <p className="text-sm text-gray-600 mt-2">{block.data.title}</p>
-              )}
-            </div>
-          );
-        
-        case 'image':
-          return (
-            <div key={index} className="mb-6">
-              <img
-                src={block.data.url}
-                alt={block.data.alt || 'Lesson image'}
-                className="w-full rounded-lg"
-              />
-              {block.data.caption && (
-                <p className="text-sm text-gray-600 mt-2 text-center">{block.data.caption}</p>
-              )}
-            </div>
-          );
-        
-        case 'code':
-          return (
-            <div key={index} className="mb-6">
-              <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
-                <code>{block.data}</code>
-              </pre>
-            </div>
-          );
-        
-        default:
-          return null;
-      }
-    });
+  const handleQuizAnswer = (quizType, isCorrect) => {
+    const key = `${currentLesson.id}-${quizType}`;
+    setQuizScores(prev => ({
+      ...prev,
+      [key]: isCorrect
+    }));
   };
 
   if (loading) {
@@ -218,7 +186,10 @@ export default function CourseDetail() {
                 </div>
                 
                 <div className="p-6">
-                  {renderLessonContent(currentLesson.content)}
+                  <CourseContentViewer 
+                    lesson={currentLesson}
+                    onQuizAnswer={handleQuizAnswer}
+                  />
                   
                   <div className="mt-8 pt-6 border-t flex justify-between items-center">
                     <button
