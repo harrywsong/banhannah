@@ -81,7 +81,9 @@ app.options('*', (req, res) => {
 
 // Test endpoint for CORS debugging (must be BEFORE main /api routes)
 app.get('/api/test-cors', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  // Set specific origin instead of wildcard when credentials are included
+  const origin = req.headers.origin || 'https://banhannah.vercel.app';
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.json({
     message: 'CORS test successful',

@@ -406,9 +406,18 @@ export async function viewPreview(req, res, next) {
     // Set comprehensive CORS headers for image serving
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
-    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow CORS
+    
+    // Set specific origin instead of wildcard when credentials might be included
+    const origin = req.headers.origin;
+    if (origin && (origin.includes('vercel.app') || origin.includes('banhannah'))) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', 'https://banhannah.vercel.app');
+    }
+    
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
     
