@@ -8,33 +8,45 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Pastel Blue as Primary (Lighter, softer shades)
         primary: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
-          DEFAULT: '#4338ca',
+          50: '#f0f9ff',
+          100: '#e0f2fe',
+          200: '#bae6fd',
+          300: '#7dd3fc',  // Light pastel blue
+          400: '#38bdf8',  // Medium pastel blue
+          500: '#7dd3fc',  // Main pastel blue (lighter)
+          600: '#38bdf8',  // Darker pastel blue (still light)
+          700: '#0ea5e9',  // Deeper blue
+          800: '#0284c7',
+          900: '#0369a1',
         },
+        // Pastel Yellow as Accent
+        accent: {
+          50: '#fefce8',
+          100: '#fef9c3',
+          200: '#fef08a',
+          300: '#fde047',  // Light pastel yellow
+          400: '#fde047',  // Main pastel yellow
+          500: '#facc15',  // Medium yellow
+          600: '#eab308',
+          700: '#ca8a04',
+          800: '#a16207',
+          900: '#854d0e',
+        },
+        // Soft Neutrals
         neutral: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617',
-        }
+          50: '#fafafa',
+          100: '#f5f5f5',
+          200: '#e5e5e5',
+          300: '#d4d4d4',
+          400: '#a3a3a3',
+          500: '#737373',
+          600: '#525252',
+          700: '#404040',
+          800: '#262626',
+          900: '#171717',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

@@ -194,8 +194,8 @@ export default function CourseDetail() {
                     <button
                       onClick={() => handleLessonComplete(currentLesson.id)}
                       className={`px-6 py-2 rounded-lg font-semibold flex items-center gap-2 ${completedLessons.includes(currentLesson.id)
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
                         }`}
                     >
                       <CheckCircle className="h-5 w-5" />
@@ -259,7 +259,7 @@ export default function CourseDetail() {
         // Course Preview (not enrolled)
         <>
           {/* Hero Section */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-16">
+          <div className="bg-gradient-to-br from-primary-400 to-primary-600 text-white py-16">
             <div className="max-w-7xl mx-auto px-4">
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div>

@@ -59,7 +59,7 @@ export default function MyCourses() {
                   alt={course.title}
                   className="w-full h-48 object-cover"
                   fallbackContent={
-                    <div className="w-full h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                    <div className="w-full h-48 bg-gradient-to-br from-primary-300 to-primary-500 flex items-center justify-center text-white font-semibold">
                       미리보기 없음
                     </div>
                   }

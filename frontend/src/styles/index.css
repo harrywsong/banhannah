@@ -96,6 +96,14 @@
   .badge-error {
     @apply badge bg-red-50 text-red-700 border border-red-100;
   }
+
+  .badge-accent {
+    @apply badge bg-accent-50 text-accent-700 border border-accent-100;
+  }
+
+  .btn-accent {
+    @apply btn bg-accent-400 text-accent-900 hover:bg-accent-500 focus-visible:ring-accent-500 shadow-sm hover:shadow;
+  }
 }
 
 @layer utilities {
