@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { 
   BookOpen, 
@@ -24,6 +24,21 @@ export default function Navbar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+    }
+
+    if (isProfileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isProfileOpen]);
 
   const handleLogout = () => {
     logout();
@@ -116,7 +131,7 @@ export default function Navbar() {
                   <div className="h-6 w-px bg-gray-300 mx-2"></div>
                   
                   {/* Profile Dropdown */}
-                  <div className="relative">
+                  <div className="relative" ref={dropdownRef}>
                     <button
                       onClick={() => setIsProfileOpen(!isProfileOpen)}
                       className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 px-3 py-2 transition-colors"
@@ -127,7 +142,7 @@ export default function Navbar() {
                     </button>
                     
                     {isProfileOpen && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border">
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border animate-in fade-in slide-in-from-top-2 duration-200">
                         <Link
                           to="/profile"
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
