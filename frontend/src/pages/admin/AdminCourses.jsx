@@ -1,9 +1,10 @@
-// frontend/src/pages/admin/AdminCourses.jsx - FIXED to show all courses
+// frontend/src/pages/admin/AdminCourses.jsx - WITH CONTENT EDITOR
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../api/client';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { Plus, Edit, Trash2, Star } from 'lucide-react';
+import CourseEditor from '../../components/CourseEditor';
+import { Plus, Edit, Trash2, Star, BookOpen } from 'lucide-react';
 
 export default function AdminCourses() {
   const [courses, setCourses] = useState([]);
@@ -11,6 +12,7 @@ export default function AdminCourses() {
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('basic'); // 'basic' or 'content'
   
   const [formData, setFormData] = useState({
     title: '',
@@ -22,7 +24,8 @@ export default function AdminCourses() {
     duration: '',
     accessDuration: '30',
     published: false,
-    featured: false
+    featured: false,
+    lessons: []
   });
   const [previewImage, setPreviewImage] = useState(null);
 
@@ -32,13 +35,10 @@ export default function AdminCourses() {
 
   const fetchCourses = async () => {
     try {
-      // FIXED: Use admin endpoint to get ALL courses (published and unpublished)
       const response = await apiClient.get('/admin/courses/all');
-      console.log('Fetched courses:', response.data);
       setCourses(response.data.courses || []);
     } catch (error) {
       console.error('Failed to fetch courses:', error);
-      // Fallback to public endpoint if admin endpoint not available
       try {
         const response = await apiClient.get('/courses');
         setCourses(response.data.courses || []);
@@ -65,6 +65,9 @@ export default function AdminCourses() {
       data.append('accessDuration', formData.accessDuration);
       data.append('published', formData.published);
       data.append('featured', formData.featured);
+      
+      // Add lessons as JSON
+      data.append('lessons', JSON.stringify(formData.lessons));
       
       if (formData.type === 'paid') {
         data.append('price', formData.price);
@@ -113,9 +116,11 @@ export default function AdminCourses() {
       duration: course.duration || '',
       accessDuration: course.accessDuration.toString(),
       published: course.published,
-      featured: course.featured
+      featured: course.featured,
+      lessons: course.lessons || []
     });
     setPreviewImage(null);
+    setActiveTab('basic');
     setShowModal(true);
   };
 
@@ -156,16 +161,11 @@ export default function AdminCourses() {
       duration: '',
       accessDuration: '30',
       published: false,
-      featured: false
+      featured: false,
+      lessons: []
     });
     setPreviewImage(null);
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setPreviewImage(file);
-    }
+    setActiveTab('basic');
   };
 
   return (
@@ -197,6 +197,7 @@ export default function AdminCourses() {
           </div>
         ) : courses.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
+            <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 mb-4">등록된 강의가 없습니다</p>
             <button
               onClick={() => {
@@ -214,27 +215,13 @@ export default function AdminCourses() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    강의명
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    타입
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    가격
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    레벨
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    상태
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    수강생
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    작업
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">강의명</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">타입</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">가격</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">레슨</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">수강생</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">작업</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -248,40 +235,32 @@ export default function AdminCourses() {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs rounded ${
-                        course.type === 'free' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-blue-100 text-blue-800'
+                        course.type === 'free' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
                       }`}>
                         {course.type === 'free' ? '무료' : '유료'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       {course.type === 'paid' ? (
-                        <span className="font-semibold">
-                          ₩{(course.discountPrice || course.price)?.toLocaleString()}
-                        </span>
+                        <span className="font-semibold">₩{(course.discountPrice || course.price)?.toLocaleString()}</span>
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      {course.level === 1 ? '초급' : course.level === 2 ? '중급' : '고급'}
+                      <span className="text-sm">{course.lessons?.length || 0}개</span>
                     </td>
                     <td className="px-6 py-4">
                       <button
                         onClick={() => togglePublished(course)}
                         className={`px-2 py-1 text-xs rounded ${
-                          course.published 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
+                          course.published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                         }`}
                       >
                         {course.published ? '게시됨' : '비공개'}
                       </button>
                     </td>
-                    <td className="px-6 py-4">
-                      {course.enrollments || 0}명
-                    </td>
+                    <td className="px-6 py-4">{course.enrollments || 0}명</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <button
@@ -311,152 +290,182 @@ export default function AdminCourses() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-lg max-w-2xl w-full my-8">
-            <div className="p-6 border-b">
+          <div className="bg-white rounded-lg max-w-4xl w-full my-8 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b sticky top-0 bg-white z-10">
               <h2 className="text-2xl font-bold">
                 {editingCourse ? '강의 수정' : '새 강의 만들기'}
               </h2>
+              <div className="flex gap-4 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('basic')}
+                  className={`pb-2 px-4 font-medium border-b-2 ${
+                    activeTab === 'basic' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
+                  }`}
+                >
+                  기본 정보
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('content')}
+                  className={`pb-2 px-4 font-medium border-b-2 ${
+                    activeTab === 'content' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
+                  }`}
+                >
+                  강의 콘텐츠
+                </button>
+              </div>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  강의명 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  설명 <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  rows="4"
-                  required
-                />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">타입</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="free">무료</option>
-                    <option value="paid">유료</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">레벨</label>
-                  <select
-                    value={formData.level}
-                    onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="1">초급</option>
-                    <option value="2">중급</option>
-                    <option value="3">고급</option>
-                  </select>
-                </div>
-              </div>
-
-              {formData.type === 'paid' && (
-                <div className="grid md:grid-cols-2 gap-4">
+            
+            <form onSubmit={handleSubmit} className="p-6">
+              {activeTab === 'basic' ? (
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      가격 <span className="text-red-500">*</span>
+                      강의명 <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      required={formData.type === 'paid'}
-                      min="0"
+                      required
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium mb-2">할인가 (선택)</label>
-                    <input
-                      type="number"
-                      value={formData.discountPrice}
-                      onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
+                    <label className="block text-sm font-medium mb-2">
+                      설명 <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                      min="0"
+                      rows="4"
+                      required
                     />
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">타입</label>
+                      <select
+                        value={formData.type}
+                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="free">무료</option>
+                        <option value="paid">유료</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">레벨</label>
+                      <select
+                        value={formData.level}
+                        onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="1">초급</option>
+                        <option value="2">중급</option>
+                        <option value="3">고급</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {formData.type === 'paid' && (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          가격 <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.price}
+                          onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          required={formData.type === 'paid'}
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">할인가 (선택)</label>
+                        <input
+                          type="number"
+                          value={formData.discountPrice}
+                          onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
+                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          min="0"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">강의 기간</label>
+                      <input
+                        type="text"
+                        value={formData.duration}
+                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="예: 4주"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">수강 기한 (일)</label>
+                      <input
+                        type="number"
+                        value={formData.accessDuration}
+                        onChange={(e) => setFormData({ ...formData, accessDuration: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        min="1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">미리보기 이미지</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setPreviewImage(e.target.files[0])}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    {previewImage && (
+                      <p className="text-sm text-gray-600 mt-1">선택됨: {previewImage.name}</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.published}
+                        onChange={(e) => setFormData({ ...formData, published: e.target.checked })}
+                        className="rounded"
+                      />
+                      <span className="text-sm">게시</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.featured}
+                        onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+                        className="rounded"
+                      />
+                      <span className="text-sm">추천 강의</span>
+                    </label>
                   </div>
                 </div>
+              ) : (
+                <CourseEditor
+                  lessons={formData.lessons}
+                  onChange={(lessons) => setFormData({ ...formData, lessons })}
+                />
               )}
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">강의 기간</label>
-                  <input
-                    type="text"
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="예: 4주"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">수강 기한 (일)</label>
-                  <input
-                    type="number"
-                    value={formData.accessDuration}
-                    onChange={(e) => setFormData({ ...formData, accessDuration: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    min="1"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">미리보기 이미지 (선택)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                {previewImage && (
-                  <p className="text-sm text-gray-600 mt-1">선택됨: {previewImage.name}</p>
-                )}
-              </div>
-
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.published}
-                    onChange={(e) => setFormData({ ...formData, published: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-sm">게시</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.featured}
-                    onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
-                    className="rounded"
-                  />
-                  <span className="text-sm">추천 강의</span>
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-4 pt-4">
+              <div className="flex justify-end gap-4 pt-6 mt-6 border-t">
                 <button
                   type="button"
                   onClick={() => {

@@ -1,4 +1,4 @@
-// frontend/src/pages/CourseDetail.jsx - Enhanced with Video Player
+// frontend/src/pages/CourseDetail.jsx - FIXED for student access
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -6,7 +6,7 @@ import { apiClient } from '../api/client';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import VideoPlayer from '../components/VideoPlayer';
-import { Star, Clock, BookOpen, Users, CheckCircle, PlayCircle, FileText } from 'lucide-react';
+import { Star, Clock, BookOpen, Users, CheckCircle, PlayCircle, FileText, Lock } from 'lucide-react';
 
 export default function CourseDetail() {
   const { id } = useParams();
@@ -20,19 +20,39 @@ export default function CourseDetail() {
 
   useEffect(() => {
     fetchCourse();
-  }, [id]);
+  }, [id, user]);
 
   const fetchCourse = async () => {
     try {
+      setLoading(true);
       const response = await apiClient.get(`/courses/${id}`);
-      setCourse(response.data.course);
+      const courseData = response.data.course;
+      setCourse(courseData);
       
-      // Set first lesson as current if user has purchased
-      if (response.data.course.hasPurchased && response.data.course.lessons?.length > 0) {
-        setCurrentLesson(response.data.course.lessons[0]);
+      console.log('Course data:', courseData);
+      console.log('Has purchased:', courseData.hasPurchased);
+      console.log('Lessons:', courseData.lessons);
+      
+      // Load progress if user has purchased
+      if (courseData.hasPurchased) {
+        // Set first lesson as current
+        if (courseData.lessons?.length > 0) {
+          setCurrentLesson(courseData.lessons[0]);
+        }
+        
+        // Load saved progress
+        try {
+          const progressResponse = await apiClient.get(`/courses/${id}/progress`);
+          if (progressResponse.data.progress?.completedLessons) {
+            setCompletedLessons(progressResponse.data.progress.completedLessons);
+          }
+        } catch (err) {
+          console.log('No saved progress yet');
+        }
       }
     } catch (error) {
       console.error('Failed to fetch course:', error);
+      alert('강의를 불러올 수 없습니다');
     } finally {
       setLoading(false);
     }
@@ -55,7 +75,8 @@ export default function CourseDetail() {
         });
         alert('강의를 구매했습니다!');
       }
-      fetchCourse();
+      // Reload course data to get updated hasPurchased status
+      await fetchCourse();
     } catch (error) {
       alert(error.response?.data?.error || '등록에 실패했습니다');
     } finally {
@@ -84,10 +105,17 @@ export default function CourseDetail() {
       return;
     }
     setCurrentLesson(lesson);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const renderLessonContent = (content) => {
-    if (!content || !Array.isArray(content)) return null;
+    if (!content || !Array.isArray(content)) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          <p>이 레슨에는 아직 콘텐츠가 없습니다</p>
+        </div>
+      );
+    }
 
     return content.map((block, index) => {
       switch (block.type) {
@@ -151,7 +179,15 @@ export default function CourseDetail() {
   if (!course) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p>강의를 찾을 수 없습니다</p>
+        <div className="text-center">
+          <p className="text-xl text-gray-600 mb-4">강의를 찾을 수 없습니다</p>
+          <button
+            onClick={() => navigate('/courses')}
+            className="text-blue-600 hover:underline"
+          >
+            강의 목록으로 돌아가기
+          </button>
+        </div>
       </div>
     );
   }
@@ -163,6 +199,15 @@ export default function CourseDetail() {
       {/* Course Player View (when enrolled) */}
       {course.hasPurchased && currentLesson ? (
         <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="mb-4">
+            <button
+              onClick={() => setCurrentLesson(null)}
+              className="text-blue-600 hover:underline flex items-center gap-2"
+            >
+              ← 강의 개요로 돌아가기
+            </button>
+          </div>
+
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2">
@@ -265,11 +310,11 @@ export default function CourseDetail() {
                   <div className="flex items-center gap-6 text-sm">
                     <div className="flex items-center gap-2">
                       <Star className="h-5 w-5 fill-current" />
-                      <span>{course.averageRating.toFixed(1)} ({course.reviews.length}개 리뷰)</span>
+                      <span>{course.averageRating?.toFixed(1) || '0.0'} ({course.reviews?.length || 0}개 리뷰)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-5 w-5" />
-                      <span>{course.enrollments}명 수강</span>
+                      <span>{course.enrollments || 0}명 수강</span>
                     </div>
                   </div>
                 </div>
@@ -295,7 +340,7 @@ export default function CourseDetail() {
                         </>
                       ) : (
                         <span className="text-3xl font-bold text-blue-600">
-                          ₩{course.price.toLocaleString()}
+                          ₩{course.price?.toLocaleString() || '0'}
                         </span>
                       )}
                     </div>
@@ -331,7 +376,7 @@ export default function CourseDetail() {
                   <p className="text-gray-700 whitespace-pre-wrap">{course.description}</p>
                 </div>
 
-                {course.lessons && (
+                {course.lessons && course.lessons.length > 0 && (
                   <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-2xl font-bold mb-4">커리큘럼</h2>
                     <div className="space-y-2">
@@ -341,6 +386,7 @@ export default function CourseDetail() {
                           className="border rounded p-4 hover:bg-gray-50 transition"
                         >
                           <div className="flex items-center gap-2">
+                            {!course.hasPurchased && <Lock className="h-5 w-5 text-gray-400" />}
                             <BookOpen className="h-5 w-5 text-blue-600" />
                             <span className="font-semibold">{lesson.title}</span>
                           </div>
@@ -380,12 +426,12 @@ export default function CourseDetail() {
                     )}
                     <div className="flex justify-between">
                       <span className="text-gray-600">수강생</span>
-                      <span className="font-semibold">{course.enrollments}명</span>
+                      <span className="font-semibold">{course.enrollments || 0}명</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">평점</span>
                       <span className="font-semibold">
-                        ⭐ {course.averageRating.toFixed(1)}
+                        ⭐ {course.averageRating?.toFixed(1) || '0.0'}
                       </span>
                     </div>
                   </div>

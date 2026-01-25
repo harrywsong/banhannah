@@ -1,9 +1,10 @@
-// src/pages/Files.jsx - FIXED (Auth required via App.jsx)
+// frontend/src/pages/Files.jsx - WITH IN-BROWSER VIEWER
 import { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Download, FileText, Search, Star } from 'lucide-react';
+import FileViewer from '../components/FileViewer';
+import { Download, FileText, Search, Star, Eye } from 'lucide-react';
 
 export default function Files() {
   const [files, setFiles] = useState([]);
@@ -11,6 +12,7 @@ export default function Files() {
   const [search, setSearch] = useState('');
   const [formatFilter, setFormatFilter] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
+  const [viewingFile, setViewingFile] = useState(null);
 
   useEffect(() => {
     fetchFiles();
@@ -37,6 +39,22 @@ export default function Files() {
     fetchFiles();
   };
 
+  const handleView = (file) => {
+    setViewingFile(file);
+  };
+
+  const handleDownload = async (file) => {
+    try {
+      // Track download
+      await apiClient.get(`/files/download/${file.filename}`);
+      
+      // Trigger download
+      window.location.href = file.downloadUrl;
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -54,8 +72,8 @@ export default function Files() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="자료 검색..."
                   className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="자료 검색..."
                 />
               </div>
             </div>
@@ -70,6 +88,7 @@ export default function Files() {
               <option value="ZIP">ZIP</option>
               <option value="DOCX">DOCX</option>
               <option value="PPTX">PPTX</option>
+              <option value="XLSX">XLSX</option>
             </select>
 
             <select
@@ -136,27 +155,38 @@ export default function Files() {
                   <p className="text-sm text-gray-600 line-clamp-2 mb-4">
                     {file.description}
                   </p>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 text-yellow-500 fill-current" />
                       <span className="text-sm font-semibold">
-                        {file.averageRating.toFixed(1)}
+                        {file.averageRating?.toFixed(1) || '0.0'}
                       </span>
                       <span className="text-sm text-gray-500">
-                        ({file.reviewCount})
+                        ({file.reviewCount || 0})
                       </span>
                     </div>
-                    <a
-                      href={file.downloadUrl}
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
-                      download
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleView(file)}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      <Eye className="h-4 w-4" />
+                      미리보기
+                    </button>
+                    <button
+                      onClick={() => handleDownload(file)}
+                      className="flex items-center justify-center gap-2 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+                      title="다운로드"
                     >
                       <Download className="h-4 w-4" />
-                      다운로드
-                    </a>
+                    </button>
                   </div>
-                  <div className="mt-3 pt-3 border-t text-sm text-gray-500">
-                    {file.downloads}회 다운로드
+
+                  <div className="mt-3 pt-3 border-t text-sm text-gray-500 text-center">
+                    {file.downloads || 0}회 다운로드
                   </div>
                 </div>
               </div>
@@ -164,6 +194,14 @@ export default function Files() {
           </div>
         )}
       </div>
+
+      {/* File Viewer Modal */}
+      {viewingFile && (
+        <FileViewer
+          file={viewingFile}
+          onClose={() => setViewingFile(null)}
+        />
+      )}
 
       <Footer />
     </div>
