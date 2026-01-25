@@ -131,8 +131,8 @@ model Review {
 
   // Relations
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course          Course?  @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  file            File?    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  course          Course?  @relation(fields: [itemId], references: [id], onDelete: Cascade, map: "Review_course_fkey")
+  file            File?    @relation(fields: [itemId], references: [id], onDelete: Cascade, map: "Review_file_fkey")
 
   @@index([itemType, itemId])
   @@index([userId])
