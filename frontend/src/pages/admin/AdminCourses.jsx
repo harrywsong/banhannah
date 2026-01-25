@@ -1,14 +1,17 @@
+// frontend/src/pages/admin/AdminCourses.jsx - FIXED to show all courses
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../api/client';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { Plus, Edit, Trash2, Eye, EyeOff, Star } from 'lucide-react';
+import { Plus, Edit, Trash2, Star } from 'lucide-react';
 
 export default function AdminCourses() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -21,6 +24,7 @@ export default function AdminCourses() {
     published: false,
     featured: false
   });
+  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
     fetchCourses();
@@ -28,10 +32,19 @@ export default function AdminCourses() {
 
   const fetchCourses = async () => {
     try {
-      const response = await apiClient.get('/courses');
-      setCourses(response.data.courses);
+      // FIXED: Use admin endpoint to get ALL courses (published and unpublished)
+      const response = await apiClient.get('/admin/courses/all');
+      console.log('Fetched courses:', response.data);
+      setCourses(response.data.courses || []);
     } catch (error) {
       console.error('Failed to fetch courses:', error);
+      // Fallback to public endpoint if admin endpoint not available
+      try {
+        const response = await apiClient.get('/courses');
+        setCourses(response.data.courses || []);
+      } catch (fallbackError) {
+        alert('강의 목록을 불러오는데 실패했습니다');
+      }
     } finally {
       setLoading(false);
     }
@@ -39,22 +52,41 @@ export default function AdminCourses() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
 
     try {
       const data = new FormData();
-      Object.keys(formData).forEach(key => {
-        if (formData[key] !== null && formData[key] !== '') {
-          data.append(key, formData[key]);
+      
+      data.append('title', formData.title);
+      data.append('description', formData.description);
+      data.append('type', formData.type);
+      data.append('level', formData.level);
+      data.append('duration', formData.duration);
+      data.append('accessDuration', formData.accessDuration);
+      data.append('published', formData.published);
+      data.append('featured', formData.featured);
+      
+      if (formData.type === 'paid') {
+        data.append('price', formData.price);
+        if (formData.discountPrice) {
+          data.append('discountPrice', formData.discountPrice);
         }
-      });
+      }
+      
+      if (previewImage) {
+        data.append('previewImage', previewImage);
+      }
 
       if (editingCourse) {
-        await apiClient.put(`/courses/${editingCourse.id}`, data);
-        alert('강의가 수정되었습니다');
+        await apiClient.put(`/courses/${editingCourse.id}`, data, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        alert('강의가 수정되었습니다!');
       } else {
-        await apiClient.post('/courses', data);
-        alert('강의가 생성되었습니다');
+        await apiClient.post('/courses', data, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        alert('강의가 생성되었습니다!');
       }
 
       setShowModal(false);
@@ -62,9 +94,10 @@ export default function AdminCourses() {
       resetForm();
       fetchCourses();
     } catch (error) {
-      alert(error.response?.data?.error || '작업에 실패했습니다');
+      console.error('Submit error:', error);
+      alert(error.response?.data?.error || '저장에 실패했습니다');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -82,6 +115,7 @@ export default function AdminCourses() {
       published: course.published,
       featured: course.featured
     });
+    setPreviewImage(null);
     setShowModal(true);
   };
 
@@ -90,7 +124,7 @@ export default function AdminCourses() {
 
     try {
       await apiClient.delete(`/courses/${id}`);
-      alert('강의가 삭제되었습니다');
+      alert('강의가 삭제되었습니다!');
       fetchCourses();
     } catch (error) {
       alert('삭제에 실패했습니다');
@@ -99,8 +133,11 @@ export default function AdminCourses() {
 
   const togglePublished = async (course) => {
     try {
-      await apiClient.put(`/courses/${course.id}`, {
-        published: !course.published
+      const data = new FormData();
+      data.append('published', !course.published);
+      
+      await apiClient.put(`/courses/${course.id}`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       fetchCourses();
     } catch (error) {
@@ -121,6 +158,14 @@ export default function AdminCourses() {
       published: false,
       featured: false
     });
+    setPreviewImage(null);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPreviewImage(file);
+    }
   };
 
   return (
@@ -129,7 +174,10 @@ export default function AdminCourses() {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">강의 관리</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">강의 관리</h1>
+            <p className="text-gray-600 mt-1">총 {courses.length}개의 강의</p>
+          </div>
           <button
             onClick={() => {
               setEditingCourse(null);
@@ -146,6 +194,20 @@ export default function AdminCourses() {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          </div>
+        ) : courses.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <p className="text-gray-500 mb-4">등록된 강의가 없습니다</p>
+            <button
+              onClick={() => {
+                setEditingCourse(null);
+                resetForm();
+                setShowModal(true);
+              }}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            >
+              첫 강의 만들기
+            </button>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -218,19 +280,21 @@ export default function AdminCourses() {
                       </button>
                     </td>
                     <td className="px-6 py-4">
-                      {course.enrollments}명
+                      {course.enrollments || 0}명
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => handleEdit(course)}
                           className="text-blue-600 hover:text-blue-800"
+                          title="수정"
                         >
                           <Edit className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => handleDelete(course.id)}
                           className="text-red-600 hover:text-red-800"
+                          title="삭제"
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>
@@ -246,8 +310,8 @@ export default function AdminCourses() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-2xl w-full my-8">
             <div className="p-6 border-b">
               <h2 className="text-2xl font-bold">
                 {editingCourse ? '강의 수정' : '새 강의 만들기'}
@@ -255,22 +319,26 @@ export default function AdminCourses() {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">강의명</label>
+                <label className="block text-sm font-medium mb-2">
+                  강의명 <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">설명</label>
+                <label className="block text-sm font-medium mb-2">
+                  설명 <span className="text-red-500">*</span>
+                </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   rows="4"
                   required
                 />
@@ -282,7 +350,7 @@ export default function AdminCourses() {
                   <select
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="free">무료</option>
                     <option value="paid">유료</option>
@@ -294,7 +362,7 @@ export default function AdminCourses() {
                   <select
                     value={formData.level}
                     onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="1">초급</option>
                     <option value="2">중급</option>
@@ -306,13 +374,16 @@ export default function AdminCourses() {
               {formData.type === 'paid' && (
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">가격</label>
+                    <label className="block text-sm font-medium mb-2">
+                      가격 <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="number"
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg"
-                      required
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required={formData.type === 'paid'}
+                      min="0"
                     />
                   </div>
                   <div>
@@ -321,7 +392,8 @@ export default function AdminCourses() {
                       type="number"
                       value={formData.discountPrice}
                       onChange={(e) => setFormData({ ...formData, discountPrice: e.target.value })}
-                      className="w-full px-4 py-2 border rounded-lg"
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      min="0"
                     />
                   </div>
                 </div>
@@ -334,7 +406,7 @@ export default function AdminCourses() {
                     type="text"
                     value={formData.duration}
                     onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                     placeholder="예: 4주"
                   />
                 </div>
@@ -344,9 +416,23 @@ export default function AdminCourses() {
                     type="number"
                     value={formData.accessDuration}
                     onChange={(e) => setFormData({ ...formData, accessDuration: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    min="1"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">미리보기 이미지 (선택)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+                {previewImage && (
+                  <p className="text-sm text-gray-600 mt-1">선택됨: {previewImage.name}</p>
+                )}
               </div>
 
               <div className="flex gap-4">
@@ -379,15 +465,16 @@ export default function AdminCourses() {
                     resetForm();
                   }}
                   className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+                  disabled={submitting}
                 >
                   취소
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={submitting}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {loading ? '처리 중...' : editingCourse ? '수정' : '생성'}
+                  {submitting ? '저장 중...' : editingCourse ? '수정' : '생성'}
                 </button>
               </div>
             </form>

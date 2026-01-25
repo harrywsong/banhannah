@@ -332,15 +332,28 @@ export async function viewFile(req, res, next) {
 
 /**
  * View preview image (public - for course/file previews)
+ * FIXED: Added proper CORS headers and error handling
  */
 export async function viewPreview(req, res, next) {
   try {
     const { filename } = req.params;
     
+    // Security: validate filename (no path traversal)
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    
     const filePath = getFilePath(filename, 'previews');
     
+    console.log('Attempting to serve preview:', {
+      filename,
+      filePath,
+      exists: fs.existsSync(filePath)
+    });
+    
     if (!fs.existsSync(filePath)) {
-      return res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Preview not found' });
+      console.error('Preview file not found:', filePath);
+      return res.status(404).json({ error: 'Preview not found' });
     }
     
     const ext = path.extname(filename).toLowerCase();
@@ -349,14 +362,28 @@ export async function viewPreview(req, res, next) {
       '.jpeg': 'image/jpeg',
       '.png': 'image/png',
       '.gif': 'image/gif',
-      '.webp': 'image/webp'
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml'
     };
     
     const contentType = mimeTypes[ext] || 'image/jpeg';
     
+    // Set proper headers for image serving
     res.setHeader('Content-Type', contentType);
-    res.sendFile(filePath);
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow CORS
+    
+    // Send file
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error('Error sending file:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Failed to send file' });
+        }
+      }
+    });
   } catch (error) {
+    console.error('Preview error:', error);
     next(error);
   }
 }

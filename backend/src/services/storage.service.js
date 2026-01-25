@@ -1,4 +1,4 @@
-// src/services/storage.service.js - File storage handling
+// backend/src/services/storage.service.js - FIXED buildFileUrl function
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -17,7 +17,7 @@ const PREVIEWS_DIR = path.join(STORAGE_DIR, 'previews');
 const PROFILE_DIR = path.join(STORAGE_DIR, 'profile-pictures');
 const VIDEOS_DIR = path.join(STORAGE_DIR, 'videos');
 
-// Create directories
+// Create directories if they don't exist
 [STORAGE_DIR, UPLOADS_DIR, PREVIEWS_DIR, PROFILE_DIR, VIDEOS_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -83,7 +83,6 @@ export const uploadFile = multer({
   storage: fileStorage,
   limits: { fileSize: ENV.MAX_FILE_SIZE },
   fileFilter: (req, file, cb) => {
-    // Allow all file types for general uploads
     cb(null, true);
   }
 });
@@ -166,16 +165,20 @@ export function deleteFile(filename, type = 'uploads') {
 }
 
 /**
- * Build file URL
+ * Build file URL - FIXED to return relative paths that work with proxy
  */
 export function buildFileUrl(filename, type = 'uploads') {
+  if (!filename) return null;
+  
   const routes = {
-    uploads: 'files/view',
-    previews: 'files/preview',
-    profile: 'files/profile',
-    videos: 'videos/view'
+    uploads: '/api/files/view',
+    previews: '/api/files/preview',
+    profile: '/api/files/profile',
+    videos: '/api/videos/view'
   };
   
   const route = routes[type] || routes.uploads;
-  return `${ENV.SERVER_URL}/api/${route}/${encodeURIComponent(filename)}`;
+  
+  // Return relative URL that works with Vite proxy
+  return `${route}/${encodeURIComponent(filename)}`;
 }

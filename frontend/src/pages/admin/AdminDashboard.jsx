@@ -1,3 +1,4 @@
+// frontend/src/pages/admin/AdminDashboard.jsx - Enhanced with real stats
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../../api/client';
@@ -10,18 +11,13 @@ import {
   DollarSign,
   TrendingUp,
   Eye,
-  Download
+  Download,
+  ShoppingCart,
+  Award
 } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({
-    totalCourses: 0,
-    totalFiles: 0,
-    totalUsers: 0,
-    totalRevenue: 0,
-    recentCourses: [],
-    recentFiles: []
-  });
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,22 +26,8 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const [coursesRes, filesRes] = await Promise.all([
-        apiClient.get('/courses'),
-        apiClient.get('/files')
-      ]);
-
-      const courses = coursesRes.data.courses;
-      const files = filesRes.data.files;
-
-      setStats({
-        totalCourses: courses.length,
-        totalFiles: files.length,
-        totalUsers: 0, // Would need a separate endpoint
-        totalRevenue: 0, // Would need a separate endpoint
-        recentCourses: courses.slice(0, 5),
-        recentFiles: files.slice(0, 5)
-      });
+      const response = await apiClient.get('/admin/stats/dashboard');
+      setStats(response.data);
     } catch (error) {
       console.error('Failed to fetch stats:', error);
     } finally {
@@ -61,13 +43,24 @@ export default function AdminDashboard() {
     );
   }
 
+  if (!stats) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-600">통계를 불러올 수 없습니다</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">관리자 대시보드</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">관리자 대시보드</h1>
+            <p className="text-gray-600 mt-1">플랫폼 전체 현황을 한눈에 확인하세요</p>
+          </div>
           <div className="flex gap-4">
             <Link
               to="/admin/courses"
@@ -84,13 +77,29 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Stats Grid */}
+        {/* Main Stats Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-gray-500 text-sm">총 사용자</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.overview.totalUsers}</p>
+                <p className="text-sm text-green-600 mt-2">
+                  +{stats.growth.newUsersThisWeek} 이번 주
+                </p>
+              </div>
+              <Users className="h-12 w-12 text-purple-600" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-gray-500 text-sm">총 강의</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalCourses}</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.overview.totalCourses}</p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {stats.overview.publishedCourses} 게시됨
+                </p>
               </div>
               <BookOpen className="h-12 w-12 text-blue-600" />
             </div>
@@ -100,7 +109,10 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">총 자료</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalFiles}</p>
+                <p className="text-3xl font-bold text-gray-900">{stats.overview.totalFiles}</p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {stats.overview.publishedFiles} 게시됨
+                </p>
               </div>
               <FileText className="h-12 w-12 text-green-600" />
             </div>
@@ -109,19 +121,12 @@ export default function AdminDashboard() {
           <div className="bg-white p-6 rounded-lg shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">총 사용자</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalUsers}</p>
-              </div>
-              <Users className="h-12 w-12 text-purple-600" />
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow">
-            <div className="flex items-center justify-between">
-              <div>
                 <p className="text-gray-500 text-sm">총 수익</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  ₩{stats.totalRevenue.toLocaleString()}
+                  ₩{stats.overview.totalRevenue.toLocaleString()}
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {stats.overview.totalPurchases} 판매
                 </p>
               </div>
               <DollarSign className="h-12 w-12 text-yellow-600" />
@@ -129,41 +134,87 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Content */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Recent Courses */}
+        {/* Growth Stats */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">주간 성장률</h2>
+              <TrendingUp className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">신규 사용자</span>
+                <span className="text-2xl font-bold text-green-600">
+                  +{stats.growth.newUsersThisWeek}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">신규 등록</span>
+                <span className="text-2xl font-bold text-blue-600">
+                  +{stats.growth.enrollmentsThisWeek}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">플랫폼 현황</h2>
+              <Award className="h-6 w-6 text-purple-600" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-blue-50 rounded">
+                <p className="text-sm text-gray-600">게시된 강의</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {stats.overview.publishedCourses}
+                </p>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded">
+                <p className="text-sm text-gray-600">게시된 자료</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {stats.overview.publishedFiles}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Top Content */}
+        <div className="grid lg:grid-cols-2 gap-6 mb-8">
+          {/* Top Courses */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b">
-              <h2 className="text-xl font-bold">최근 강의</h2>
+              <h2 className="text-xl font-bold">인기 강의 TOP 5</h2>
             </div>
             <div className="p-6">
-              {stats.recentCourses.length === 0 ? (
+              {stats.topContent.courses.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">강의가 없습니다</p>
               ) : (
                 <div className="space-y-4">
-                  {stats.recentCourses.map((course) => (
-                    <div key={course.id} className="border-l-4 border-blue-600 pl-4 py-2">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="font-semibold">{course.title}</h3>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Eye className="h-4 w-4" />
-                              {course.views} 조회
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Users className="h-4 w-4" />
-                              {course.enrollments} 수강
-                            </span>
-                          </div>
+                  {stats.topContent.courses.map((course, index) => (
+                    <div key={course.id} className="flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50">
+                      <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-bold">{index + 1}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold truncate">{course.title}</h3>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            {course.enrollments}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Eye className="h-4 w-4" />
+                            {course.views}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-xs ${
+                            course.type === 'free' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {course.type === 'free' ? '무료' : '유료'}
+                          </span>
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          course.published 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {course.published ? '게시됨' : '비공개'}
-                        </span>
                       </div>
                     </div>
                   ))}
@@ -172,38 +223,32 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Recent Files */}
+          {/* Top Files */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b">
-              <h2 className="text-xl font-bold">최근 자료</h2>
+              <h2 className="text-xl font-bold">인기 자료 TOP 5</h2>
             </div>
             <div className="p-6">
-              {stats.recentFiles.length === 0 ? (
+              {stats.topContent.files.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">자료가 없습니다</p>
               ) : (
                 <div className="space-y-4">
-                  {stats.recentFiles.map((file) => (
-                    <div key={file.id} className="border-l-4 border-green-600 pl-4 py-2">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="font-semibold">{file.title}</h3>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Download className="h-4 w-4" />
-                              {file.downloads} 다운로드
-                            </span>
-                            <span className="px-2 py-1 bg-gray-100 rounded text-xs">
-                              {file.format}
-                            </span>
-                          </div>
+                  {stats.topContent.files.map((file, index) => (
+                    <div key={file.id} className="flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50">
+                      <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 font-bold">{index + 1}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold truncate">{file.title}</h3>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Download className="h-4 w-4" />
+                            {file.downloads}
+                          </span>
+                          <span className="px-2 py-0.5 bg-gray-100 rounded text-xs">
+                            {file.format}
+                          </span>
                         </div>
-                        <span className={`px-2 py-1 text-xs rounded ${
-                          file.published 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {file.published ? '게시됨' : '비공개'}
-                        </span>
                       </div>
                     </div>
                   ))}
@@ -213,27 +258,87 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Recent Purchases */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-6 border-b">
+            <h2 className="text-xl font-bold">최근 구매 내역</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    사용자
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    강의
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    금액
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    결제 수단
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    구매일
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {stats.recentActivity.purchases.map((purchase) => (
+                  <tr key={purchase.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="font-medium">{purchase.user.name}</div>
+                        <div className="text-sm text-gray-500">{purchase.user.email}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-medium">{purchase.course.title}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="font-semibold">
+                        ₩{purchase.amount.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm">{purchase.paymentMethod || '-'}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(purchase.purchasedAt).toLocaleDateString('ko-KR')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Quick Actions */}
         <div className="mt-8 bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-bold mb-4">빠른 작업</h2>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-4 gap-4">
             <Link
               to="/admin/courses"
               className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-600 hover:bg-blue-50 transition"
             >
               <BookOpen className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-              <p className="font-semibold">새 강의 만들기</p>
+              <p className="font-semibold">강의 관리</p>
             </Link>
             <Link
               to="/admin/files"
               className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-600 hover:bg-green-50 transition"
             >
               <FileText className="h-8 w-8 mx-auto mb-2 text-green-600" />
-              <p className="font-semibold">자료 업로드</p>
+              <p className="font-semibold">자료 관리</p>
             </Link>
             <button className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-600 hover:bg-purple-50 transition">
-              <TrendingUp className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-              <p className="font-semibold">통계 보기</p>
+              <Users className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+              <p className="font-semibold">사용자 관리</p>
+            </button>
+            <button className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-yellow-600 hover:bg-yellow-50 transition">
+              <ShoppingCart className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
+              <p className="font-semibold">구매 내역</p>
             </button>
           </div>
         </div>

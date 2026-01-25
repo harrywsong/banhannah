@@ -1,14 +1,18 @@
+// frontend/src/pages/admin/AdminFiles.jsx - FIXED VERSION
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../api/client';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { Plus, Edit, Trash2, Upload, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Download, Star } from 'lucide-react';
 
 export default function AdminFiles() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingFile, setEditingFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Form state
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -26,10 +30,19 @@ export default function AdminFiles() {
 
   const fetchFiles = async () => {
     try {
-      const response = await apiClient.get('/files');
-      setFiles(response.data.files);
+      // FIXED: Use admin endpoint to get ALL files (published and unpublished)
+      const response = await apiClient.get('/admin/files/all');
+      console.log('Fetched files:', response.data);
+      setFiles(response.data.files || []);
     } catch (error) {
       console.error('Failed to fetch files:', error);
+      // Fallback to public endpoint if admin endpoint not available
+      try {
+        const response = await apiClient.get('/files');
+        setFiles(response.data.files || []);
+      } catch (fallbackError) {
+        alert('파일 목록을 불러오는데 실패했습니다');
+      }
     } finally {
       setLoading(false);
     }
@@ -37,16 +50,27 @@ export default function AdminFiles() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    
+    if (!editingFile && !selectedFile) {
+      alert('파일을 선택해주세요');
+      return;
+    }
+
+    setSubmitting(true);
 
     try {
+      // Create FormData for file upload
       const data = new FormData();
-      Object.keys(formData).forEach(key => {
-        if (formData[key] !== null && formData[key] !== '') {
-          data.append(key, formData[key]);
-        }
-      });
-
+      
+      // Add all form fields
+      data.append('title', formData.title);
+      data.append('description', formData.description);
+      data.append('format', formData.format);
+      data.append('level', formData.level);
+      data.append('published', formData.published);
+      data.append('featured', formData.featured);
+      
+      // Add files
       if (selectedFile) {
         data.append('file', selectedFile);
       }
@@ -58,12 +82,12 @@ export default function AdminFiles() {
         await apiClient.put(`/files/${editingFile.id}`, data, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        alert('파일이 수정되었습니다');
+        alert('파일이 수정되었습니다!');
       } else {
         await apiClient.post('/files', data, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        alert('파일이 업로드되었습니다');
+        alert('파일이 업로드되었습니다!');
       }
 
       setShowModal(false);
@@ -71,9 +95,10 @@ export default function AdminFiles() {
       resetForm();
       fetchFiles();
     } catch (error) {
-      alert(error.response?.data?.error || '작업에 실패했습니다');
+      console.error('Submit error:', error);
+      alert(error.response?.data?.error || '저장에 실패했습니다');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -87,6 +112,8 @@ export default function AdminFiles() {
       published: file.published,
       featured: file.featured
     });
+    setSelectedFile(null);
+    setPreviewImage(null);
     setShowModal(true);
   };
 
@@ -95,7 +122,7 @@ export default function AdminFiles() {
 
     try {
       await apiClient.delete(`/files/${id}`);
-      alert('파일이 삭제되었습니다');
+      alert('파일이 삭제되었습니다!');
       fetchFiles();
     } catch (error) {
       alert('삭제에 실패했습니다');
@@ -104,8 +131,11 @@ export default function AdminFiles() {
 
   const togglePublished = async (file) => {
     try {
-      await apiClient.put(`/files/${file.id}`, {
-        published: !file.published
+      const data = new FormData();
+      data.append('published', !file.published);
+      
+      await apiClient.put(`/files/${file.id}`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       fetchFiles();
     } catch (error) {
@@ -126,8 +156,22 @@ export default function AdminFiles() {
     setPreviewImage(null);
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handlePreviewChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setPreviewImage(file);
+    }
+  };
+
   const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
+    if (!bytes) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -157,6 +201,10 @@ export default function AdminFiles() {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          </div>
+        ) : files.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <p className="text-gray-500">등록된 자료가 없습니다</p>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -190,7 +238,10 @@ export default function AdminFiles() {
                 {files.map((file) => (
                   <tr key={file.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <span className="font-medium">{file.title}</span>
+                      <div className="flex items-center gap-2">
+                        {file.featured && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
+                        <span className="font-medium">{file.title}</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
@@ -251,8 +302,8 @@ export default function AdminFiles() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-2xl w-full my-8">
             <div className="p-6 border-b">
               <h2 className="text-2xl font-bold">
                 {editingFile ? '자료 수정' : '새 자료 업로드'}
@@ -266,10 +317,15 @@ export default function AdminFiles() {
                   </label>
                   <input
                     type="file"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
-                    className="w-full px-4 py-2 border rounded-lg"
-                    required
+                    onChange={handleFileChange}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+                    required={!editingFile}
                   />
+                  {selectedFile && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      선택됨: {selectedFile.name} ({formatFileSize(selectedFile.size)})
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -280,28 +336,35 @@ export default function AdminFiles() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setPreviewImage(e.target.files[0])}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  onChange={handlePreviewChange}
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
                 />
+                {previewImage && (
+                  <p className="text-sm text-gray-600 mt-1">선택됨: {previewImage.name}</p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">제목</label>
+                <label className="block text-sm font-medium mb-2">
+                  제목 <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">설명</label>
+                <label className="block text-sm font-medium mb-2">
+                  설명 <span className="text-red-500">*</span>
+                </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
                   rows="4"
                   required
                 />
@@ -313,7 +376,7 @@ export default function AdminFiles() {
                   <select
                     value={formData.format}
                     onChange={(e) => setFormData({ ...formData, format: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
                   >
                     <option value="PDF">PDF</option>
                     <option value="ZIP">ZIP</option>
@@ -330,7 +393,7 @@ export default function AdminFiles() {
                   <select
                     value={formData.level}
                     onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg"
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500"
                   >
                     <option value="1">초급</option>
                     <option value="2">중급</option>
@@ -369,15 +432,16 @@ export default function AdminFiles() {
                     resetForm();
                   }}
                   className="px-6 py-2 border rounded-lg hover:bg-gray-50"
+                  disabled={submitting}
                 >
                   취소
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={submitting}
                   className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
-                  {loading ? '처리 중...' : editingFile ? '수정' : '업로드'}
+                  {submitting ? '저장 중...' : editingFile ? '수정' : '업로드'}
                 </button>
               </div>
             </form>
