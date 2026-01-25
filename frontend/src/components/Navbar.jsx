@@ -2,22 +2,22 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { 
-  BookOpenIcon, 
-  UserIcon, 
-  ArrowRightOnRectangleIcon, 
-  Cog6ToothIcon,
-  ChevronDownIcon,
-  Bars3Icon,
-  XMarkIcon,
-  HomeIcon,
-  InformationCircleIcon,
-  ChatBubbleLeftRightIcon,
-  QuestionMarkCircleIcon,
-  EnvelopeIcon,
-  AcademicCapIcon,
-  DocumentTextIcon,
-  ChartBarIcon
-} from '@heroicons/react/24/outline';
+  BookOpen, 
+  User, 
+  LogOut, 
+  Settings,
+  ChevronDown,
+  Menu,
+  X,
+  Home,
+  Info,
+  MessageCircle,
+  HelpCircle,
+  Mail,
+  GraduationCap,
+  FileText,
+  BarChart3
+} from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
@@ -38,7 +38,7 @@ export default function Navbar() {
           {/* Logo and main navigation */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <BookOpenIcon className="h-8 w-8 text-blue-600" />
+              <BookOpen className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-bold text-gray-900">반혜나</span>
             </Link>
             
@@ -48,35 +48,35 @@ export default function Navbar() {
                 to="/" 
                 className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
               >
-                <HomeIcon className="h-4 w-4 mr-1" />
+                <Home className="h-4 w-4 mr-1" />
                 홈
               </Link>
               <Link 
                 to="/about" 
                 className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
               >
-                <InformationCircleIcon className="h-4 w-4 mr-1" />
+                <Info className="h-4 w-4 mr-1" />
                 소개
               </Link>
               <Link 
                 to="/reviews" 
                 className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
               >
-                <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />
+                <MessageCircle className="h-4 w-4 mr-1" />
                 후기
               </Link>
               <Link 
                 to="/faq" 
                 className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
               >
-                <QuestionMarkCircleIcon className="h-4 w-4 mr-1" />
+                <HelpCircle className="h-4 w-4 mr-1" />
                 FAQ
               </Link>
               <Link 
                 to="/contact" 
                 className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
               >
-                <EnvelopeIcon className="h-4 w-4 mr-1" />
+                <Mail className="h-4 w-4 mr-1" />
                 연락
               </Link>
             </div>
@@ -92,14 +92,14 @@ export default function Navbar() {
                     to="/courses"
                     className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
                   >
-                    <AcademicCapIcon className="h-4 w-4 mr-1" />
+                    <GraduationCap className="h-4 w-4 mr-1" />
                     강의
                   </Link>
                   <Link
                     to="/files"
                     className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
                   >
-                    <DocumentTextIcon className="h-4 w-4 mr-1" />
+                    <FileText className="h-4 w-4 mr-1" />
                     자료실
                   </Link>
                   
@@ -109,7 +109,7 @@ export default function Navbar() {
                     to="/dashboard"
                     className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
                   >
-                    <ChartBarIcon className="h-4 w-4 mr-1" />
+                    <BarChart3 className="h-4 w-4 mr-1" />
                     대시보드
                   </Link>
                   
@@ -121,9 +121,9 @@ export default function Navbar() {
                       onClick={() => setIsProfileOpen(!isProfileOpen)}
                       className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 px-3 py-2 transition-colors"
                     >
-                      <UserIcon className="h-5 w-5" />
+                      <User className="h-5 w-5" />
                       <span className="hidden lg:block">{user?.name}</span>
-                      <ChevronDownIcon className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4" />
                     </button>
                     
                     {isProfileOpen && (
@@ -133,7 +133,7 @@ export default function Navbar() {
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                           onClick={() => setIsProfileOpen(false)}
                         >
-                          <UserIcon className="h-4 w-4 mr-2" />
+                          <User className="h-4 w-4 mr-2" />
                           내 프로필
                         </Link>
                         {isAdmin && (
@@ -142,7 +142,7 @@ export default function Navbar() {
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                             onClick={() => setIsProfileOpen(false)}
                           >
-                            <Cog6ToothIcon className="h-4 w-4 mr-2" />
+                            <Settings className="h-4 w-4 mr-2" />
                             관리자 패널
                           </Link>
                         )}
@@ -151,7 +151,7 @@ export default function Navbar() {
                           onClick={handleLogout}
                           className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
                         >
-                          <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
+                          <LogOut className="h-4 w-4 mr-2" />
                           로그아웃
                         </button>
                       </div>
@@ -185,9 +185,9 @@ export default function Navbar() {
               className="md:hidden p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100"
             >
               {isMobileMenuOpen ? (
-                <XMarkIcon className="h-6 w-6" />
+                <X className="h-6 w-6" />
               ) : (
-                <Bars3Icon className="h-6 w-6" />
+                <Menu className="h-6 w-6" />
               )}
             </button>
           </div>
@@ -202,7 +202,7 @@ export default function Navbar() {
                 className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <HomeIcon className="h-4 w-4 mr-2" />
+                <Home className="h-4 w-4 mr-2" />
                 홈
               </Link>
               <Link
@@ -210,7 +210,7 @@ export default function Navbar() {
                 className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <InformationCircleIcon className="h-4 w-4 mr-2" />
+                <Info className="h-4 w-4 mr-2" />
                 소개
               </Link>
               <Link
@@ -218,7 +218,7 @@ export default function Navbar() {
                 className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <ChatBubbleLeftRightIcon className="h-4 w-4 mr-2" />
+                <MessageCircle className="h-4 w-4 mr-2" />
                 후기
               </Link>
               <Link
@@ -226,7 +226,7 @@ export default function Navbar() {
                 className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <QuestionMarkCircleIcon className="h-4 w-4 mr-2" />
+                <HelpCircle className="h-4 w-4 mr-2" />
                 FAQ
               </Link>
               <Link
@@ -234,7 +234,7 @@ export default function Navbar() {
                 className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <EnvelopeIcon className="h-4 w-4 mr-2" />
+                <Mail className="h-4 w-4 mr-2" />
                 연락
               </Link>
               
@@ -246,7 +246,7 @@ export default function Navbar() {
                     className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <AcademicCapIcon className="h-4 w-4 mr-2" />
+                    <GraduationCap className="h-4 w-4 mr-2" />
                     강의
                   </Link>
                   <Link
@@ -254,7 +254,7 @@ export default function Navbar() {
                     className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <DocumentTextIcon className="h-4 w-4 mr-2" />
+                    <FileText className="h-4 w-4 mr-2" />
                     자료실
                   </Link>
                   <Link
@@ -262,7 +262,7 @@ export default function Navbar() {
                     className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <ChartBarIcon className="h-4 w-4 mr-2" />
+                    <BarChart3 className="h-4 w-4 mr-2" />
                     대시보드
                   </Link>
                   <Link
@@ -270,7 +270,7 @@ export default function Navbar() {
                     className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <UserIcon className="h-4 w-4 mr-2" />
+                    <User className="h-4 w-4 mr-2" />
                     내 프로필
                   </Link>
                   {isAdmin && (
@@ -279,7 +279,7 @@ export default function Navbar() {
                       className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
-                      <Cog6ToothIcon className="h-4 w-4 mr-2" />
+                      <Settings className="h-4 w-4 mr-2" />
                       관리자 패널
                     </Link>
                   )}
@@ -290,7 +290,7 @@ export default function Navbar() {
                     }}
                     className="block w-full text-left px-3 py-2 text-red-600 hover:bg-gray-50 rounded-md flex items-center"
                   >
-                    <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
+                    <LogOut className="h-4 w-4 mr-2" />
                     로그아웃
                   </button>
                 </>
