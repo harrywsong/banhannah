@@ -6,6 +6,8 @@ import filesRoutes from './files.routes.js';
 import reviewsRoutes from './reviews.routes.js';
 import videosRoutes from './videos.routes.js';
 import adminRoutes from './admin.routes.js';
+import statsRoutes from './stats.routes.js';
+import contactRoutes from './contact.routes.js';
 
 const router = express.Router();
 
@@ -16,6 +18,8 @@ router.use('/files', filesRoutes);
 router.use('/reviews', reviewsRoutes);
 router.use('/videos', videosRoutes);
 router.use('/admin', adminRoutes);
+router.use('/stats', statsRoutes);
+router.use('/contact', contactRoutes);
 
 // API info endpoint
 router.get('/', (req, res) => {
@@ -53,6 +57,11 @@ router.get('/', (req, res) => {
         path: '/api/admin',
         description: 'Admin-only endpoints',
         methods: ['GET /stats/dashboard', 'GET /users', 'GET /purchases']
+      },
+      contact: {
+        path: '/api/contact',
+        description: 'Contact form submission',
+        methods: ['POST /submit']
       }
     },
     status: 'operational',

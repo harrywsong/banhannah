@@ -138,3 +138,60 @@ export async function changePassword(req, res, next) {
     next(error);
   }
 }
+
+/**
+ * Get user's purchases
+ */
+export async function getMyPurchases(req, res, next) {
+  try {
+    const { prisma } = await import('../config/database.js');
+    
+    const purchases = await prisma.purchase.findMany({
+      where: { userId: req.user.id },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            type: true,
+            price: true,
+            discountPrice: true
+          }
+        }
+      },
+      orderBy: { purchasedAt: 'desc' }
+    });
+    
+    res.json({ purchases });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get user's progress
+ */
+export async function getMyProgress(req, res, next) {
+  try {
+    const { prisma } = await import('../config/database.js');
+    
+    const progress = await prisma.progress.findMany({
+      where: { userId: req.user.id },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            lessons: true
+          }
+        }
+      },
+      orderBy: { lastAccessedAt: 'desc' }
+    });
+    
+    res.json({ progress });
+  } catch (error) {
+    next(error);
+  }
+}

@@ -24,7 +24,9 @@ const required = [
 
 const missing = required.filter(key => !process.env[key]);
 if (missing.length > 0) {
-  throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
+  console.error('Please check your .env.local file and ensure all required variables are set.');
+  process.exit(1);
 }
 
 // Export validated environment

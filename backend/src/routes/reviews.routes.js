@@ -7,6 +7,7 @@ import { reviewValidation } from '../utils/validators.js';
 const router = express.Router();
 
 // Public routes
+router.get('/all', reviewsController.getAllReviews);
 router.get('/:itemType/:itemId', reviewsController.getReviews);
 
 // Protected routes

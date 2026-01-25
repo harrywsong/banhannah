@@ -77,6 +77,7 @@ model File {
   originalName    String
   fileSize        Int
   format          String   // PDF, ZIP, DOCX, etc.
+  pageCount       Int?     // Number of pages (for PDFs and documents)
   previewImage    String?
   level           Int      @default(1)
   downloads       Int      @default(0)
@@ -126,6 +127,7 @@ model Review {
   // Relations
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, itemType, itemId])
   @@index([itemType, itemId])
   @@index([userId])
 }

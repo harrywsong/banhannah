@@ -148,15 +148,21 @@ router.get('/stats/content', async (req, res, next) => {
  */
 router.get('/users', async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, search } = req.query;
+    const { page = 1, limit = 20, search, role } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
-    const where = search ? {
-      OR: [
+    const where = {};
+    
+    if (search) {
+      where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } }
-      ]
-    } : {};
+      ];
+    }
+    
+    if (role && role !== 'all') {
+      where.role = role;
+    }
     
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -184,12 +190,9 @@ router.get('/users', async (req, res, next) => {
     
     res.json({
       users,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit))
-      }
+      totalPages: Math.ceil(total / parseInt(limit)),
+      currentPage: parseInt(page),
+      total
     });
   } catch (error) {
     next(error);
@@ -252,11 +255,48 @@ router.delete('/users/:id', async (req, res, next) => {
  */
 router.get('/purchases', async (req, res, next) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, search, period } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const where = {};
+    
+    // Add search filter
+    if (search) {
+      where.OR = [
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+        { course: { title: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+    
+    // Add period filter
+    if (period && period !== 'all') {
+      const now = new Date();
+      let startDate;
+      
+      switch (period) {
+        case 'today':
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'year':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+      }
+      
+      if (startDate) {
+        where.purchasedAt = { gte: startDate };
+      }
+    }
     
     const [purchases, total] = await Promise.all([
       prisma.purchase.findMany({
+        where,
         skip,
         take: parseInt(limit),
         include: {
@@ -264,23 +304,97 @@ router.get('/purchases', async (req, res, next) => {
             select: { id: true, name: true, email: true }
           },
           course: {
-            select: { id: true, title: true, type: true }
+            select: { id: true, title: true, type: true, price: true }
           }
         },
         orderBy: { purchasedAt: 'desc' }
       }),
-      prisma.purchase.count()
+      prisma.purchase.count({ where })
     ]);
     
+    // Add status and payment method (mock data for now)
+    const purchasesWithStatus = purchases.map(purchase => ({
+      ...purchase,
+      status: 'completed', // Mock status
+      paymentMethod: '카드', // Mock payment method
+      originalPrice: purchase.course.price
+    }));
+    
     res.json({
-      purchases,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit))
-      }
+      purchases: purchasesWithStatus,
+      totalPages: Math.ceil(total / parseInt(limit)),
+      currentPage: parseInt(page),
+      total
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Get purchase statistics
+ */
+router.get('/purchases/stats', async (req, res, next) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const [totalRevenue, totalPurchases, monthlyRevenue, monthlyPurchases] = await Promise.all([
+      prisma.purchase.aggregate({
+        _sum: { amount: true }
+      }),
+      prisma.purchase.count(),
+      prisma.purchase.aggregate({
+        where: { purchasedAt: { gte: startOfMonth } },
+        _sum: { amount: true }
+      }),
+      prisma.purchase.count({
+        where: { purchasedAt: { gte: startOfMonth } }
+      })
+    ]);
+    
+    const averagePurchase = totalPurchases > 0 ? (totalRevenue._sum.amount || 0) / totalPurchases : 0;
+    
+    res.json({
+      totalRevenue: totalRevenue._sum.amount || 0,
+      totalPurchases,
+      monthlyRevenue: monthlyRevenue._sum.amount || 0,
+      monthlyPurchases,
+      averagePurchase: Math.round(averagePurchase)
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Export purchases to CSV
+ */
+router.get('/purchases/export', async (req, res, next) => {
+  try {
+    const purchases = await prisma.purchase.findMany({
+      include: {
+        user: {
+          select: { name: true, email: true }
+        },
+        course: {
+          select: { title: true, type: true }
+        }
+      },
+      orderBy: { purchasedAt: 'desc' }
+    });
+    
+    // Create CSV content
+    const csvHeader = 'Date,User Name,User Email,Course Title,Course Type,Amount\n';
+    const csvRows = purchases.map(purchase => 
+      `${purchase.purchasedAt.toISOString().split('T')[0]},${purchase.user.name},${purchase.user.email},"${purchase.course.title}",${purchase.course.type},${purchase.amount}`
+    ).join('\n');
+    
+    const csvContent = csvHeader + csvRows;
+    
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=purchases.csv');
+    res.send(csvContent);
   } catch (error) {
     next(error);
   }

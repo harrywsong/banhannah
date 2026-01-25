@@ -57,4 +57,8 @@ router.put('/change-password',
   authController.changePassword
 );
 
+// User data endpoints
+router.get('/my-purchases', authenticate, authController.getMyPurchases);
+router.get('/my-progress', authenticate, authController.getMyProgress);
+
 export default router;

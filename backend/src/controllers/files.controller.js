@@ -2,6 +2,7 @@
 import { prisma } from '../config/database.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import { deleteFile, getFilePath, buildFileUrl } from '../services/storage.service.js';
+import { getFilePageCount } from '../utils/pdfUtils.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -138,7 +139,9 @@ export async function uploadFile(req, res, next) {
       title,
       description,
       format,
-      level
+      level,
+      published,
+      featured
     } = req.body;
     
     const fileData = {
@@ -149,11 +152,24 @@ export async function uploadFile(req, res, next) {
       fileSize: uploadedFile.size,
       format,
       level: level ? parseInt(level) : 1,
-      published: false
+      published: published === 'true' || published === true,
+      featured: featured === 'true' || featured === true
     };
     
     if (previewImage) {
       fileData.previewImage = previewImage.filename;
+    }
+    
+    // Extract page count for supported formats
+    try {
+      const filePath = getFilePath(uploadedFile.filename, 'uploads');
+      const pageCount = await getFilePageCount(filePath, format);
+      if (pageCount !== null) {
+        fileData.pageCount = pageCount;
+      }
+    } catch (error) {
+      console.warn('Failed to extract page count:', error.message);
+      // Continue without page count - it's not critical for file upload
     }
     
     const file = await prisma.file.create({
@@ -206,11 +222,11 @@ export async function updateFile(req, res, next) {
     if (featured !== undefined) updateData.featured = featured === 'true' || featured === true;
     
     // Handle preview image
-    if (req.file) {
+    if (req.files && req.files.preview && req.files.preview[0]) {
       if (file.previewImage) {
         deleteFile(file.previewImage, 'previews');
       }
-      updateData.previewImage = req.file.filename;
+      updateData.previewImage = req.files.preview[0].filename;
     }
     
     const updatedFile = await prisma.file.update({
@@ -325,6 +341,25 @@ export async function viewFile(req, res, next) {
     
     res.setHeader('Content-Type', contentType);
     res.sendFile(filePath);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Update page counts for existing files (admin only)
+ */
+export async function updatePageCounts(req, res, next) {
+  try {
+    const { updateExistingFilePageCounts } = await import('../utils/pdfUtils.js');
+    const storageService = await import('../services/storage.service.js');
+    
+    const result = await updateExistingFilePageCounts(prisma, storageService);
+    
+    res.json({
+      message: 'Page count update completed',
+      ...result
+    });
   } catch (error) {
     next(error);
   }

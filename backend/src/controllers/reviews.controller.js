@@ -4,6 +4,53 @@ import { HTTP_STATUS } from '../config/constants.js';
 import { maskName } from '../utils/helpers.js';
 
 /**
+ * Get all reviews (for homepage carousel and reviews page)
+ */
+export async function getAllReviews(req, res, next) {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+    
+    const reviews = await prisma.review.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: parseInt(limit),
+      skip: parseInt(offset)
+    });
+    
+    // Mask names for privacy
+    const maskedReviews = reviews.map(review => ({
+      ...review,
+      user: {
+        ...review.user,
+        name: maskName(review.user.name)
+      }
+    }));
+    
+    // Get total count for pagination
+    const totalCount = await prisma.review.count();
+    
+    res.json({ 
+      reviews: maskedReviews,
+      pagination: {
+        total: totalCount,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        hasMore: parseInt(offset) + parseInt(limit) < totalCount
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Get reviews for an item
  */
 export async function getReviews(req, res, next) {
@@ -182,7 +229,7 @@ export async function updateReview(req, res, next) {
 }
 
 /**
- * Delete review
+ * Delete review (Admin only)
  */
 export async function deleteReview(req, res, next) {
   try {
@@ -196,10 +243,10 @@ export async function deleteReview(req, res, next) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Review not found' });
     }
     
-    // Check ownership or admin
-    if (review.userId !== req.user.id && req.user.role !== 'ADMIN') {
+    // Only admins can delete reviews
+    if (req.user.role !== 'ADMIN') {
       return res.status(HTTP_STATUS.FORBIDDEN).json({ 
-        error: 'You can only delete your own reviews' 
+        error: 'Only administrators can delete reviews' 
       });
     }
     

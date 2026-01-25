@@ -31,7 +31,10 @@ router.post('/',
 router.put('/:id',
   authenticate,
   requireAdmin,
-  uploadPreview.single('preview'),
+  uploadFile.fields([
+    { name: 'file', maxCount: 1 },
+    { name: 'preview', maxCount: 1 }
+  ]),
   filesController.updateFile
 );
 
@@ -39,6 +42,13 @@ router.delete('/:id',
   authenticate,
   requireAdmin,
   filesController.deleteFileRecord
+);
+
+// Update page counts for existing files
+router.post('/update-page-counts',
+  authenticate,
+  requireAdmin,
+  filesController.updatePageCounts
 );
 
 export default router;
