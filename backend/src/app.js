@@ -36,8 +36,13 @@ app.use(cors({
     // Development: allow all
     if (ENV.isDev) return callback(null, true);
     
-    // Production: check whitelist
+    // Production: check whitelist and Vercel patterns
     if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Allow all Vercel preview deployments
+    if (origin.includes('vercel.app')) {
       return callback(null, true);
     }
     
@@ -45,8 +50,9 @@ app.use(cors({
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Type', 'Content-Length']
 }));
 
 // ============================================
@@ -64,6 +70,15 @@ configureMiddleware(app);
 // ============================================
 // ROUTES
 // ============================================
+// Global OPTIONS handler for preflight requests
+app.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
+
 app.use('/api', routes);
 
 // Health check
@@ -72,6 +87,18 @@ app.get('/health', (req, res) => {
     status: 'ok', 
     environment: ENV.NODE_ENV,
     timestamp: new Date().toISOString() 
+  });
+});
+
+// Test endpoint for CORS debugging
+app.get('/api/test-cors', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.json({
+    message: 'CORS test successful',
+    origin: req.headers.origin,
+    userAgent: req.headers['user-agent'],
+    timestamp: new Date().toISOString()
   });
 });
 
