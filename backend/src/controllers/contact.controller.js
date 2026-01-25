@@ -6,8 +6,8 @@ import path from 'path';
 
 export const submitContactForm = async (req, res) => {
   try {
-    const { name, email, subject, message, category } = req.body;
-    
+    const { name, email, subject, message } = req.body;
+
     // Extract files from the fields structure
     const files = [];
     if (req.files) {
@@ -66,7 +66,7 @@ export const submitContactForm = async (req, res) => {
     const emailSent = await sendContactFormEmail({
       name: sanitizedName,
       email: sanitizedEmail,
-      subject: `[${category}] ${sanitizedSubject}`,
+      subject: sanitizedSubject,
       message: sanitizedMessage,
       attachments
     });
@@ -84,7 +84,6 @@ export const submitContactForm = async (req, res) => {
     logger.info('Contact form submitted', {
       name: sanitizedName,
       email: sanitizedEmail,
-      category,
       subject: sanitizedSubject,
       hasAttachments: files.length > 0,
       attachmentCount: files.length,
@@ -98,7 +97,7 @@ export const submitContactForm = async (req, res) => {
 
   } catch (error) {
     logger.error('Contact form submission error:', error);
-    
+
     // Clean up uploaded files on error
     if (req.files) {
       const allFiles = [];
@@ -107,7 +106,7 @@ export const submitContactForm = async (req, res) => {
           allFiles.push(...req.files[fieldName]);
         }
       });
-      
+
       // Clean up files after email is sent (success or failure)
       for (const file of allFiles) {
         try {

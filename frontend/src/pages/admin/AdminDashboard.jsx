@@ -2,12 +2,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../../api/client';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
-import { 
-  BookOpen, 
-  FileText, 
-  Users, 
+
+import {
+  BookOpen,
+  FileText,
+  Users,
   DollarSign,
   TrendingUp,
   Eye,
@@ -53,7 +52,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
@@ -207,11 +206,10 @@ export default function AdminDashboard() {
                             <Eye className="h-4 w-4" />
                             {course.views}
                           </span>
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            course.type === 'free' 
-                              ? 'bg-green-100 text-green-800' 
+                          <span className={`px-2 py-0.5 rounded text-xs ${course.type === 'free'
+                              ? 'bg-green-100 text-green-800'
                               : 'bg-blue-100 text-blue-800'
-                          }`}>
+                            }`}>
                             {course.type === 'free' ? '무료' : '유료'}
                           </span>
                         </div>
@@ -344,7 +342,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <Footer />
+
     </div>
   );
 }

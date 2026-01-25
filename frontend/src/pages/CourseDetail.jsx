@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../api/client';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+
 import CourseContentViewer from '../components/CourseContentViewer';
 import PreviewImage from '../components/PreviewImage';
 import { Star, Clock, BookOpen, Users, CheckCircle, PlayCircle, Lock } from 'lucide-react';
@@ -30,18 +29,18 @@ export default function CourseDetail() {
       const response = await apiClient.get(`/courses/${id}`);
       const courseData = response.data.course;
       setCourse(courseData);
-      
+
       console.log('Course data:', courseData);
       console.log('Has purchased:', courseData.hasPurchased);
       console.log('Lessons:', courseData.lessons);
-      
+
       // Load progress if user has purchased
       if (courseData.hasPurchased) {
         // Set first lesson as current
         if (courseData.lessons?.length > 0) {
           setCurrentLesson(courseData.lessons[0]);
         }
-        
+
         // Load saved progress
         try {
           const progressResponse = await apiClient.get(`/courses/${id}/progress`);
@@ -93,7 +92,7 @@ export default function CourseDetail() {
     if (!completedLessons.includes(lessonId)) {
       const newCompleted = [...completedLessons, lessonId];
       setCompletedLessons(newCompleted);
-      
+
       try {
         await apiClient.put(`/courses/${id}/progress`, {
           completedLessons: newCompleted
@@ -107,7 +106,7 @@ export default function CourseDetail() {
       // Uncomplete the lesson
       const newCompleted = completedLessons.filter(id => id !== lessonId);
       setCompletedLessons(newCompleted);
-      
+
       try {
         await apiClient.put(`/courses/${id}/progress`, {
           completedLessons: newCompleted
@@ -163,7 +162,6 @@ export default function CourseDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
 
       {/* Course Player View (when enrolled) */}
       {course.hasPurchased && currentLesson ? (
@@ -185,21 +183,20 @@ export default function CourseDetail() {
                   <h1 className="text-2xl font-bold mb-2">{currentLesson.title}</h1>
                   <p className="text-gray-600">{currentLesson.description}</p>
                 </div>
-                
+
                 <div className="p-6">
-                  <CourseContentViewer 
+                  <CourseContentViewer
                     lesson={currentLesson}
                     onQuizAnswer={handleQuizAnswer}
                   />
-                  
+
                   <div className="mt-8 pt-6 border-t flex justify-between items-center">
                     <button
                       onClick={() => handleLessonComplete(currentLesson.id)}
-                      className={`px-6 py-2 rounded-lg font-semibold flex items-center gap-2 ${
-                        completedLessons.includes(currentLesson.id)
+                      className={`px-6 py-2 rounded-lg font-semibold flex items-center gap-2 ${completedLessons.includes(currentLesson.id)
                           ? 'bg-green-100 text-green-700'
                           : 'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}
+                        }`}
                     >
                       <CheckCircle className="h-5 w-5" />
                       {completedLessons.includes(currentLesson.id) ? '완료됨' : '완료 표시'}
@@ -231,9 +228,8 @@ export default function CourseDetail() {
                     <button
                       key={lesson.id}
                       onClick={() => handleLessonClick(lesson)}
-                      className={`w-full text-left p-4 border-b hover:bg-gray-50 transition ${
-                        currentLesson?.id === lesson.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
-                      }`}
+                      className={`w-full text-left p-4 border-b hover:bg-gray-50 transition ${currentLesson?.id === lesson.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
+                        }`}
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0 mt-1">
@@ -323,8 +319,8 @@ export default function CourseDetail() {
                     {enrolling
                       ? '처리 중...'
                       : course.type === 'free'
-                      ? '무료 등록'
-                      : '지금 구매하기'}
+                        ? '무료 등록'
+                        : '지금 구매하기'}
                   </button>
                   {course.duration && (
                     <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
@@ -412,7 +408,6 @@ export default function CourseDetail() {
         </>
       )}
 
-      <Footer />
     </div>
   );
 }

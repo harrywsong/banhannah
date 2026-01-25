@@ -1,9 +1,7 @@
-// src/pages/Profile.jsx - FIXED VERSION
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../api/client';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+
 import { User, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function Profile() {
@@ -68,16 +66,15 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+
       <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">프로필 설정</h1>
 
         {message.text && (
-          <div className={`mb-6 p-4 rounded-lg flex items-center gap-2 ${
-            message.type === 'success' 
-              ? 'bg-green-50 text-green-800 border border-green-200' 
+          <div className={`mb-6 p-4 rounded-lg flex items-center gap-2 ${message.type === 'success'
+              ? 'bg-green-50 text-green-800 border border-green-200'
               : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
+            }`}>
             {message.type === 'success' ? (
               <CheckCircle className="h-5 w-5" />
             ) : (
@@ -92,21 +89,19 @@ export default function Profile() {
             <nav className="flex">
               <button
                 onClick={() => setActiveTab('profile')}
-                className={`px-6 py-4 font-medium ${
-                  activeTab === 'profile'
+                className={`px-6 py-4 font-medium ${activeTab === 'profile'
                     ? 'border-b-2 border-blue-600 text-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 프로필 정보
               </button>
               <button
                 onClick={() => setActiveTab('password')}
-                className={`px-6 py-4 font-medium ${
-                  activeTab === 'password'
+                className={`px-6 py-4 font-medium ${activeTab === 'password'
                     ? 'border-b-2 border-blue-600 text-blue-600'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 비밀번호 변경
               </button>
@@ -224,7 +219,7 @@ export default function Profile() {
           </div>
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 }

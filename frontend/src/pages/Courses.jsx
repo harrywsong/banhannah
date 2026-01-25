@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../api/client';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+
 import PreviewImage from '../components/PreviewImage';
-import { Search, Filter, Star } from 'lucide-react';
+import { Search, Star } from 'lucide-react';
 
 export default function Courses() {
   const [courses, setCourses] = useState([]);
@@ -40,10 +39,10 @@ export default function Courses() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">모든 강의</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">모든 강의</h1>
 
         {/* Search and Filters */}
         <div className="bg-white p-6 rounded-lg shadow mb-8">
@@ -162,7 +161,7 @@ export default function Courses() {
         )}
       </div>
 
-      <Footer />
+
     </div>
   );
 }

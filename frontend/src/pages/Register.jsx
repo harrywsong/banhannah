@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, CheckCircle, BookOpen, ArrowLeft } from 'lucide-react';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -11,7 +11,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   const { register } = useAuth();
 
   const handleSubmit = async (e) => {
@@ -42,124 +42,156 @@ export default function Register() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-          <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">회원가입 완료!</h2>
-          <p className="text-gray-600 mb-6">
-            이메일로 인증 링크가 발송되었습니다.<br />
-            이메일을 확인하여 계정을 활성화해주세요.
-          </p>
-          <Link
-            to="/login"
-            className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            로그인하기
-          </Link>
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center py-12 px-4">
+        <div className="w-full max-w-md">
+          <div className="card p-8 text-center shadow-lg border-neutral-200">
+            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="h-10 w-10 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-neutral-900 mb-4">회원가입 완료!</h2>
+            <p className="text-neutral-600 mb-8 leading-relaxed">
+              이메일로 인증 링크가 발송되었습니다.<br />
+              이메일을 확인하여 계정을 활성화해주세요.
+            </p>
+            <Link
+              to="/login"
+              className="btn btn-primary w-full shadow-lg shadow-primary-500/20"
+            >
+              로그인하기
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center py-12 px-4">
+      <div className="absolute top-8 left-8">
+        <Link to="/" className="flex items-center text-neutral-600 hover:text-neutral-900 transition-colors">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          홈으로
+        </Link>
+      </div>
+
+      <div className="w-full max-w-md">
+        {/* Header */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">회원가입</h2>
-          <p className="text-gray-600 mt-2">새 계정을 만드세요</p>
+          <div className="flex justify-center mb-6 animate-fade-in">
+            <div className="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/30">
+              <BookOpen className="w-7 h-7 text-white" />
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-bold text-neutral-900 mb-2 tracking-tight">회원가입</h1>
+          <p className="text-neutral-500">새 계정을 만들어 학습을 시작하세요</p>
         </div>
 
-        {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
-            <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-            <p className="text-red-800">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              이름
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="홍길동"
-                required
-              />
+        {/* Register Form */}
+        <div className="card p-8 md:p-10 shadow-xl shadow-neutral-200/50 border-neutral-100 bg-white">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-lg flex items-center animate-fade-in">
+              <AlertCircle className="h-5 w-5 text-red-600 mr-3 flex-shrink-0" />
+              <p className="text-red-800 text-sm font-medium">{error}</p>
             </div>
-          </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              이메일
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="your@email.com"
-                required
-              />
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                이름
+              </label>
+              <div className="relative group">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400 group-focus-within:text-primary-500 transition-colors" />
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="input pl-10"
+                  placeholder="홍길동"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              비밀번호
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
-                required
-              />
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                이메일
+              </label>
+              <div className="relative group">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400 group-focus-within:text-primary-500 transition-colors" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input pl-10"
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              비밀번호 확인
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
-                required
-              />
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                비밀번호
+              </label>
+              <div className="relative group">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400 group-focus-within:text-primary-500 transition-colors" />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input pl-10"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
             </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                비밀번호 확인
+              </label>
+              <div className="relative group">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400 group-focus-within:text-primary-500 transition-colors" />
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="input pl-10"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn btn-primary w-full btn-lg shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-300 mt-2"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                  가입 중...
+                </span>
+              ) : '회원가입'}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center">
+            <p className="text-sm text-neutral-500">
+              이미 계정이 있으신가요?{' '}
+              <Link to="/login" className="text-primary-600 hover:text-primary-700 font-semibold hover:underline">
+                로그인
+              </Link>
+            </p>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition"
-          >
-            {loading ? '가입 중...' : '회원가입'}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-gray-600">
-          이미 계정이 있으신가요?{' '}
-          <Link to="/login" className="text-blue-600 hover:underline">
-            로그인
-          </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

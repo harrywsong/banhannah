@@ -1,8 +1,7 @@
 // frontend/src/pages/admin/AdminFiles.jsx - FIXED VERSION
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../api/client';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+
 import { Plus, Edit, Trash2, Download, Star } from 'lucide-react';
 
 export default function AdminFiles() {
@@ -11,7 +10,7 @@ export default function AdminFiles() {
   const [showModal, setShowModal] = useState(false);
   const [editingFile, setEditingFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     title: '',
@@ -50,7 +49,7 @@ export default function AdminFiles() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!editingFile && !selectedFile) {
       alert('파일을 선택해주세요');
       return;
@@ -61,7 +60,7 @@ export default function AdminFiles() {
     try {
       // Create FormData for file upload
       const data = new FormData();
-      
+
       // Add all form fields
       data.append('title', formData.title);
       data.append('description', formData.description);
@@ -69,7 +68,7 @@ export default function AdminFiles() {
       data.append('level', formData.level);
       data.append('published', formData.published);
       data.append('featured', formData.featured);
-      
+
       // Add files
       if (selectedFile) {
         data.append('file', selectedFile);
@@ -133,7 +132,7 @@ export default function AdminFiles() {
     try {
       const data = new FormData();
       data.append('published', !file.published);
-      
+
       await apiClient.put(`/files/${file.id}`, data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -180,7 +179,7 @@ export default function AdminFiles() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
@@ -257,11 +256,10 @@ export default function AdminFiles() {
                     <td className="px-6 py-4">
                       <button
                         onClick={() => togglePublished(file)}
-                        className={`px-2 py-1 text-xs rounded ${
-                          file.published 
-                            ? 'bg-green-100 text-green-800' 
+                        className={`px-2 py-1 text-xs rounded ${file.published
+                            ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
-                        }`}
+                          }`}
                       >
                         {file.published ? '게시됨' : '비공개'}
                       </button>
@@ -449,7 +447,7 @@ export default function AdminFiles() {
         </div>
       )}
 
-      <Footer />
+
     </div>
   );
 }

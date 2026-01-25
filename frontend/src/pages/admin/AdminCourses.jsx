@@ -1,8 +1,7 @@
 // frontend/src/pages/admin/AdminCourses.jsx - WITH CONTENT EDITOR
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../api/client';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+
 import CourseEditor from '../../components/CourseEditor';
 import { Plus, Edit, Trash2, Star, BookOpen } from 'lucide-react';
 
@@ -13,7 +12,7 @@ export default function AdminCourses() {
   const [editingCourse, setEditingCourse] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('basic'); // 'basic' or 'content'
-  
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -56,7 +55,7 @@ export default function AdminCourses() {
 
     try {
       const data = new FormData();
-      
+
       data.append('title', formData.title);
       data.append('description', formData.description);
       data.append('type', formData.type);
@@ -65,17 +64,17 @@ export default function AdminCourses() {
       data.append('accessDuration', formData.accessDuration);
       data.append('published', formData.published);
       data.append('featured', formData.featured);
-      
+
       // Add lessons as JSON
       data.append('lessons', JSON.stringify(formData.lessons));
-      
+
       if (formData.type === 'paid') {
         data.append('price', formData.price);
         if (formData.discountPrice) {
           data.append('discountPrice', formData.discountPrice);
         }
       }
-      
+
       if (previewImage) {
         data.append('previewImage', previewImage);
       }
@@ -140,7 +139,7 @@ export default function AdminCourses() {
     try {
       const data = new FormData();
       data.append('published', !course.published);
-      
+
       await apiClient.put(`/courses/${course.id}`, data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -170,7 +169,7 @@ export default function AdminCourses() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
@@ -234,9 +233,8 @@ export default function AdminCourses() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        course.type === 'free' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded ${course.type === 'free' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
                         {course.type === 'free' ? '무료' : '유료'}
                       </span>
                     </td>
@@ -253,9 +251,8 @@ export default function AdminCourses() {
                     <td className="px-6 py-4">
                       <button
                         onClick={() => togglePublished(course)}
-                        className={`px-2 py-1 text-xs rounded ${
-                          course.published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}
+                        className={`px-2 py-1 text-xs rounded ${course.published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}
                       >
                         {course.published ? '게시됨' : '비공개'}
                       </button>
@@ -299,24 +296,22 @@ export default function AdminCourses() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('basic')}
-                  className={`pb-2 px-4 font-medium border-b-2 ${
-                    activeTab === 'basic' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
-                  }`}
+                  className={`pb-2 px-4 font-medium border-b-2 ${activeTab === 'basic' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
+                    }`}
                 >
                   기본 정보
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('content')}
-                  className={`pb-2 px-4 font-medium border-b-2 ${
-                    activeTab === 'content' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
-                  }`}
+                  className={`pb-2 px-4 font-medium border-b-2 ${activeTab === 'content' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'
+                    }`}
                 >
                   강의 콘텐츠
                 </button>
               </div>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6">
               {activeTab === 'basic' ? (
                 <div className="space-y-4">
@@ -491,7 +486,7 @@ export default function AdminCourses() {
         </div>
       )}
 
-      <Footer />
+
     </div>
   );
 }

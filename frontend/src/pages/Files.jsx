@@ -1,8 +1,6 @@
-// frontend/src/pages/Files.jsx - WITH IN-BROWSER VIEWER
 import { useEffect, useState } from 'react';
 import { apiClient } from '../api/client';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+
 import FileViewer from '../components/FileViewer';
 import PreviewImage from '../components/PreviewImage';
 import { Download, FileText, Search, Star, Eye } from 'lucide-react';
@@ -46,10 +44,7 @@ export default function Files() {
 
   const handleDownload = async (file) => {
     try {
-      // Track download
       await apiClient.get(`/files/download/${file.filename}`);
-      
-      // Trigger download
       window.location.href = file.downloadUrl;
     } catch (error) {
       console.error('Download failed:', error);
@@ -58,10 +53,10 @@ export default function Files() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">학습 자료</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">학습 자료</h1>
 
         {/* Search and Filters */}
         <div className="bg-white p-6 rounded-lg shadow mb-8">
@@ -204,7 +199,7 @@ export default function Files() {
         />
       )}
 
-      <Footer />
+
     </div>
   );
 }

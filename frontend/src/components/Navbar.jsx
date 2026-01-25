@@ -1,30 +1,37 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { 
-  BookOpen, 
-  User, 
-  LogOut, 
-  Settings,
-  ChevronDown,
+import {
+  BookOpen,
+  FileText,
+  MessageCircle,
+  User,
+  LogOut,
   Menu,
   X,
   Home,
-  Info,
-  MessageCircle,
+  Star,
   HelpCircle,
-  Mail,
-  GraduationCap,
-  FileText,
-  BarChart3
+  Settings,
+  ChevronDown
 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function Navbar() {
-  const { user, logout, isAuthenticated, isAdmin } = useAuth();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated, user, logout, isAdmin } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+    setIsMobileMenuOpen(false);
+    setIsProfileOpen(false);
+  };
+
+  const isActive = (path) => location.pathname === path;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -40,298 +47,253 @@ export default function Navbar() {
     }
   }, [isProfileOpen]);
 
-  const handleLogout = () => {
-    logout();
-    setIsProfileOpen(false);
-    navigate('/');
-  };
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [isMobileMenuOpen]);
+
+  const navLinks = [
+    { path: '/', label: '홈', icon: Home },
+    { path: '/courses', label: '강의', icon: BookOpen },
+    { path: '/files', label: '자료실', icon: FileText },
+    { path: '/reviews', label: '후기', icon: Star },
+    { path: '/faq', label: 'FAQ', icon: HelpCircle },
+    { path: '/contact', label: '문의', icon: MessageCircle },
+  ];
 
   return (
-    <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          {/* Logo and main navigation */}
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
-              <BookOpen className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">반혜나</span>
+    <>
+      <nav className="sticky top-0 z-50 w-full border-b border-neutral-200 glass">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between">
+            {/* Logo */}
+            <Link
+              to="/"
+              className="flex items-center space-x-2 font-bold text-xl text-neutral-900 group"
+            >
+              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110 duration-200 shadow-md shadow-primary-500/30">
+                <BookOpen className="w-5 h-5 text-white" />
+              </div>
+              <span className="tracking-tight">반혜나 교육</span>
             </Link>
-            
-            {/* Desktop Navigation */}
-            <div className="hidden md:ml-10 md:flex md:items-center md:space-x-8">
-              <Link 
-                to="/" 
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
-              >
-                <Home className="h-4 w-4 mr-1" />
-                홈
-              </Link>
-              <Link 
-                to="/about" 
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
-              >
-                <Info className="h-4 w-4 mr-1" />
-                소개
-              </Link>
-              <Link 
-                to="/reviews" 
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
-              >
-                <MessageCircle className="h-4 w-4 mr-1" />
-                후기
-              </Link>
-              <Link 
-                to="/faq" 
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
-              >
-                <HelpCircle className="h-4 w-4 mr-1" />
-                FAQ
-              </Link>
-              <Link 
-                to="/contact" 
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
-              >
-                <Mail className="h-4 w-4 mr-1" />
-                연락
-              </Link>
-            </div>
-          </div>
 
-          {/* Right side navigation */}
-          <div className="flex items-center space-x-1">
-            {isAuthenticated ? (
-              <>
-                {/* Authenticated user navigation */}
-                <div className="hidden md:flex md:items-center md:space-x-1">
-                  <Link
-                    to="/courses"
-                    className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
-                  >
-                    <GraduationCap className="h-4 w-4 mr-1" />
-                    강의
-                  </Link>
-                  <Link
-                    to="/files"
-                    className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
-                  >
-                    <FileText className="h-4 w-4 mr-1" />
-                    자료실
-                  </Link>
-                  
-                  <div className="h-6 w-px bg-gray-300 mx-2"></div>
-                  
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-1">
+              {navLinks.map(({ path, label, icon: Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(path)
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                    }`}
+                >
+                  <Icon className="w-4 h-4 opacity-70" />
+                  <span>{label}</span>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop Auth Section */}
+            <div className="hidden md:flex items-center space-x-3">
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-2">
                   <Link
                     to="/dashboard"
-                    className="text-gray-700 hover:text-blue-600 px-3 py-2 flex items-center transition-colors"
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive('/dashboard')
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      }`}
                   >
-                    <BarChart3 className="h-4 w-4 mr-1" />
-                    대시보드
+                    <Home className="w-4 h-4" />
+                    <span>대시보드</span>
                   </Link>
-                  
-                  <div className="h-6 w-px bg-gray-300 mx-2"></div>
-                  
+
                   {/* Profile Dropdown */}
                   <div className="relative" ref={dropdownRef}>
                     <button
                       onClick={() => setIsProfileOpen(!isProfileOpen)}
-                      className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 px-3 py-2 transition-colors"
+                      className="flex items-center space-x-2 px-2 py-1.5 rounded-lg text-sm font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-100 transition-all duration-200 border border-transparent hover:border-neutral-200"
                     >
-                      <User className="h-5 w-5" />
-                      <span className="hidden lg:block">{user?.name}</span>
-                      <ChevronDown className="h-4 w-4" />
+                      <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 border border-primary-200">
+                        {user?.name?.[0] || <User className="w-4 h-4" />}
+                      </div>
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
                     </button>
-                    
+
                     {isProfileOpen && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border animate-in fade-in slide-in-from-top-2 duration-200">
-                        <Link
-                          to="/profile"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          <User className="h-4 w-4 mr-2" />
-                          내 프로필
-                        </Link>
-                        {isAdmin && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl shadow-neutral-200/50 border border-neutral-100 py-1 z-50 animate-fade-in origin-top-right">
+                        <div className="px-4 py-3 border-b border-neutral-100">
+                          <p className="text-sm font-medium text-neutral-900 truncate">{user?.name}</p>
+                          <p className="text-xs text-neutral-500 truncate">{user?.email}</p>
+                        </div>
+
+                        <div className="py-1">
                           <Link
-                            to="/admin"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                            to="/profile"
+                            className="flex items-center space-x-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
                             onClick={() => setIsProfileOpen(false)}
                           >
-                            <Settings className="h-4 w-4 mr-2" />
-                            관리자 패널
+                            <User className="w-4 h-4 text-neutral-500" />
+                            <span>프로필 설정</span>
                           </Link>
-                        )}
-                        <hr className="my-1" />
-                        <button
-                          onClick={handleLogout}
-                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
-                        >
-                          <LogOut className="h-4 w-4 mr-2" />
-                          로그아웃
-                        </button>
+                          {isAdmin && (
+                            <Link
+                              to="/admin"
+                              className="flex items-center space-x-2 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                              onClick={() => setIsProfileOpen(false)}
+                            >
+                              <Settings className="w-4 h-4 text-neutral-500" />
+                              <span>관리자 패널</span>
+                            </Link>
+                          )}
+                        </div>
+
+                        <div className="border-t border-neutral-100 my-1"></div>
+
+                        <div className="py-1">
+                          <button
+                            onClick={handleLogout}
+                            className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>로그아웃</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
-              </>
-            ) : (
-              <>
-                {/* Guest navigation */}
-                <div className="hidden md:flex md:items-center md:space-x-4">
+              ) : (
+                <div className="flex items-center space-x-2">
                   <Link
                     to="/login"
-                    className="text-gray-700 hover:text-blue-600 px-3 py-2 transition-colors"
+                    className="btn btn-ghost btn-sm text-neutral-600"
                   >
                     로그인
                   </Link>
                   <Link
                     to="/register"
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="btn btn-primary btn-sm rounded-full px-4"
                   >
                     회원가입
                   </Link>
                 </div>
-              </>
-            )}
+              )}
+            </div>
 
-            {/* Mobile menu button */}
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100"
+              className="md:hidden p-2 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 transition-colors"
             >
               {isMobileMenuOpen ? (
-                <X className="h-6 w-6" />
+                <X className="w-6 h-6" />
               ) : (
-                <Menu className="h-6 w-6" />
+                <Menu className="w-6 h-6" />
               )}
             </button>
           </div>
         </div>
+      </nav>
 
-        {/* Mobile menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t bg-white shadow-lg">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              <Link
-                to="/"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Home className="h-4 w-4 mr-2" />
-                홈
-              </Link>
-              <Link
-                to="/about"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Info className="h-4 w-4 mr-2" />
-                소개
-              </Link>
-              <Link
-                to="/reviews"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                후기
-              </Link>
-              <Link
-                to="/faq"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <HelpCircle className="h-4 w-4 mr-2" />
-                FAQ
-              </Link>
-              <Link
-                to="/contact"
-                className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                연락
-              </Link>
-              
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-40 bg-white md:hidden pt-20 pb-6 px-4 animate-fade-in overflow-y-auto">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {navLinks.map(({ path, label, icon: Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`flex flex-col items-center justify-center p-4 rounded-xl text-sm font-medium transition-all duration-200 border ${isActive(path)
+                      ? 'bg-primary-50 text-primary-700 border-primary-100 shadow-sm'
+                      : 'bg-neutral-50 text-neutral-600 border-transparent hover:bg-neutral-100'
+                    }`}
+                >
+                  <Icon className="w-6 h-6 mb-2" />
+                  <span>{label}</span>
+                </Link>
+              ))}
+            </div>
+
+            <div className="border-t border-neutral-100 pt-4 mt-4">
               {isAuthenticated ? (
-                <>
-                  <hr className="my-2" />
-                  <Link
-                    to="/courses"
-                    className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <GraduationCap className="h-4 w-4 mr-2" />
-                    강의
-                  </Link>
-                  <Link
-                    to="/files"
-                    className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    자료실
-                  </Link>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 px-2 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700">
+                      {user?.name?.[0] || <User className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-neutral-900">{user?.name}</div>
+                      <div className="text-xs text-neutral-500">{user?.email}</div>
+                    </div>
+                  </div>
+
                   <Link
                     to="/dashboard"
-                    className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 rounded-xl bg-neutral-50 text-neutral-700 hover:bg-neutral-100 transition-colors"
                   >
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    대시보드
+                    <Home className="w-5 h-5 text-neutral-500" />
+                    <span>대시보드 바로가기</span>
                   </Link>
+
                   <Link
                     to="/profile"
-                    className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 rounded-xl bg-neutral-50 text-neutral-700 hover:bg-neutral-100 transition-colors"
                   >
-                    <User className="h-4 w-4 mr-2" />
-                    내 프로필
+                    <User className="w-5 h-5 text-neutral-500" />
+                    <span>프로필 설정</span>
                   </Link>
+
                   {isAdmin && (
                     <Link
                       to="/admin"
-                      className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md flex items-center"
                       onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center space-x-3 px-4 py-3 rounded-xl bg-neutral-50 text-neutral-700 hover:bg-neutral-100 transition-colors"
                     >
-                      <Settings className="h-4 w-4 mr-2" />
-                      관리자 패널
+                      <Settings className="w-5 h-5 text-neutral-500" />
+                      <span>관리자 패널</span>
                     </Link>
                   )}
+
                   <button
-                    onClick={() => {
-                      handleLogout();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="block w-full text-left px-3 py-2 text-red-600 hover:bg-gray-50 rounded-md flex items-center"
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-red-50 text-red-600 font-medium hover:bg-red-100 transition-colors mt-2"
                   >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    로그아웃
+                    <LogOut className="w-5 h-5" />
+                    <span>로그아웃</span>
                   </button>
-                </>
+                </div>
               ) : (
-                <>
-                  <hr className="my-2" />
+                <div className="space-y-3">
                   <Link
                     to="/login"
-                    className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    className="block w-full text-center px-4 py-3 rounded-xl bg-neutral-100 text-neutral-700 font-medium hover:bg-neutral-200 transition-colors"
                   >
                     로그인
                   </Link>
                   <Link
                     to="/register"
-                    className="block px-3 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md mx-3"
                     onClick={() => setIsMobileMenuOpen(false)}
+                    className="block w-full text-center px-4 py-3 rounded-xl bg-primary-600 text-white font-medium hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/30"
                   >
                     회원가입
                   </Link>
-                </>
+                </div>
               )}
             </div>
           </div>
-        )}
-      </div>
-    </nav>
+        </div>
+      )}
+    </>
   );
 }

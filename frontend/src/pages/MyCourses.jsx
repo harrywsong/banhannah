@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../api/client';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import PreviewImage from '../components/PreviewImage';
 import { BookOpen, PlayCircle } from 'lucide-react';
 
@@ -28,10 +26,10 @@ export default function MyCourses() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">내 강의</h1>
-        
+
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -87,7 +85,7 @@ export default function MyCourses() {
           </div>
         )}
       </div>
-      <Footer />
+
     </div>
   );
 }

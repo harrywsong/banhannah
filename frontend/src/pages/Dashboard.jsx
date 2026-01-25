@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../api/client';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 import PreviewImage from '../components/PreviewImage';
 import { BookOpen, FileText, Star, TrendingUp } from 'lucide-react';
 
@@ -29,7 +27,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
+
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
@@ -92,10 +90,10 @@ export default function Dashboard() {
           ) : myCourses.length === 0 ? (
             <div className="text-center py-12">
               <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">아직 등록한 강의가 없습니다</p>
+              <p className="text-gray-500 mb-4">아직 등록한 강의가 없습니다</p>
               <Link
                 to="/courses"
-                className="inline-block mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
               >
                 강의 둘러보기
               </Link>
@@ -135,7 +133,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <Footer />
+
     </div>
   );
 }

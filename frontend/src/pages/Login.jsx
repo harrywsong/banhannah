@@ -1,10 +1,7 @@
-// ============================================
-// frontend/src/pages/Login.jsx
-// ============================================
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, BookOpen, ArrowLeft } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -53,80 +50,99 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4">
+      <div className="w-full max-w-md">
+        {/* Header */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">로그인</h2>
-          <p className="text-gray-600 mt-2">계정에 로그인하세요</p>
+          <Link to="/" className="inline-flex items-center space-x-2 text-slate-600 hover:text-slate-900 mb-6">
+            <ArrowLeft className="w-4 h-4" />
+            <span>홈으로 돌아가기</span>
+          </Link>
+          
+          <div className="flex justify-center mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center">
+              <BookOpen className="w-7 h-7 text-white" />
+            </div>
+          </div>
+          
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">로그인</h1>
+          <p className="text-slate-600">계정에 로그인하여 학습을 계속하세요</p>
         </div>
 
-        {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-red-800">{error}</p>
-              {emailNotVerified && (
-                <button
-                  onClick={handleResendVerification}
-                  className="text-blue-600 underline mt-2 text-sm"
-                >
-                  인증 이메일 재발송
-                </button>
-              )}
+        {/* Login Form */}
+        <div className="card p-8">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-red-800 text-sm">{error}</p>
+                {emailNotVerified && (
+                  <button
+                    onClick={handleResendVerification}
+                    className="text-blue-600 underline mt-2 text-sm hover:text-blue-700"
+                  >
+                    인증 이메일 재발송
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              이메일
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="your@email.com"
-                required
-              />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                이메일
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input pl-10"
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              비밀번호
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
-                required
-              />
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+                비밀번호
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="input pl-10"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
             </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn btn-primary w-full btn-lg"
+            >
+              {loading ? '로그인 중...' : '로그인'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-slate-600">
+              계정이 없으신가요?{' '}
+              <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
+                회원가입
+              </Link>
+            </p>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition"
-          >
-            {loading ? '로그인 중...' : '로그인'}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-gray-600">
-          계정이 없으신가요?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">
-            회원가입
-          </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

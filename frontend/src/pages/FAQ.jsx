@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, HelpCircle } from 'lucide-react';
 
 export default function FAQ() {
   const [openItems, setOpenItems] = useState({});
@@ -47,51 +45,66 @@ export default function FAQ() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">자주 묻는 질문</h1>
-        
-        <div className="space-y-4">
-          {faqs.map((faq) => (
-            <div key={faq.id} className="bg-white rounded-lg shadow">
-              <button
-                onClick={() => toggleItem(faq.id)}
-                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50"
-              >
-                <h3 className="text-lg font-semibold text-gray-900">{faq.question}</h3>
-                {openItems[faq.id] ? (
-                  <ChevronUp className="h-5 w-5 text-gray-500" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-500" />
-                )}
-              </button>
-              
-              {openItems[faq.id] && (
-                <div className="px-6 pb-4">
-                  <p className="text-gray-700 leading-relaxed">{faq.answer}</p>
-                </div>
-              )}
+    <div className="min-h-screen bg-neutral-50">
+      {/* Hero Section */}
+      <section className="relative pt-20 pb-16 overflow-hidden bg-gradient-to-br from-primary-600 to-primary-700">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center text-white">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-6 backdrop-blur-sm">
+              <HelpCircle className="w-8 h-8" />
             </div>
-          ))}
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">자주 묻는 질문</h1>
+            <p className="text-xl opacity-90 font-light leading-relaxed">
+              궁금하신 점을 빠르게 찾아보세요
+            </p>
+          </div>
         </div>
-        
-        <div className="mt-12 bg-white rounded-lg shadow p-8 text-center">
-          <h2 className="text-2xl font-semibold mb-4">더 궁금한 점이 있으신가요?</h2>
-          <p className="text-gray-600 mb-6">
-            위에서 답을 찾지 못하셨다면 언제든지 연락해 주세요.
-          </p>
-          <a
-            href="/contact"
-            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
-          >
-            문의하기
-          </a>
+      </section>
+
+      {/* FAQ Content */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="space-y-4">
+              {faqs.map((faq) => (
+                <div key={faq.id} className="card overflow-hidden hover:shadow-xl transition-all duration-300">
+                  <button
+                    onClick={() => toggleItem(faq.id)}
+                    className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-neutral-50 transition-colors"
+                  >
+                    <h3 className="text-lg font-semibold text-neutral-900 pr-4">{faq.question}</h3>
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center transition-transform duration-300 ${openItems[faq.id] ? 'rotate-180' : ''}`}>
+                      <ChevronDown className="h-5 w-5 text-primary-600" />
+                    </div>
+                  </button>
+
+                  {openItems[faq.id] && (
+                    <div className="px-6 pb-5 animate-fade-in">
+                      <div className="pt-2 border-t border-neutral-100">
+                        <p className="text-neutral-700 leading-relaxed mt-3">{faq.answer}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Contact CTA */}
+            <div className="card p-8 text-center mt-12 bg-gradient-to-br from-primary-50 to-white border-primary-100">
+              <h2 className="text-2xl font-bold text-neutral-900 mb-4">더 궁금한 점이 있으신가요?</h2>
+              <p className="text-neutral-600 mb-6 leading-relaxed">
+                위에서 답을 찾지 못하셨다면 언제든지 연락해 주세요.
+              </p>
+              <a
+                href="/contact"
+                className="btn btn-primary btn-lg rounded-full px-8 shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-300"
+              >
+                문의하기
+              </a>
+            </div>
+          </div>
         </div>
-      </div>
-      
-      <Footer />
+      </section>
     </div>
   );
 }

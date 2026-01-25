@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -9,7 +9,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [emailNotVerified, setEmailNotVerified] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -50,22 +50,29 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">로그인</h2>
-          <p className="text-gray-600 mt-2">계정에 로그인하세요</p>
+    <div className="min-h-screen bg-neutral-50 flex items-center justify-center py-12 px-4">
+      <div className="absolute top-8 left-8">
+        <Link to="/" className="flex items-center text-neutral-600 hover:text-neutral-900 transition-colors">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          홈으로
+        </Link>
+      </div>
+
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl shadow-neutral-200/50 p-8 md:p-10 border border-neutral-100">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold text-neutral-900 tracking-tight">로그인</h2>
+          <p className="text-neutral-500 mt-2 text-sm">교육 플랫폼 이용을 위해 로그인해주세요</p>
         </div>
 
         {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-2" />
+          <div className="mb-6 bg-red-50 border border-red-100 rounded-lg p-4 flex items-start animate-fade-in">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-red-800">{error}</p>
+              <p className="text-red-800 text-sm font-medium">{error}</p>
               {emailNotVerified && (
                 <button
                   onClick={handleResendVerification}
-                  className="text-blue-600 underline mt-2 text-sm"
+                  className="text-primary-600 underline mt-2 text-xs hover:text-primary-700"
                 >
                   인증 이메일 재발송
                 </button>
@@ -76,33 +83,38 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-neutral-700 mb-2">
               이메일
             </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+            <div className="relative group">
+              <Mail className="absolute left-3 top-3 h-5 w-5 text-neutral-400 group-focus-within:text-primary-500 transition-colors" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="your@email.com"
+                className="input pl-10"
+                placeholder="name@example.com"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              비밀번호
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-neutral-700">
+                비밀번호
+              </label>
+              <a href="#" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+                비밀번호 찾기
+              </a>
+            </div>
+            <div className="relative group">
+              <Lock className="absolute left-3 top-3 h-5 w-5 text-neutral-400 group-focus-within:text-primary-500 transition-colors" />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="input pl-10"
                 placeholder="••••••••"
                 required
               />
@@ -112,16 +124,21 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 transition"
+            className="w-full btn btn-primary btn-lg rounded-lg font-semibold text-base shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 transition-all duration-300 transform active:scale-[0.98]"
           >
-            {loading ? '로그인 중...' : '로그인'}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                로그인 중...
+              </span>
+            ) : '로그인'}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-gray-600">
+        <p className="mt-8 text-center text-sm text-neutral-500">
           계정이 없으신가요?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">
-            회원가입
+          <Link to="/register" className="text-primary-600 font-semibold hover:text-primary-700 hover:underline">
+            회원가입하기
           </Link>
         </p>
       </div>
