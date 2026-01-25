@@ -13,7 +13,7 @@ import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
 import MyCourses from './pages/MyCourses';
 import Files from './pages/Files';
-import Profile from './pages/Profile';
+import Profile from "./pages/MyProfile.jsx";
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminFiles from './pages/admin/AdminFiles';

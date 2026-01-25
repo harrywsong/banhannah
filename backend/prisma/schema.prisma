@@ -62,7 +62,6 @@ model Course {
 
   // Relations
   purchases       Purchase[]
-  reviews         Review[]
   progress        Progress[]
 
   @@index([type, published])
@@ -87,9 +86,6 @@ model File {
   featured        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-
-  // Relations
-  reviews         Review[]
 
   @@index([format, published])
   @@index([featured])
@@ -119,11 +115,14 @@ model Purchase {
 // ============================================
 // REVIEW MODEL
 // ============================================
+// Reviews can be for courses, files, or classes
+// We store itemType and itemId without foreign key constraints
+// This allows flexible reviews for different item types
 model Review {
   id              Int      @id @default(autoincrement())
   userId          Int
-  itemType        String   // file, course, class
-  itemId          Int
+  itemType        String   // "file", "course", or "class"
+  itemId          Int      // ID of the file, course, or class
   rating          Int      // 1-5
   comment         String   @db.Text
   createdAt       DateTime @default(now())
@@ -131,8 +130,6 @@ model Review {
 
   // Relations
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course          Course?  @relation(fields: [itemId], references: [id], onDelete: Cascade, map: "Review_course_fkey")
-  file            File?    @relation(fields: [itemId], references: [id], onDelete: Cascade, map: "Review_file_fkey")
 
   @@index([itemType, itemId])
   @@index([userId])

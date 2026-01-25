@@ -7,7 +7,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { BookOpen, PlayCircle } from 'lucide-react';
 
-export function MyCourses() {
+export default function MyCourses() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 

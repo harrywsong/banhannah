@@ -7,7 +7,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { User, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 
-export function Profile() {
+export default function Profile() {
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
