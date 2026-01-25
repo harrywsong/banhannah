@@ -79,18 +79,7 @@ app.options('*', (req, res) => {
   res.status(200).end();
 });
 
-app.use('/api', routes);
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    environment: ENV.NODE_ENV,
-    timestamp: new Date().toISOString() 
-  });
-});
-
-// Test endpoint for CORS debugging
+// Test endpoint for CORS debugging (must be BEFORE main /api routes)
 app.get('/api/test-cors', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -99,6 +88,17 @@ app.get('/api/test-cors', (req, res) => {
     origin: req.headers.origin,
     userAgent: req.headers['user-agent'],
     timestamp: new Date().toISOString()
+  });
+});
+
+app.use('/api', routes);
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    environment: ENV.NODE_ENV,
+    timestamp: new Date().toISOString() 
   });
 });
 
