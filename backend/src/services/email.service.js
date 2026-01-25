@@ -399,8 +399,9 @@ export async function sendContactFormEmail({ name, email, subject, message, atta
           <div class="contact-info">
             <h3 style="margin-top: 0; color: #1e40af;">📞 추가 문의</h3>
             <p>빠른 시일 내에 답변드리겠습니다. 추가 문의사항이 있으시면 언제든 연락해주세요.</p>
-            <p><strong>이메일:</strong> support@banhyena.com</p>
-            <p><strong>전화:</strong> 02-1234-5678</p>
+            <p><strong>이메일:</strong> info.banhannah@gmail.com</p>
+            <p><strong>Instagram:</strong> @banhyena</p>
+            <p><strong>KakaoTalk:</strong> 오픈채팅방 문의</p>
           </div>
         </div>
         
