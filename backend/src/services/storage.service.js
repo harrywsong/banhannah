@@ -179,6 +179,11 @@ export function buildFileUrl(filename, type = 'uploads') {
   
   const route = routes[type] || routes.uploads;
   
-  // Return relative URL that works with Vite proxy
+  // In production, return absolute URLs; in development, return relative URLs for Vite proxy
+  if (ENV.isProd && ENV.SERVER_URL) {
+    return `${ENV.SERVER_URL}${route}/${encodeURIComponent(filename)}`;
+  }
+  
+  // Return relative URL that works with Vite proxy in development
   return `${route}/${encodeURIComponent(filename)}`;
 }

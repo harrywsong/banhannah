@@ -403,10 +403,14 @@ export async function viewPreview(req, res, next) {
     
     const contentType = mimeTypes[ext] || 'image/jpeg';
     
-    // Set proper headers for image serving
+    // Set comprehensive CORS headers for image serving
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
     res.setHeader('Access-Control-Allow-Origin', '*'); // Allow CORS
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
     
     // Send file
     res.sendFile(filePath, (err) => {

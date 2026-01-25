@@ -14,6 +14,13 @@ router.get('/download/:filename', authenticate, filesController.downloadFile);
 router.get('/view/:filename', authenticate, filesController.viewFile);
 
 // Preview images are public (for course cards, file cards)
+router.options('/preview/:filename', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.status(200).end();
+});
 router.get('/preview/:filename', filesController.viewPreview);
 
 // Admin routes
