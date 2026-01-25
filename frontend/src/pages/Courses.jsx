@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import PreviewImage from '../components/PreviewImage';
 import { Search, Filter, Star } from 'lucide-react';
 
 export default function Courses() {
@@ -107,23 +108,16 @@ export default function Courses() {
                 to={`/courses/${course.id}`}
                 className="bg-white rounded-lg overflow-hidden shadow hover:shadow-lg transition"
               >
-                {course.previewImage ? (
-                  <img
-                    src={`${import.meta.env.VITE_API_URL}/files/preview/${course.previewImage}`}
-                    alt={course.title}
-                    className="w-full h-48 object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <div 
-                  className="w-full h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold"
-                  style={{ display: course.previewImage ? 'none' : 'flex' }}
-                >
-                  {course.previewImage ? '이미지 로드 실패' : '미리보기 없음'}
-                </div>
+                <PreviewImage
+                  previewImage={course.previewImage}
+                  alt={course.title}
+                  className="w-full h-48 object-cover"
+                  fallbackContent={
+                    <div className="w-full h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                      미리보기 없음
+                    </div>
+                  }
+                />
                 <div className="p-6">
                   <div className="flex items-center gap-2 mb-2">
                     {course.type === 'free' ? (

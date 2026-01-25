@@ -4,6 +4,7 @@ import { apiClient } from '../api/client';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import FileViewer from '../components/FileViewer';
+import PreviewImage from '../components/PreviewImage';
 import { Download, FileText, Search, Star, Eye } from 'lucide-react';
 
 export default function Files() {
@@ -128,26 +129,17 @@ export default function Files() {
                 key={file.id}
                 className="bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition"
               >
-                {file.previewUrl ? (
-                  <img
-                    src={file.previewUrl}
-                    alt={file.title}
-                    className="w-full h-48 object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <div 
-                  className="w-full h-48 bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center"
-                  style={{ display: file.previewUrl ? 'none' : 'flex' }}
-                >
-                  <FileText className="h-16 w-16 text-white" />
-                  {file.previewUrl && (
-                    <span className="ml-2 text-white text-sm">이미지 로드 실패</span>
-                  )}
-                </div>
+                <PreviewImage
+                  previewImage={file.previewImage}
+                  previewUrl={file.previewUrl}
+                  alt={file.title}
+                  className="w-full h-48 object-cover"
+                  fallbackContent={
+                    <div className="w-full h-48 bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center">
+                      <FileText className="h-16 w-16 text-white" />
+                    </div>
+                  }
+                />
                 <div className="p-6">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">

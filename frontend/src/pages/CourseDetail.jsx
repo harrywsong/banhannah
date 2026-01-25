@@ -6,6 +6,7 @@ import { apiClient } from '../api/client';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CourseContentViewer from '../components/CourseContentViewer';
+import PreviewImage from '../components/PreviewImage';
 import { Star, Clock, BookOpen, Users, CheckCircle, PlayCircle, Lock } from 'lucide-react';
 
 export default function CourseDetail() {
@@ -291,16 +292,11 @@ export default function CourseDetail() {
                 </div>
 
                 <div className="bg-white text-gray-900 rounded-lg p-6 shadow-xl">
-                  {course.previewImage && (
-                    <img
-                      src={`${import.meta.env.VITE_API_URL}/files/preview/${course.previewImage}`}
-                      alt={course.title}
-                      className="w-full h-48 object-cover rounded mb-4"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  )}
+                  <PreviewImage
+                    previewImage={course.previewImage}
+                    alt={course.title}
+                    className="w-full h-48 object-cover rounded mb-4"
+                  />
                   {course.type === 'paid' && (
                     <div className="mb-4">
                       {course.discountPrice ? (
