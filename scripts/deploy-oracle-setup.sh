@@ -40,7 +40,30 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-# 1. Install Node.js dependencies
+# 1. Check Node.js version and fix permissions
+print_info "Checking Node.js version..."
+NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+if [ "$NODE_VERSION" -lt 20 ]; then
+    print_warning "Node.js version $NODE_VERSION detected. Some packages require Node.js 20+"
+    print_info "Updating package.json to use compatible versions..."
+    
+    # Create a temporary package.json with compatible versions
+    if [ -f "package.json.backup" ]; then
+        print_info "Backup already exists, using original"
+    else
+        cp package.json package.json.backup
+    fi
+    
+    # Replace cross-env version for Node 18 compatibility
+    sed -i 's/"cross-env": "^10.1.0"/"cross-env": "^7.0.3"/' package.json
+fi
+
+# Fix ownership of the directory
+print_info "Fixing directory permissions..."
+sudo chown -R $USER:$USER .
+sudo chmod -R 755 .
+
+# Install Node.js dependencies
 print_info "Installing Node.js dependencies..."
 npm install
 print_status "Dependencies installed"
