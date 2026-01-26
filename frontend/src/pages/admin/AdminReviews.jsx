@@ -27,12 +27,20 @@ const AdminReviews = () => {
       if (filterType) params.append('itemType', filterType);
       if (filterRating) params.append('rating', filterRating);
       
+      console.log('🔍 Fetching reviews with params:', params.toString());
+      
       const response = await request(`/admin/reviews/all?${params}`);
-      setReviews(response.reviews);
-      setTotalPages(response.pagination.pages);
+      
+      console.log('📊 Reviews API response:', response);
+      console.log('📝 Reviews data:', response.reviews);
+      console.log('📄 Pagination:', response.pagination);
+      
+      setReviews(response.reviews || []);
+      setTotalPages(response.pagination?.pages || 1);
       setCurrentPage(page);
     } catch (error) {
-      console.error('Failed to fetch reviews:', error);
+      console.error('❌ Failed to fetch reviews:', error);
+      console.error('Error details:', error.response?.data || error.message);
     } finally {
       setLoading(false);
     }

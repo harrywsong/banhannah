@@ -13,9 +13,14 @@ Environment=PATH=/usr/bin:/usr/local/bin
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=10
-StandardOutput=syslog
-StandardError=syslog
+StandardOutput=journal
+StandardError=journal
 SyslogIdentifier=banhannah-backend
+
+# Graceful shutdown
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
 
 # Security settings
 NoNewPrivileges=yes
@@ -25,9 +30,11 @@ ReadWritePaths=/home/ubuntu/banhannah/backend
 ReadWritePaths=/home/ubuntu/banhannah/backend/storage
 ReadWritePaths=/home/ubuntu/banhannah/backend/logs
 
-# Resource limits
+# Resource limits for large uploads
 LimitNOFILE=65536
-MemoryMax=1G
+MemoryMax=2G
+# Increase timeout for large uploads
+TimeoutStartSec=60
 
 [Install]
 WantedBy=multi-user.target
