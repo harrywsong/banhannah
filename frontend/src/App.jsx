@@ -27,6 +27,7 @@ import AdminCourses from './pages/admin/AdminCourses';
 import AdminFiles from './pages/admin/AdminFiles';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminPurchases from './pages/admin/AdminPurchases';
+import AdminReviews from './pages/admin/AdminReviews';
 import ImageTest from './pages/ImageTest';
 
 // Protected Route Component
@@ -145,6 +146,14 @@ function App() {
               element={
                 <ProtectedRoute adminOnly>
                   <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/reviews"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminReviews />
                 </ProtectedRoute>
               }
             />

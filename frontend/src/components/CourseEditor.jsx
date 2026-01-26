@@ -191,13 +191,19 @@ const MediaUploader = ({ type, data, onChange }) => {
   const [uploadMode, setUploadMode] = useState(data?.uploadMode || 'link');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [retryInfo, setRetryInfo] = useState(null);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleFileUpload = async (e, retryCount = 0) => {
+    const file = e.target?.files?.[0] || e; // Support both event and direct file
     if (!file) return;
 
+    const maxRetries = 3;
+    const isVideo = type === 'video' || file.type.startsWith('video/');
+    
     setUploading(true);
-    setUploadProgress(0);
+    if (retryCount === 0) {
+      setUploadProgress(0);
+    }
 
     try {
       // Create FormData for file upload
@@ -208,9 +214,15 @@ const MediaUploader = ({ type, data, onChange }) => {
       // Import apiClient dynamically to avoid circular imports
       const { apiClient } = await import('../api/client.js');
 
-      // Upload file to server
+      // Configure timeout based on file type and size
+      const timeoutMs = isVideo ? Math.max(300000, file.size / 1000) : 60000; // 5min+ for videos, 1min for others
+      
+      console.log(`Starting upload attempt ${retryCount + 1}/${maxRetries + 1} for ${isVideo ? 'video' : 'file'} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+
+      // Upload file to server with extended timeout for videos
       const response = await apiClient.post('/files/upload-content', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: timeoutMs,
         onUploadProgress: (progressEvent) => {
           const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(progress);
@@ -234,10 +246,48 @@ const MediaUploader = ({ type, data, onChange }) => {
       setUploading(false);
       console.log('File upload completed and state updated');
     } catch (error) {
-      console.error('Upload failed:', error);
-      alert('파일 업로드에 실패했습니다: ' + (error.response?.data?.error || error.message));
+      console.error(`Upload attempt ${retryCount + 1} failed:`, error);
+      
+      // Check if this is a network error that might benefit from retry
+      const isNetworkError = error.code === 'NETWORK_ERROR' || 
+                            error.code === 'ECONNRESET' ||
+                            error.message.includes('Network Error') ||
+                            error.message.includes('timeout') ||
+                            error.message.includes('CONNECTION_RESET') ||
+                            (error.response && error.response.status >= 500);
+      
+      if (isNetworkError && retryCount < maxRetries) {
+        const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Exponential backoff, max 10s
+        console.log(`Retrying upload in ${retryDelay}ms... (attempt ${retryCount + 2}/${maxRetries + 1})`);
+        
+        // Show retry message to user
+        const retryMessage = `업로드 중 연결이 끊어졌습니다. ${retryDelay / 1000}초 후 재시도합니다...`;
+        setRetryInfo({
+          attempt: retryCount + 2,
+          total: maxRetries + 1,
+          delay: retryDelay / 1000
+        });
+        
+        // Update progress to show retry status
+        setUploadProgress(prev => prev > 0 ? prev : 10); // Keep some progress visible
+        
+        setTimeout(() => {
+          setRetryInfo(null);
+          handleFileUpload(file, retryCount + 1);
+        }, retryDelay);
+        
+        return; // Don't reset uploading state yet
+      }
+      
+      // Final failure after all retries
+      const errorMessage = isVideo 
+        ? `동영상 업로드에 실패했습니다. 파일 크기가 너무 크거나 네트워크 연결이 불안정할 수 있습니다. (${retryCount + 1}/${maxRetries + 1} 시도 완료)`
+        : `파일 업로드에 실패했습니다: ${error.response?.data?.error || error.message}`;
+      
+      alert(errorMessage);
       setUploading(false);
       setUploadProgress(0);
+      setRetryInfo(null);
     }
   };
 
@@ -321,11 +371,30 @@ const MediaUploader = ({ type, data, onChange }) => {
               <div className="mt-4">
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      retryInfo ? 'bg-yellow-500' : 'bg-blue-600'
+                    }`}
                     style={{ width: `${uploadProgress}%` }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-600 mt-1">{uploadProgress}% 완료</p>
+                <div className="flex justify-between items-center mt-1">
+                  <p className="text-xs text-gray-600">{uploadProgress}% 완료</p>
+                  {retryInfo && (
+                    <p className="text-xs text-yellow-600">
+                      재시도 중... ({retryInfo.attempt}/{retryInfo.total})
+                    </p>
+                  )}
+                </div>
+                {retryInfo && (
+                  <p className="text-xs text-yellow-600 mt-1">
+                    연결이 끊어져 {retryInfo.delay}초 후 재시도합니다
+                  </p>
+                )}
+                {type === 'video' && !retryInfo && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    💡 대용량 동영상은 업로드에 시간이 걸릴 수 있습니다
+                  </p>
+                )}
               </div>
             )}
           </div>

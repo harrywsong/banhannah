@@ -2,6 +2,7 @@
 import { prisma } from '../config/database.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import { maskName } from '../utils/helpers.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Get dashboard statistics (Admin only)
@@ -152,7 +153,14 @@ export async function getAllUsers(req, res, next) {
           role: true,
           emailVerified: true,
           createdAt: true,
-          updatedAt: true
+          updatedAt: true,
+          _count: {
+            select: {
+              purchases: true,
+              reviews: true,
+              progress: true
+            }
+          }
         },
         orderBy: { createdAt: 'desc' },
         take: parseInt(limit),
@@ -175,6 +183,92 @@ export async function getAllUsers(req, res, next) {
     });
   } catch (error) {
     console.error('Error fetching users:', error);
+    next(error);
+  }
+}
+
+/**
+ * Delete user (Admin only)
+ */
+export async function deleteUser(req, res, next) {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id);
+    
+    // Prevent admin from deleting themselves
+    if (userId === req.user.id) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        error: 'You cannot delete your own account' 
+      });
+    }
+    
+    // Check if user exists and get their details
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        _count: {
+          select: {
+            purchases: true,
+            reviews: true,
+            progress: true,
+            fileAccess: true
+          }
+        }
+      }
+    });
+    
+    if (!user) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'User not found' });
+    }
+    
+    // Prevent deletion of other admin users (optional safety measure)
+    if (user.role === 'ADMIN') {
+      return res.status(HTTP_STATUS.FORBIDDEN).json({ 
+        error: 'Cannot delete admin users' 
+      });
+    }
+    
+    // Delete the user (CASCADE will handle related records)
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+    
+    // Log the deletion for audit purposes
+    logger.warn(`Admin ${req.user.email} deleted user: ${user.email}`, {
+      deletedUser: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        createdAt: user.createdAt
+      },
+      relatedData: {
+        purchases: user._count.purchases,
+        reviews: user._count.reviews,
+        progress: user._count.progress,
+        fileAccess: user._count.fileAccess
+      },
+      deletedBy: req.user.email,
+      deletedAt: new Date().toISOString()
+    });
+    
+    res.json({ 
+      message: 'User deleted successfully',
+      deletedUser: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      },
+      relatedDataDeleted: {
+        purchases: user._count.purchases,
+        reviews: user._count.reviews,
+        progress: user._count.progress,
+        fileAccess: user._count.fileAccess
+      }
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
     next(error);
   }
 }

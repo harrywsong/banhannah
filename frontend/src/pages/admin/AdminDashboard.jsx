@@ -347,6 +347,13 @@ export default function AdminDashboard() {
               <p className="font-semibold">사용자 관리</p>
             </Link>
             <Link
+              to="/admin/reviews"
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-600 hover:bg-orange-50 transition"
+            >
+              <Award className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+              <p className="font-semibold">리뷰 관리</p>
+            </Link>
+            <Link
               to="/admin/purchases"
               className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-yellow-600 hover:bg-yellow-50 transition"
             >

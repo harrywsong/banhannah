@@ -15,6 +15,7 @@ router.get('/stats/dashboard', adminController.getDashboardStats);
 
 // User management
 router.get('/users', adminController.getAllUsers);
+router.delete('/users/:id', adminController.deleteUser);
 
 // Purchase management
 router.get('/purchases', adminController.getAllPurchases);

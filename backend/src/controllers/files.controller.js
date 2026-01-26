@@ -519,11 +519,19 @@ export async function uploadCourseContent(req, res, next) {
 
     const uploadedFile = req.file;
     const { type } = req.body; // video, image, file
+    const isVideo = type === 'video' || uploadedFile.mimetype.startsWith('video/');
+
+    // For large video files, extend the response timeout
+    if (isVideo && uploadedFile.size > 100 * 1024 * 1024) { // 100MB+
+      req.setTimeout(600000); // 10 minutes
+      res.setTimeout(600000);
+      console.log('Extended timeout for large video upload');
+    }
 
     // Build the appropriate URL based on type
     let fileUrl;
     
-    if (type === 'video' || uploadedFile.mimetype.startsWith('video/')) {
+    if (isVideo) {
       fileUrl = buildFileUrl(uploadedFile.filename, 'videos');
       console.log('Video uploaded, URL:', fileUrl);
     } else {
@@ -552,6 +560,26 @@ export async function uploadCourseContent(req, res, next) {
     res.status(HTTP_STATUS.CREATED).json(responseData);
   } catch (error) {
     console.error('Course content upload error:', error);
+    
+    // Provide more specific error messages for common upload issues
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        error: 'File too large. Maximum file size exceeded.' 
+      });
+    }
+    
+    if (error.code === 'ENOSPC') {
+      return res.status(HTTP_STATUS.INSUFFICIENT_STORAGE).json({ 
+        error: 'Server storage full. Please try again later.' 
+      });
+    }
+    
+    if (error.code === 'ECONNRESET' || error.code === 'EPIPE') {
+      return res.status(HTTP_STATUS.REQUEST_TIMEOUT).json({ 
+        error: 'Upload connection was reset. Please try again.' 
+      });
+    }
+    
     next(error);
   }
 }

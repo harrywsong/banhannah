@@ -4,6 +4,7 @@ import * as filesController from '../controllers/files.controller.js';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
 import { uploadFile, uploadPreview } from '../services/storage.service.js';
 import { fileMetadataValidation } from '../utils/validators.js';
+import { handleLargeUploads, handleUploadCompletion } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -32,19 +33,23 @@ router.get('/video/:filename', filesController.viewVideo);
 router.post('/',
   authenticate,
   requireAdmin,
+  handleLargeUploads,
   uploadFile.fields([
     { name: 'file', maxCount: 1 },
     { name: 'preview', maxCount: 1 }
   ]),
+  handleUploadCompletion,
   fileMetadataValidation,
   filesController.uploadFile
 );
 
-// Course content upload endpoint
+// Course content upload endpoint with enhanced upload handling
 router.post('/upload-content',
   authenticate,
   requireAdmin,
+  handleLargeUploads,
   uploadFile.single('file'),
+  handleUploadCompletion,
   filesController.uploadCourseContent
 );
 
@@ -54,10 +59,12 @@ router.get('/download-content/:filename', authenticate, filesController.download
 router.put('/:id',
   authenticate,
   requireAdmin,
+  handleLargeUploads,
   uploadFile.fields([
     { name: 'file', maxCount: 1 },
     { name: 'preview', maxCount: 1 }
   ]),
+  handleUploadCompletion,
   filesController.updateFile
 );
 

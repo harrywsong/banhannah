@@ -12,7 +12,9 @@ import {
   User,
   ArrowLeft,
   Trash2,
-  Edit
+  Edit,
+  AlertTriangle,
+  X
 } from 'lucide-react';
 
 export default function AdminUsers() {
@@ -20,6 +22,8 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, user: null, step: 1 });
+  const [deleting, setDeleting] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
@@ -67,6 +71,41 @@ export default function AdminUsers() {
 
   const handlePageChange = (newPage) => {
     setPagination(prev => ({ ...prev, page: newPage }));
+  };
+
+  const handleDeleteUser = (user) => {
+    setDeleteModal({ isOpen: true, user, step: 1 });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ isOpen: false, user: null, step: 1 });
+  };
+
+  const proceedToConfirmation = () => {
+    setDeleteModal(prev => ({ ...prev, step: 2 }));
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModal.user) return;
+    
+    try {
+      setDeleting(true);
+      await apiClient.delete(`/admin/users/${deleteModal.user.id}`);
+      
+      // Remove user from local state
+      setUsers(prev => prev.filter(u => u.id !== deleteModal.user.id));
+      setPagination(prev => ({ ...prev, total: prev.total - 1 }));
+      
+      closeDeleteModal();
+      
+      // Show success message (you could add a toast notification here)
+      alert('사용자가 성공적으로 삭제되었습니다.');
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      alert('사용자 삭제에 실패했습니다: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -249,9 +288,20 @@ export default function AdminUsers() {
                       {user.updatedAt ? formatDate(user.updatedAt) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-gray-400 hover:text-gray-600">
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        {user.role !== 'ADMIN' && (
+                          <button
+                            onClick={() => handleDeleteUser(user)}
+                            className="text-red-600 hover:text-red-800 transition-colors p-1 rounded hover:bg-red-50"
+                            title="사용자 삭제"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-50">
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -363,6 +413,112 @@ export default function AdminUsers() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            {deleteModal.step === 1 ? (
+              // Step 1: Initial warning
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">사용자 삭제 확인</h3>
+                </div>
+                
+                <div className="mb-6">
+                  <p className="text-gray-700 mb-3">
+                    다음 사용자를 삭제하시겠습니까?
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="font-medium text-gray-900">{deleteModal.user?.name}</p>
+                    <p className="text-sm text-gray-600">{deleteModal.user?.email}</p>
+                    <p className="text-sm text-gray-600">역할: {deleteModal.user?.role === 'ADMIN' ? '관리자' : '학생'}</p>
+                  </div>
+                  <div className="mt-3 text-sm text-red-600">
+                    <p>⚠️ 이 작업은 되돌릴 수 없습니다.</p>
+                    <p>• 사용자의 모든 구매 기록이 삭제됩니다</p>
+                    <p>• 사용자의 모든 리뷰가 삭제됩니다</p>
+                    <p>• 사용자의 모든 진행 상황이 삭제됩니다</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={closeDeleteModal}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={proceedToConfirmation}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    계속 진행
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // Step 2: Final confirmation
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">최종 확인</h3>
+                </div>
+                
+                <div className="mb-6">
+                  <p className="text-gray-700 mb-3 font-medium">
+                    정말로 <span className="text-red-600">{deleteModal.user?.name}</span> 사용자를 삭제하시겠습니까?
+                  </p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-red-800 font-medium text-sm">
+                      🚨 이 작업은 완전히 되돌릴 수 없습니다!
+                    </p>
+                    <p className="text-red-700 text-sm mt-1">
+                      사용자와 관련된 모든 데이터가 영구적으로 삭제됩니다.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setDeleteModal(prev => ({ ...prev, step: 1 }))}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    disabled={deleting}
+                  >
+                    뒤로
+                  </button>
+                  <button
+                    onClick={closeDeleteModal}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    disabled={deleting}
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    disabled={deleting}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {deleting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        삭제 중...
+                      </>
+                    ) : (
+                      '영구 삭제'
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

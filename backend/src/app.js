@@ -63,6 +63,19 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // ============================================
+// SERVER TIMEOUT CONFIGURATION
+// ============================================
+// Increase server timeout for large uploads
+app.use((req, res, next) => {
+  // Set longer timeout for upload endpoints
+  if (req.path.includes('/upload') || req.headers['content-type']?.includes('multipart/form-data')) {
+    req.setTimeout(600000); // 10 minutes
+    res.setTimeout(600000);
+  }
+  next();
+});
+
+// ============================================
 // CUSTOM MIDDLEWARE
 // ============================================
 configureMiddleware(app);
