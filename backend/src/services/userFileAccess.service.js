@@ -62,7 +62,6 @@ export async function getUserAccessedFiles(userId, limit = 10, offset = 0) {
       where: { userId: parseInt(userId) },
       include: {
         file: {
-          where: { published: true }, // Only include published files
           include: {
             _count: {
               select: { userAccess: true }
@@ -78,7 +77,7 @@ export async function getUserAccessedFiles(userId, limit = 10, offset = 0) {
     // Filter out files that are no longer published and add additional data
     const accessedFiles = await Promise.all(
       userFiles
-        .filter(access => access.file) // Remove null files (unpublished)
+        .filter(access => access.file && access.file.published) // Filter published files here
         .map(async (access) => {
           const file = access.file;
           
