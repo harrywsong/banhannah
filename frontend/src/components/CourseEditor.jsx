@@ -189,19 +189,56 @@ const MatchingEditor = ({ data, onChange }) => {
 // Media Upload Component
 const MediaUploader = ({ type, data, onChange }) => {
   const [uploadMode, setUploadMode] = useState(data?.uploadMode || 'link');
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const tempUrl = URL.createObjectURL(file);
-    onChange({
-      ...data,
-      uploadMode: 'upload',
-      file: file,
-      url: tempUrl,
-      fileName: file.name
-    });
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', type);
+
+      // Import apiClient dynamically to avoid circular imports
+      const { apiClient } = await import('../api/client.js');
+
+      // Upload file to server
+      const response = await apiClient.post('/files/upload-content', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(progress);
+        }
+      });
+
+      const uploadedFile = response.data.file;
+      
+      console.log('Upload successful:', uploadedFile);
+      
+      onChange({
+        ...data,
+        uploadMode: 'upload',
+        file: file,
+        url: uploadedFile.url,
+        fileName: uploadedFile.originalName,
+        fileSize: uploadedFile.size,
+        serverFilename: uploadedFile.filename
+      });
+      
+      setUploading(false);
+      console.log('File upload completed and state updated');
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('파일 업로드에 실패했습니다: ' + (error.response?.data?.error || error.message));
+      setUploading(false);
+      setUploadProgress(0);
+    }
   };
 
   const acceptTypes = {
@@ -261,16 +298,17 @@ const MediaUploader = ({ type, data, onChange }) => {
               type="file"
               accept={acceptTypes[type]}
               onChange={handleFileUpload}
+              disabled={uploading}
               className="hidden"
               id={`file-upload-${type}-${Date.now()}`}
             />
             <label
               htmlFor={`file-upload-${type}-${Date.now()}`}
-              className="cursor-pointer"
+              className={`cursor-pointer ${uploading ? 'pointer-events-none' : ''}`}
             >
               <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
               <p className="text-sm text-gray-600">
-                Click to upload or drag and drop
+                {uploading ? '업로드 중...' : 'Click to upload or drag and drop'}
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 {type === 'video' && 'MP4, WebM, etc.'}
@@ -278,14 +316,31 @@ const MediaUploader = ({ type, data, onChange }) => {
                 {type === 'file' && 'PDF, DOC, TXT, etc.'}
               </p>
             </label>
+            
+            {uploading && (
+              <div className="mt-4">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">{uploadProgress}% 완료</p>
+              </div>
+            )}
           </div>
-          {data?.fileName && (
+          {data?.fileName && !uploading && (
             <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
               <span>✓ {data.fileName}</span>
+              {data.fileSize && (
+                <span className="text-gray-500">
+                  ({(data.fileSize / 1024 / 1024).toFixed(1)} MB)
+                </span>
+              )}
               <button
                 type="button"
-                onClick={() => onChange({ ...data, file: null, fileName: null, url: null })}
-                className="text-red-600 hover:underline"
+                onClick={() => onChange({ ...data, file: null, fileName: null, url: null, fileSize: null })}
+                className="text-red-600 hover:underline ml-auto"
               >
                 Remove
               </button>
@@ -295,25 +350,56 @@ const MediaUploader = ({ type, data, onChange }) => {
       )}
 
       {type === 'video' && (
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={data?.disableControls || false}
-              onChange={(e) => onChange({ ...data, disableControls: e.target.checked })}
-              className="rounded"
-            />
-            Disable video controls (prevent seeking/downloading)
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={data?.preventRightClick || false}
-              onChange={(e) => onChange({ ...data, preventRightClick: e.target.checked })}
-              className="rounded"
-            />
-            Prevent right-click on video
-          </label>
+        <div className="space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-medium text-blue-800 flex items-center gap-2">
+            🎥 비디오 보안 설정
+          </h4>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={data?.preventRightClick !== false} // Default to true
+                onChange={(e) => onChange({ ...data, preventRightClick: e.target.checked })}
+                className="rounded"
+              />
+              <span className="font-medium">우클릭 방지</span>
+              <span className="text-gray-600">(다운로드 메뉴 차단)</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={data?.disableDownload !== false} // Default to true
+                onChange={(e) => onChange({ ...data, disableDownload: e.target.checked })}
+                className="rounded"
+              />
+              <span className="font-medium">다운로드 버튼 숨김</span>
+              <span className="text-gray-600">(브라우저 다운로드 버튼 제거)</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={data?.disablePictureInPicture || false}
+                onChange={(e) => onChange({ ...data, disablePictureInPicture: e.target.checked })}
+                className="rounded"
+              />
+              <span className="font-medium">화면 속 화면 비활성화</span>
+              <span className="text-gray-600">(PIP 모드 차단)</span>
+            </label>
+            <hr className="border-blue-200" />
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={data?.disableControls || false}
+                onChange={(e) => onChange({ ...data, disableControls: e.target.checked })}
+                className="rounded"
+              />
+              <span className="font-medium text-red-600">모든 컨트롤 비활성화</span>
+              <span className="text-gray-600">(재생/일시정지, 탐색 등 모두 차단)</span>
+            </label>
+          </div>
+          <div className="text-xs text-blue-700 bg-blue-100 p-2 rounded">
+            💡 <strong>권장:</strong> 우클릭 방지와 다운로드 버튼 숨김만 활성화하여 사용성과 보안의 균형을 맞추세요
+          </div>
         </div>
       )}
 
@@ -384,11 +470,19 @@ export default function EnglishCourseEditor({ lessons = [], onChange }) {
         newBlock.data = '';
         break;
       case 'video':
+        newBlock.data = { 
+          uploadMode: 'link', 
+          url: '', 
+          title: '',
+          disableControls: false,  // Allow normal controls by default
+          preventRightClick: true, // Still prevent right-click saving
+          disableDownload: true    // Prevent download but allow other controls
+        };
+        break;
       case 'image':
       case 'file':
         newBlock.data = { uploadMode: 'link', url: '', title: '' };
         break;
-      case 'multiple-choice':
         newBlock.data = { question: '', options: ['', '', '', ''], correctAnswer: 0, explanation: '' };
         break;
       case 'fill-blanks':

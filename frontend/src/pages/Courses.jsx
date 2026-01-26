@@ -39,14 +39,17 @@ export default function Courses() {
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center text-white">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-6 backdrop-blur-sm">
-              <BookOpen className="w-8 h-8" />
+      <section className="relative pt-12 pb-12 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-neutral-100">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary-100/20 via-transparent to-transparent"></div>
+        <div className="container mx-auto px-4 relative">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mb-4 shadow-lg shadow-primary-500/25">
+              <BookOpen className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">모든 강의</h1>
-            <p className="text-xl opacity-90 font-light leading-relaxed">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3 tracking-tight bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
+              모든 강의
+            </h1>
+            <p className="text-lg text-slate-600 font-light leading-relaxed max-w-2xl mx-auto">
               전문가가 만든 고품질 강의로 실력을 향상시키세요
             </p>
           </div>
@@ -159,8 +162,8 @@ export default function Courses() {
                         {course.type === 'paid' && (
                           <span className="text-lg font-bold text-primary-600">
                             {course.discountPrice
-                              ? `₩${course.discountPrice.toLocaleString()}`
-                              : `₩${course.price?.toLocaleString() || '0'}`}
+                              ? `$${course.discountPrice.toLocaleString()}`
+                              : `$${course.price?.toLocaleString() || '0'}`}
                           </span>
                         )}
                       </div>

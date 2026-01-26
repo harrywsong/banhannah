@@ -7,11 +7,13 @@ import { fileMetadataValidation } from '../utils/validators.js';
 
 const router = express.Router();
 
-// ALL file routes require authentication except preview images
+// ALL file routes require authentication except preview images and view (for iframes)
 router.get('/', authenticate, filesController.getAllFiles);
 router.get('/:id', authenticate, filesController.getFileById);
 router.get('/download/:filename', authenticate, filesController.downloadFile);
-router.get('/view/:filename', authenticate, filesController.viewFile);
+
+// View route is public for iframe embedding (but still checks file access in controller)
+router.get('/view/:filename', filesController.viewFile);
 
 // Preview images are public (for course cards, file cards)
 router.options('/preview/:filename', (req, res) => {
@@ -22,6 +24,9 @@ router.options('/preview/:filename', (req, res) => {
   res.status(200).end();
 });
 router.get('/preview/:filename', filesController.viewPreview);
+
+// Video streaming endpoint (public for course content)
+router.get('/video/:filename', filesController.viewVideo);
 
 // Admin routes
 router.post('/',
@@ -34,6 +39,17 @@ router.post('/',
   fileMetadataValidation,
   filesController.uploadFile
 );
+
+// Course content upload endpoint
+router.post('/upload-content',
+  authenticate,
+  requireAdmin,
+  uploadFile.single('file'),
+  filesController.uploadCourseContent
+);
+
+// Course content download endpoint (separate from main file downloads)
+router.get('/download-content/:filename', authenticate, filesController.downloadCourseContent);
 
 router.put('/:id',
   authenticate,

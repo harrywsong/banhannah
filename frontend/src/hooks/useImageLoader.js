@@ -1,6 +1,5 @@
 // frontend/src/hooks/useImageLoader.js
 import { useState, useEffect } from 'react';
-import { apiClient } from '../api/client';
 
 export function useImageLoader(imageUrl) {
   const [blobUrl, setBlobUrl] = useState(null);
@@ -13,37 +12,36 @@ export function useImageLoader(imageUrl) {
       return;
     }
 
-    const loadImage = async () => {
-      try {
-        setLoading(true);
-        setError(false);
-        
-        // Extract the filename from the full URL
-        const filename = imageUrl.split('/').pop();
-        
-        // Use API client to fetch the image as blob
-        const response = await apiClient.get(`/files/preview/${filename}`, {
-          responseType: 'blob'
-        });
-        
-        // Create blob URL
-        const blob = new Blob([response.data], { type: response.headers['content-type'] || 'image/jpeg' });
-        const url = URL.createObjectURL(blob);
-        
-        setBlobUrl(url);
-      } catch (err) {
-        console.error('Failed to load image:', err);
-        setError(true);
-      } finally {
+    console.log('Loading image:', imageUrl);
+
+    const loadImage = () => {
+      setLoading(true);
+      setError(false);
+      
+      // Create a new image element to test loading
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        console.log('Image loaded successfully:', imageUrl);
+        setBlobUrl(imageUrl);
         setLoading(false);
-      }
+      };
+      
+      img.onerror = (e) => {
+        console.error('Image failed to load:', imageUrl, e);
+        setError(true);
+        setLoading(false);
+      };
+      
+      img.src = imageUrl;
     };
 
     loadImage();
 
-    // Cleanup blob URL on unmount
+    // Cleanup
     return () => {
-      if (blobUrl) {
+      if (blobUrl && blobUrl.startsWith('blob:')) {
         URL.revokeObjectURL(blobUrl);
       }
     };

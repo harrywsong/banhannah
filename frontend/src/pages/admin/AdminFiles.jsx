@@ -29,19 +29,13 @@ export default function AdminFiles() {
 
   const fetchFiles = async () => {
     try {
-      // FIXED: Use admin endpoint to get ALL files (published and unpublished)
-      const response = await apiClient.get('/admin/files/all');
+      // Use the regular files endpoint - admins can see all files
+      const response = await apiClient.get('/files');
       console.log('Fetched files:', response.data);
       setFiles(response.data.files || []);
     } catch (error) {
       console.error('Failed to fetch files:', error);
-      // Fallback to public endpoint if admin endpoint not available
-      try {
-        const response = await apiClient.get('/files');
-        setFiles(response.data.files || []);
-      } catch (fallbackError) {
-        alert('파일 목록을 불러오는데 실패했습니다');
-      }
+      alert('파일 목록을 불러오는데 실패했습니다: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
@@ -54,6 +48,11 @@ export default function AdminFiles() {
       alert('파일을 선택해주세요');
       return;
     }
+
+    console.log('📤 Starting file upload...');
+    console.log('Form data:', formData);
+    console.log('Selected file:', selectedFile);
+    console.log('Preview image:', previewImage);
 
     setSubmitting(true);
 
@@ -72,20 +71,26 @@ export default function AdminFiles() {
       // Add files
       if (selectedFile) {
         data.append('file', selectedFile);
+        console.log('📁 Added file to FormData:', selectedFile.name);
       }
       if (previewImage) {
         data.append('preview', previewImage);
+        console.log('🖼️ Added preview image to FormData:', previewImage.name);
       }
 
+      console.log('📡 Sending request...');
+
       if (editingFile) {
-        await apiClient.put(`/files/${editingFile.id}`, data, {
+        const response = await apiClient.put(`/files/${editingFile.id}`, data, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
+        console.log('✅ Edit response:', response.data);
         alert('파일이 수정되었습니다!');
       } else {
-        await apiClient.post('/files', data, {
+        const response = await apiClient.post('/files', data, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
+        console.log('✅ Upload response:', response.data);
         alert('파일이 업로드되었습니다!');
       }
 
@@ -94,8 +99,9 @@ export default function AdminFiles() {
       resetForm();
       fetchFiles();
     } catch (error) {
-      console.error('Submit error:', error);
-      alert(error.response?.data?.error || '저장에 실패했습니다');
+      console.error('❌ Submit error:', error);
+      console.error('Error response:', error.response?.data);
+      alert(error.response?.data?.error || '저장에 실패했습니다: ' + error.message);
     } finally {
       setSubmitting(false);
     }

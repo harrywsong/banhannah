@@ -24,20 +24,51 @@ export async function getAllReviews(req, res, next) {
       skip: parseInt(offset)
     });
     
-    // Mask names for privacy
-    const maskedReviews = reviews.map(review => ({
-      ...review,
-      user: {
-        ...review.user,
-        name: maskName(review.user.name)
-      }
-    }));
+    // Fetch item details for each review
+    const reviewsWithItems = await Promise.all(
+      reviews.map(async (review) => {
+        let itemDetails = null;
+        
+        if (review.itemType === 'course') {
+          const course = await prisma.course.findUnique({
+            where: { id: review.itemId },
+            select: { id: true, title: true }
+          });
+          if (course) {
+            itemDetails = {
+              title: course.title,
+              link: `/courses/${course.id}`
+            };
+          }
+        } else if (review.itemType === 'file') {
+          const file = await prisma.file.findUnique({
+            where: { id: review.itemId },
+            select: { id: true, title: true }
+          });
+          if (file) {
+            itemDetails = {
+              title: file.title,
+              link: `/files?search=${encodeURIComponent(file.title)}`
+            };
+          }
+        }
+        
+        return {
+          ...review,
+          itemDetails,
+          user: {
+            ...review.user,
+            name: maskName(review.user.name)
+          }
+        };
+      })
+    );
     
     // Get total count for pagination
     const totalCount = await prisma.review.count();
     
     res.json({ 
-      reviews: maskedReviews,
+      reviews: reviewsWithItems,
       pagination: {
         total: totalCount,
         limit: parseInt(limit),
@@ -73,16 +104,47 @@ export async function getReviews(req, res, next) {
       orderBy: { createdAt: 'desc' }
     });
     
-    // Mask names for privacy
-    const maskedReviews = reviews.map(review => ({
-      ...review,
-      user: {
-        ...review.user,
-        name: maskName(review.user.name)
-      }
-    }));
+    // Fetch item details for each review
+    const reviewsWithItems = await Promise.all(
+      reviews.map(async (review) => {
+        let itemDetails = null;
+        
+        if (review.itemType === 'course') {
+          const course = await prisma.course.findUnique({
+            where: { id: review.itemId },
+            select: { id: true, title: true }
+          });
+          if (course) {
+            itemDetails = {
+              title: course.title,
+              link: `/courses/${course.id}`
+            };
+          }
+        } else if (review.itemType === 'file') {
+          const file = await prisma.file.findUnique({
+            where: { id: review.itemId },
+            select: { id: true, title: true }
+          });
+          if (file) {
+            itemDetails = {
+              title: file.title,
+              link: `/files?search=${encodeURIComponent(file.title)}`
+            };
+          }
+        }
+        
+        return {
+          ...review,
+          itemDetails,
+          user: {
+            ...review.user,
+            name: maskName(review.user.name)
+          }
+        };
+      })
+    );
     
-    res.json({ reviews: maskedReviews });
+    res.json({ reviews: reviewsWithItems });
   } catch (error) {
     next(error);
   }

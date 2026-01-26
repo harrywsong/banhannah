@@ -36,7 +36,8 @@ export default function Login() {
 
   const handleResendVerification = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/resend-verification`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+      const response = await fetch(`${apiUrl}/auth/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -134,13 +135,25 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-3">
             <p className="text-sm text-slate-600">
               계정이 없으신가요?{' '}
               <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
                 회원가입
               </Link>
             </p>
+            
+            <div className="text-xs text-slate-500">
+              로그인 시{' '}
+              <Link to="/terms" className="text-blue-600 hover:text-blue-700 underline">
+                이용약관
+              </Link>
+              {' '}및{' '}
+              <Link to="/privacy" className="text-blue-600 hover:text-blue-700 underline">
+                개인정보처리방침
+              </Link>
+              에 동의한 것으로 간주됩니다.
+            </div>
           </div>
         </div>
       </div>

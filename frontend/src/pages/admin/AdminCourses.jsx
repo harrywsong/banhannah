@@ -240,7 +240,7 @@ export default function AdminCourses() {
                     </td>
                     <td className="px-6 py-4">
                       {course.type === 'paid' ? (
-                        <span className="font-semibold">₩{(course.discountPrice || course.price)?.toLocaleString()}</span>
+                        <span className="font-semibold">${(course.discountPrice || course.price)?.toLocaleString()}</span>
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
@@ -408,14 +408,29 @@ export default function AdminCourses() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-2">수강 기한 (일)</label>
-                      <input
-                        type="number"
-                        value={formData.accessDuration}
-                        onChange={(e) => setFormData({ ...formData, accessDuration: e.target.value })}
-                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                        min="1"
-                      />
+                      <label className="block text-sm font-medium mb-2">
+                        수강 기한 (일)
+                        {formData.type === 'free' && (
+                          <span className="text-green-600 text-xs ml-2">(무료 강의는 무제한)</span>
+                        )}
+                      </label>
+                      {formData.type === 'free' ? (
+                        <input
+                          type="text"
+                          value="무제한"
+                          disabled
+                          className="w-full px-4 py-2 border rounded-lg bg-gray-100 text-gray-600"
+                        />
+                      ) : (
+                        <input
+                          type="number"
+                          value={formData.accessDuration}
+                          onChange={(e) => setFormData({ ...formData, accessDuration: e.target.value })}
+                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          min="1"
+                          placeholder="예: 90"
+                        />
+                      )}
                     </div>
                   </div>
 

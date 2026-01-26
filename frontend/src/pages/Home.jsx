@@ -1,9 +1,50 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { BookOpen, FileText, Award, Users, ArrowRight, CheckCircle, Star } from 'lucide-react';
+import { apiClient } from '../api/client';
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
+  const [testimonials, setTestimonials] = useState([]);
+  const [testimonialsLoading, setTestimonialsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalCourses: 0,
+    totalFiles: 0,
+    totalReviews: 0
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTestimonials();
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const response = await apiClient.get('/stats/public');
+      setStats(response.data);
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+      // Keep default values if API fails
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  const fetchTestimonials = async () => {
+    try {
+      const response = await apiClient.get('/reviews/all?limit=3');
+      setTestimonials(response.data.reviews || []);
+    } catch (err) {
+      console.error('Error fetching testimonials:', err);
+      // Fallback to empty array if API fails
+      setTestimonials([]);
+    } finally {
+      setTestimonialsLoading(false);
+    }
+  };
 
   const features = [
     {
@@ -28,19 +69,40 @@ export default function Home() {
     }
   ];
 
-  const stats = [
-    { number: '1,000+', label: '수강생' },
-    { number: '50+', label: '강의' },
-    { number: '95%', label: '만족도' },
-    { number: '24/7', label: '지원' }
+  const displayStats = [
+    { 
+      number: statsLoading ? '...' : `${stats.totalUsers}+`, 
+      label: '수강생',
+      color: 'text-blue-600'
+    },
+    { 
+      number: statsLoading ? '...' : `${stats.totalCourses}`, 
+      label: '강의',
+      color: 'text-green-600'
+    },
+    { 
+      number: statsLoading ? '...' : `${stats.totalFiles}`, 
+      label: '학습자료',
+      color: 'text-purple-600'
+    },
+    { 
+      number: statsLoading ? '...' : `${stats.totalReviews}`, 
+      label: '후기',
+      color: 'text-orange-600'
+    }
   ];
 
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 overflow-hidden">
-        <div className="absolute inset-0 bg-neutral-50 -z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-neutral-50 via-blue-50/30 to-purple-50/20 -z-10"></div>
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-[0.03] -z-10"></div>
+        
+        {/* Floating color orbs */}
+        <div className="absolute top-20 left-10 w-32 h-32 bg-primary-200/20 rounded-full blur-xl -z-10"></div>
+        <div className="absolute bottom-20 right-10 w-40 h-40 bg-purple-200/20 rounded-full blur-xl -z-10"></div>
+        <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-blue-200/20 rounded-full blur-xl -z-10"></div>
 
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center animate-slide-up">
@@ -95,9 +157,11 @@ export default function Home() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 border-t border-neutral-200 pt-12">
-              {stats.map((stat, index) => (
+              {displayStats.map((stat, index) => (
                 <div key={index} className="text-center group hover:transform hover:-translate-y-1 transition-transform duration-300">
-                  <div className="text-3xl font-bold text-neutral-900 mb-1 group-hover:text-primary-600 transition-colors">{stat.number}</div>
+                  <div className={`text-3xl font-bold mb-1 group-hover:scale-110 transition-all duration-300 ${stat.color}`}>
+                    {stat.number}
+                  </div>
                   <div className="text-sm text-neutral-500 font-medium">{stat.label}</div>
                 </div>
               ))}
@@ -107,7 +171,10 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 bg-white border-t border-neutral-100">
+      <section className="py-24 bg-gradient-to-b from-white via-green-50/30 to-white border-t border-neutral-100 relative">
+        {/* Subtle background elements */}
+        <div className="absolute top-10 right-20 w-20 h-20 bg-green-200/20 rounded-full blur-lg"></div>
+        <div className="absolute bottom-10 left-20 w-16 h-16 bg-blue-200/20 rounded-full blur-lg"></div>
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
@@ -133,7 +200,10 @@ export default function Home() {
       </section>
 
       {/* Testimonial Section */}
-      <section className="py-24 bg-neutral-50 border-t border-neutral-200">
+      <section className="py-24 bg-gradient-to-br from-neutral-50 via-orange-50/20 to-neutral-50 border-t border-neutral-200 relative">
+        {/* Subtle background elements */}
+        <div className="absolute top-16 left-16 w-28 h-28 bg-orange-200/15 rounded-full blur-xl"></div>
+        <div className="absolute bottom-16 right-16 w-24 h-24 bg-yellow-200/15 rounded-full blur-xl"></div>
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
@@ -146,44 +216,66 @@ export default function Home() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  name: '김학생',
-                  role: '웹 개발자',
-                  content: '체계적인 커리큘럼과 실무 중심의 내용이 정말 도움이 되었습니다.',
-                  rating: 5
-                },
-                {
-                  name: '이수강',
-                  role: '디자이너',
-                  content: '강사님의 설명이 명확하고 질문에 대한 답변도 빨라서 만족합니다.',
-                  rating: 5
-                },
-                {
-                  name: '박학습',
-                  role: '학생',
-                  content: '초보자도 쉽게 따라할 수 있도록 단계별로 잘 구성되어 있어요.',
-                  rating: 5
-                }
-              ].map((testimonial, index) => (
-                <div key={index} className="card p-8 bg-white hover:shadow-md transition-shadow">
-                  <div className="flex items-center mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-neutral-700 mb-6 leading-relaxed italic">"{testimonial.content}"</p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500 font-bold">
-                      {testimonial.name[0]}
+              {testimonialsLoading ? (
+                // Loading state
+                [...Array(3)].map((_, index) => (
+                  <div key={index} className="card p-8 bg-white animate-pulse">
+                    <div className="flex items-center mb-4">
+                      <div className="h-4 w-20 bg-gray-200 rounded"></div>
                     </div>
-                    <div>
-                      <div className="font-semibold text-neutral-900 text-sm">{testimonial.name}</div>
-                      <div className="text-xs text-neutral-500">{testimonial.role}</div>
+                    <div className="space-y-2 mb-6">
+                      <div className="h-4 bg-gray-200 rounded"></div>
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-200"></div>
+                      <div className="space-y-1">
+                        <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                        <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : testimonials.length === 0 ? (
+                // No reviews state
+                <div className="col-span-full text-center py-12">
+                  <Star className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-600 mb-2">아직 리뷰가 없습니다</h3>
+                  <p className="text-gray-500">첫 번째 리뷰를 남겨주세요!</p>
                 </div>
-              ))}
+              ) : (
+                // Real testimonials
+                testimonials.map((testimonial, index) => (
+                  <div key={testimonial.id || index} className="card p-8 bg-white hover:shadow-md transition-shadow">
+                    <div className="flex items-center mb-4">
+                      {[...Array(testimonial.rating)].map((_, i) => (
+                        <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                      ))}
+                    </div>
+                    <p className="text-neutral-700 mb-6 leading-relaxed italic">"{testimonial.comment}"</p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-500 font-bold">
+                        {testimonial.user?.name?.[0] || '?'}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-neutral-900 text-sm">{testimonial.user?.name || '익명'}</div>
+                        <div className="text-xs text-neutral-500">
+                          {testimonial.itemDetails ? (
+                            <Link 
+                              to={testimonial.itemDetails.link}
+                              className="text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                              {testimonial.itemType === 'course' ? '강의: ' : '자료: '}{testimonial.itemDetails.title}
+                            </Link>
+                          ) : (
+                            testimonial.itemType === 'course' ? '강의 수강생' : '자료 이용자'
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

@@ -122,7 +122,7 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-gray-500 text-sm">총 수익</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  ₩{stats.overview.totalRevenue.toLocaleString()}
+                  ${stats.overview.totalRevenue.toLocaleString()}
                 </p>
                 <p className="text-sm text-gray-600 mt-2">
                   {stats.overview.totalPurchases} 판매
@@ -137,18 +137,27 @@ export default function AdminDashboard() {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">주간 성장률</h2>
+              <div>
+                <h2 className="text-xl font-bold">주간 성장률</h2>
+                <p className="text-sm text-gray-500">지난 7일간 (최근 일주일)</p>
+              </div>
               <TrendingUp className="h-6 w-6 text-green-600" />
             </div>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">신규 사용자</span>
+                <div>
+                  <span className="text-gray-600">신규 사용자</span>
+                  <p className="text-xs text-gray-400">지난 주 대비</p>
+                </div>
                 <span className="text-2xl font-bold text-green-600">
                   +{stats.growth.newUsersThisWeek}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-600">신규 등록</span>
+                <div>
+                  <span className="text-gray-600">신규 등록</span>
+                  <p className="text-xs text-gray-400">강의 등록 수</p>
+                </div>
                 <span className="text-2xl font-bold text-blue-600">
                   +{stats.growth.enrollmentsThisWeek}
                 </span>
@@ -296,7 +305,7 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="font-semibold">
-                        ₩{purchase.amount.toLocaleString()}
+                        ${purchase.amount.toLocaleString()}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -330,14 +339,20 @@ export default function AdminDashboard() {
               <FileText className="h-8 w-8 mx-auto mb-2 text-green-600" />
               <p className="font-semibold">자료 관리</p>
             </Link>
-            <button className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-600 hover:bg-purple-50 transition">
+            <Link
+              to="/admin/users"
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-600 hover:bg-purple-50 transition"
+            >
               <Users className="h-8 w-8 mx-auto mb-2 text-purple-600" />
               <p className="font-semibold">사용자 관리</p>
-            </button>
-            <button className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-yellow-600 hover:bg-yellow-50 transition">
+            </Link>
+            <Link
+              to="/admin/purchases"
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-yellow-600 hover:bg-yellow-50 transition"
+            >
               <ShoppingCart className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
               <p className="font-semibold">구매 내역</p>
-            </button>
+            </Link>
           </div>
         </div>
       </div>

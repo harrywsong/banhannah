@@ -5,8 +5,10 @@ import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../api/client';
 
 import CourseContentViewer from '../components/CourseContentViewer';
+import CourseReviews from '../components/CourseReviews';
+import CompactCourseReviews from '../components/CompactCourseReviews';
 import PreviewImage from '../components/PreviewImage';
-import { Star, Clock, BookOpen, Users, CheckCircle, PlayCircle, Lock } from 'lucide-react';
+import { Star, Clock, BookOpen, Users, CheckCircle, PlayCircle, Lock, Trophy } from 'lucide-react';
 
 export default function CourseDetail() {
   const { id } = useParams();
@@ -18,6 +20,7 @@ export default function CourseDetail() {
   const [currentLesson, setCurrentLesson] = useState(null);
   const [completedLessons, setCompletedLessons] = useState([]);
   const [quizScores, setQuizScores] = useState({});
+  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     fetchCourse();
@@ -89,9 +92,21 @@ export default function CourseDetail() {
   };
 
   const handleLessonComplete = async (lessonId) => {
-    if (!completedLessons.includes(lessonId)) {
+    const wasCompleted = completedLessons.includes(lessonId);
+    
+    if (!wasCompleted) {
       const newCompleted = [...completedLessons, lessonId];
       setCompletedLessons(newCompleted);
+
+      // Check if course is now 100% complete
+      const totalLessons = course?.lessons?.length || 0;
+      const completionPercentage = totalLessons > 0 ? (newCompleted.length / totalLessons) * 100 : 0;
+      
+      // Trigger celebration if course is completed
+      if (completionPercentage === 100) {
+        setShowCelebration(true);
+        setTimeout(() => setShowCelebration(false), 4000);
+      }
 
       try {
         await apiClient.put(`/courses/${id}/progress`, {
@@ -161,7 +176,60 @@ export default function CourseDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* Celebration Effect */}
+      {showCelebration && (
+        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center animate-bounce">
+              <div className="text-8xl mb-6">🎉</div>
+              <div className="bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 text-white px-12 py-6 rounded-2xl text-2xl font-bold shadow-2xl animate-pulse">
+                <Trophy className="inline h-8 w-8 mr-3" />
+                축하합니다! 강의를 완료했습니다!
+                <Trophy className="inline h-8 w-8 ml-3" />
+              </div>
+              <div className="mt-4 text-lg font-semibold text-gray-700 animate-pulse">
+                🏆 모든 레슨을 성공적으로 완료하셨습니다! 🏆
+              </div>
+            </div>
+          </div>
+          {/* Enhanced Confetti Animation */}
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute animate-ping"
+              style={{
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${1 + Math.random()}s`
+              }}
+            >
+              <div 
+                className={`w-3 h-3 rounded-full animate-bounce ${
+                  ['bg-yellow-400', 'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500'][Math.floor(Math.random() * 6)]
+                }`}
+                style={{
+                  animationDelay: `${Math.random() * 1}s`
+                }}
+              ></div>
+            </div>
+          ))}
+          {/* Fireworks effect */}
+          <div className="absolute top-1/4 left-1/4 animate-pulse">
+            <div className="text-4xl">✨</div>
+          </div>
+          <div className="absolute top-1/3 right-1/4 animate-pulse" style={{animationDelay: '0.5s'}}>
+            <div className="text-4xl">🎆</div>
+          </div>
+          <div className="absolute bottom-1/4 left-1/3 animate-pulse" style={{animationDelay: '1s'}}>
+            <div className="text-4xl">🎊</div>
+          </div>
+          <div className="absolute bottom-1/3 right-1/3 animate-pulse" style={{animationDelay: '1.5s'}}>
+            <div className="text-4xl">⭐</div>
+          </div>
+        </div>
+      )}
 
       {/* Course Player View (when enrolled) */}
       {course.hasPurchased && currentLesson ? (
@@ -210,20 +278,44 @@ export default function CourseDetail() {
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow sticky top-4">
                 <div className="p-4 border-b">
-                  <h3 className="font-bold">강의 목록</h3>
-                  <div className="mt-2 bg-gray-200 rounded-full h-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-bold">강의 목록</h3>
+                    {completedLessons.length === (course.lessons?.length || 0) && course.lessons?.length > 0 && (
+                      <div className="flex items-center gap-1 text-green-600 animate-pulse">
+                        <Trophy className="h-4 w-4" />
+                        <span className="text-sm font-semibold">완료!</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-2 bg-gray-200 rounded-full h-3 relative overflow-hidden">
                     <div
-                      className="bg-blue-600 h-2 rounded-full transition-all"
+                      className={`h-3 rounded-full transition-all duration-500 ${
+                        completedLessons.length === (course.lessons?.length || 0) && course.lessons?.length > 0
+                          ? 'bg-gradient-to-r from-green-400 via-green-500 to-green-600 animate-pulse'
+                          : 'bg-gradient-to-r from-blue-400 to-blue-600'
+                      }`}
                       style={{
                         width: `${(completedLessons.length / (course.lessons?.length || 1)) * 100}%`
                       }}
                     />
+                    {completedLessons.length === (course.lessons?.length || 0) && course.lessons?.length > 0 && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                    )}
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {completedLessons.length} / {course.lessons?.length || 0} 완료
-                  </p>
+                  <div className="flex justify-between items-center mt-2">
+                    <p className="text-sm text-gray-600">
+                      {completedLessons.length} / {course.lessons?.length || 0} 완료
+                    </p>
+                    <p className={`text-sm font-semibold ${
+                      completedLessons.length === (course.lessons?.length || 0) && course.lessons?.length > 0
+                        ? 'text-green-600'
+                        : 'text-blue-600'
+                    }`}>
+                      {Math.round((completedLessons.length / (course.lessons?.length || 1)) * 100)}%
+                    </p>
+                  </div>
                 </div>
-                <div className="max-h-[600px] overflow-y-auto">
+                <div className="max-h-[400px] overflow-y-auto">
                   {course.lessons?.map((lesson, index) => (
                     <button
                       key={lesson.id}
@@ -251,6 +343,12 @@ export default function CourseDetail() {
                     </button>
                   ))}
                 </div>
+                
+                {/* Compact Review Section */}
+                <CompactCourseReviews 
+                  courseId={parseInt(id)} 
+                  hasPurchased={course.hasPurchased} 
+                />
               </div>
             </div>
           </div>
@@ -265,11 +363,11 @@ export default function CourseDetail() {
                 <div>
                   <div className="flex gap-2 mb-4">
                     {course.type === 'free' ? (
-                      <span className="px-3 py-1 bg-green-500 rounded text-sm">무료</span>
+                      <span className="badge bg-accent-400 text-accent-900 border-0">무료</span>
                     ) : (
-                      <span className="px-3 py-1 bg-yellow-500 rounded text-sm">유료</span>
+                      <span className="badge bg-white/20 text-white border-white/30">유료</span>
                     )}
-                    <span className="px-3 py-1 bg-white/20 rounded text-sm">
+                    <span className="badge bg-white/20 text-white border-white/30">
                       {course.level === 1 ? '초급' : course.level === 2 ? '중급' : '고급'}
                     </span>
                   </div>
@@ -298,15 +396,15 @@ export default function CourseDetail() {
                       {course.discountPrice ? (
                         <>
                           <span className="text-3xl font-bold text-blue-600">
-                            ₩{course.discountPrice.toLocaleString()}
+                            ${course.discountPrice.toLocaleString()}
                           </span>
                           <span className="text-lg text-gray-400 line-through ml-2">
-                            ₩{course.price.toLocaleString()}
+                            ${course.price.toLocaleString()}
                           </span>
                         </>
                       ) : (
                         <span className="text-3xl font-bold text-blue-600">
-                          ₩{course.price?.toLocaleString() || '0'}
+                          ${course.price?.toLocaleString() || '0'}
                         </span>
                       )}
                     </div>
@@ -329,19 +427,14 @@ export default function CourseDetail() {
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-          </div>
+              </div >
+            </div >
+          </div >
 
           {/* Course Content Preview */}
-          <div className="max-w-7xl mx-auto px-4 py-12">
+          < div className="max-w-7xl mx-auto px-4 py-12" >
             <div className="grid lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2">
-                <div className="bg-white rounded-lg shadow p-6 mb-8">
-                  <h2 className="text-2xl font-bold mb-4">강의 소개</h2>
-                  <p className="text-gray-700 whitespace-pre-wrap">{course.description}</p>
-                </div>
-
                 {course.lessons && course.lessons.length > 0 && (
                   <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-2xl font-bold mb-4">커리큘럼</h2>
@@ -369,7 +462,7 @@ export default function CourseDetail() {
               </div>
 
               <div>
-                <div className="bg-white rounded-lg shadow p-6 sticky top-4">
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
                   <h3 className="text-xl font-bold mb-4">강의 정보</h3>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
@@ -402,12 +495,21 @@ export default function CourseDetail() {
                     </div>
                   </div>
                 </div>
+
+                {/* Course Reviews Section */}
+                <div className="mt-6">
+                  <CourseReviews 
+                    courseId={parseInt(id)} 
+                    hasPurchased={course.hasPurchased} 
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          </div >
         </>
-      )}
+      )
+      }
 
-    </div>
+    </div >
   );
 }

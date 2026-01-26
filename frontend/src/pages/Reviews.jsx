@@ -1,45 +1,87 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Star, MessageSquare, User } from 'lucide-react';
+import { apiClient } from '../api/client';
 
 export default function Reviews() {
-  const [reviews] = useState([
-    {
-      id: 1,
-      name: '김학생',
-      rating: 5,
-      comment: '정말 유익한 강의였습니다. 설명이 명확하고 이해하기 쉬웠어요.',
-      course: '기초 프로그래밍',
-      date: '2024-01-15'
-    },
-    {
-      id: 2,
-      name: '이수강',
-      rating: 5,
-      comment: '실무에 바로 적용할 수 있는 내용들이 많아서 도움이 되었습니다.',
-      course: '웹 개발 심화',
-      date: '2024-01-10'
-    },
-    {
-      id: 3,
-      name: '박학습',
-      rating: 4,
-      comment: '강의 자료가 잘 정리되어 있고, 질문에 대한 답변도 빨라서 좋았습니다.',
-      course: '데이터베이스 기초',
-      date: '2024-01-05'
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.get('/reviews/all?limit=20');
+      setReviews(response.data.reviews || []);
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+      setError('리뷰를 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+
+  const getItemName = (review) => {
+    if (review.itemDetails) {
+      return (
+        <Link 
+          to={review.itemDetails.link}
+          className="text-blue-600 hover:text-blue-800 hover:underline"
+        >
+          {review.itemType === 'course' ? '강의: ' : '자료: '}{review.itemDetails.title}
+        </Link>
+      );
+    }
+    return review.itemType === 'course' ? '강의' : '자료';
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('ko-KR');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">리뷰를 불러오는 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <p className="text-red-600">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden bg-gradient-to-br from-primary-600 to-primary-700">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center text-white">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-6 backdrop-blur-sm">
-              <MessageSquare className="w-8 h-8" />
+      <section className="relative pt-12 pb-12 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-neutral-100">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-100/30 via-transparent to-transparent"></div>
+        <div className="container mx-auto px-4 relative">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl mb-4 shadow-lg shadow-amber-500/25">
+              <MessageSquare className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">수강 후기</h1>
-            <p className="text-xl opacity-90 font-light leading-relaxed">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3 tracking-tight bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
+              수강 후기
+            </h1>
+            <p className="text-lg text-slate-600 font-light leading-relaxed max-w-2xl mx-auto">
               실제 수강생들의 생생한 경험을 확인해보세요
             </p>
           </div>
@@ -51,7 +93,14 @@ export default function Reviews() {
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {reviews.map((review) => (
+            {reviews.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <MessageSquare className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">아직 리뷰가 없습니다</h3>
+                <p className="text-gray-600">첫 번째 리뷰를 남겨주세요!</p>
+              </div>
+            ) : (
+              reviews.map((review) => (
                 <div key={review.id} className="card p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
                   <div className="flex items-center mb-4">
                     <div className="flex items-center">
@@ -73,17 +122,18 @@ export default function Reviews() {
                   <div className="border-t border-neutral-100 pt-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold">
-                        {review.name[0]}
+                        {review.user.name[0]}
                       </div>
                       <div>
-                        <p className="font-semibold text-neutral-900">{review.name}</p>
-                        <p className="text-sm text-neutral-600">{review.course}</p>
-                        <p className="text-xs text-neutral-500 mt-0.5">{review.date}</p>
+                        <p className="font-semibold text-neutral-900">{review.user.name}</p>
+                        <p className="text-sm text-neutral-600">{getItemName(review)}</p>
+                        <p className="text-xs text-neutral-500 mt-0.5">{formatDate(review.createdAt)}</p>
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+            )}
             </div>
 
             {/* CTA Card */}

@@ -3,6 +3,49 @@ import { prisma } from '../config/database.js';
 import { HTTP_STATUS } from '../config/constants.js';
 
 /**
+ * Get public statistics for homepage (no authentication required)
+ */
+export async function getPublicStats(req, res, next) {
+  try {
+    // Get total users (students only)
+    const totalUsers = await prisma.user.count({
+      where: { role: 'STUDENT' }
+    });
+
+    // Get total courses
+    const totalCourses = await prisma.course.count({
+      where: { published: true }
+    });
+
+    // Get total files
+    const totalFiles = await prisma.file.count({
+      where: { published: true }
+    });
+
+    // Get total reviews
+    const totalReviews = await prisma.review.count();
+
+    const stats = {
+      totalUsers,
+      totalCourses,
+      totalFiles,
+      totalReviews
+    };
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching public stats:', error);
+    // Return default values if database fails
+    res.json({
+      totalUsers: 0,
+      totalCourses: 0,
+      totalFiles: 0,
+      totalReviews: 0
+    });
+  }
+}
+
+/**
  * Get platform statistics for homepage
  */
 export async function getPlatformStats(req, res, next) {

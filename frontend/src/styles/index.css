@@ -4,6 +4,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Balanced Video Protection - Prevents downloading while allowing normal controls */
+video[controlsList*="nodownload"] {
+  /* Hide download button specifically */
+}
+
+video[controlsList*="nodownload"]::-webkit-media-controls-download-button {
+  display: none !important;
+}
+
+video[controlsList*="nodownload"]::-moz-media-controls-download-button {
+  display: none !important;
+}
+
+/* Prevent right-click context menu on protected videos */
+video[oncontextmenu] {
+  -webkit-touch-callout: none;
+}
+
+/* Light protection - only when needed */
+.video-protected {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 @layer base {
   * {
     @apply border-neutral-200 outline-none;

@@ -30,10 +30,24 @@ const VIDEOS_DIR = path.join(STORAGE_DIR, 'videos');
  */
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, UPLOADS_DIR);
+    // Check if this is a course content upload
+    const type = req.body.type;
+    console.log('File upload destination - type:', type, 'mimetype:', file.mimetype);
+    
+    if (type === 'video' || file.mimetype.startsWith('video/')) {
+      console.log('Uploading to videos directory:', VIDEOS_DIR);
+      cb(null, VIDEOS_DIR);
+    } else if (type === 'image' || file.mimetype.startsWith('image/')) {
+      console.log('Uploading to uploads directory (image):', UPLOADS_DIR);
+      cb(null, UPLOADS_DIR);
+    } else {
+      console.log('Uploading to uploads directory (default):', UPLOADS_DIR);
+      cb(null, UPLOADS_DIR);
+    }
   },
   filename: (req, file, cb) => {
     const uniqueName = generateUniqueFilename(file.originalname);
+    console.log('Generated filename:', uniqueName);
     cb(null, uniqueName);
   }
 });
@@ -77,11 +91,13 @@ const imageFilter = (req, file, cb) => {
 };
 
 /**
- * File upload middleware
+ * File upload middleware - NO SIZE LIMIT for admin uploads
  */
 export const uploadFile = multer({
   storage: fileStorage,
-  limits: { fileSize: ENV.MAX_FILE_SIZE },
+  limits: { 
+    fileSize: Infinity // Remove file size limit for admin uploads
+  },
   fileFilter: (req, file, cb) => {
     cb(null, true);
   }
@@ -106,7 +122,7 @@ export const uploadProfilePicture = multer({
 });
 
 /**
- * Video upload middleware
+ * Video upload middleware - NO SIZE LIMIT for admin uploads
  */
 export const uploadVideo = multer({
   storage: multer.diskStorage({
@@ -118,12 +134,14 @@ export const uploadVideo = multer({
       cb(null, uniqueName);
     }
   }),
-  limits: { fileSize: ENV.MAX_VIDEO_SIZE },
+  limits: { 
+    fileSize: Infinity // Remove file size limit for admin video uploads
+  },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /mp4|mov|avi|mkv|webm/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    
+
     if (extname && mimetype) {
       cb(null, true);
     } else {
@@ -142,7 +160,7 @@ export function getFilePath(filename, type = 'uploads') {
     profile: PROFILE_DIR,
     videos: VIDEOS_DIR
   };
-  
+
   return path.join(dirs[type] || UPLOADS_DIR, filename);
 }
 
@@ -169,21 +187,28 @@ export function deleteFile(filename, type = 'uploads') {
  */
 export function buildFileUrl(filename, type = 'uploads') {
   if (!filename) return null;
-  
+
   const routes = {
     uploads: '/api/files/view',
+    download: '/api/files/download',
     previews: '/api/files/preview',
     profile: '/api/files/profile',
-    videos: '/api/videos/view'
+    videos: '/api/files/video'
   };
-  
+
   const route = routes[type] || routes.uploads;
-  
-  // In production, return absolute URLs; in development, return relative URLs for Vite proxy
-  if (ENV.isProd && ENV.SERVER_URL) {
+
+  // Always return relative URLs in development for Vite proxy
+  // In production, we can return absolute URLs if needed
+  if (ENV.NODE_ENV === 'development') {
+    return `${route}/${encodeURIComponent(filename)}`;
+  }
+
+  // Production: return absolute URLs only if SERVER_URL is properly configured
+  if (ENV.SERVER_URL && !ENV.SERVER_URL.includes('undefined')) {
     return `${ENV.SERVER_URL}${route}/${encodeURIComponent(filename)}`;
   }
-  
-  // Return relative URL that works with Vite proxy in development
+
+  // Fallback to relative URLs
   return `${route}/${encodeURIComponent(filename)}`;
 }

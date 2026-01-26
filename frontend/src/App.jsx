@@ -11,6 +11,8 @@ import About from './pages/About';
 import Reviews from './pages/Reviews';
 import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail';
@@ -23,6 +25,9 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminFiles from './pages/admin/AdminFiles';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminPurchases from './pages/admin/AdminPurchases';
+import ImageTest from './pages/ImageTest';
 
 // Protected Route Component
 function ProtectedRoute({ children, adminOnly = false }) {
@@ -65,6 +70,9 @@ function App() {
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/image-test" element={<ImageTest />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
@@ -129,6 +137,22 @@ function App() {
               element={
                 <ProtectedRoute adminOnly>
                   <AdminFiles />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminUsers />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/purchases"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminPurchases />
                 </ProtectedRoute>
               }
             />

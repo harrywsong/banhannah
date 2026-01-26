@@ -106,14 +106,17 @@ export default function Contact() {
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden bg-gradient-to-br from-primary-600 to-primary-700">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center text-white">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-6 backdrop-blur-sm">
-              <Mail className="w-8 h-8" />
+      <section className="relative pt-12 pb-12 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-neutral-100">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/30 via-transparent to-transparent"></div>
+        <div className="container mx-auto px-4 relative">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl mb-4 shadow-lg shadow-blue-500/25">
+              <Mail className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">문의하기</h1>
-            <p className="text-xl opacity-90 font-light leading-relaxed">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3 tracking-tight bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
+              문의하기
+            </h1>
+            <p className="text-lg text-slate-600 font-light leading-relaxed max-w-2xl mx-auto">
               궁금하신 점이 있으시면 언제든지 연락해주세요
             </p>
           </div>
@@ -135,16 +138,51 @@ export default function Contact() {
                     </div>
                     <div>
                       <p className="font-medium text-neutral-900">이메일</p>
-                      <p className="text-neutral-600 text-sm">info.banhannah@gmail.com</p>
+                      <a 
+                        href="mailto:info.banhannah@gmail.com"
+                        className="text-primary-600 text-sm hover:text-primary-700 transition-colors"
+                      >
+                        info.banhannah@gmail.com
+                      </a>
                     </div>
                   </div>
 
-                  <div className="card p-6 bg-primary-50 border-primary-100">
-                    <h3 className="font-semibold text-primary-900 mb-2">운영 시간</h3>
-                    <p className="text-primary-800 text-sm leading-relaxed">
-                      평일: 09:00 - 18:00<br />
-                      주말 및 공휴일: 휴무
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center flex-shrink-0">
+                      <svg className="h-5 w-5 text-pink-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-neutral-900">인스타그램</p>
+                      <a 
+                        href="https://www.instagram.com/banhanna_h/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-pink-600 text-sm hover:text-pink-700 transition-colors"
+                      >
+                        @banhanna_h
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 3c2.753 0 5.07.59 6.975 1.69C20.88 5.79 21.796 7.24 21.796 8.8c0 .63-.084 1.24-.25 1.81-.166.57-.415 1.1-.745 1.59-.33.49-.745.94-1.245 1.35-.5.41-1.085.77-1.755 1.08-.67.31-1.425.55-2.265.72-.84.17-1.765.25-2.775.25-.84 0-1.65-.06-2.43-.18-.78-.12-1.52-.3-2.22-.54-.7-.24-1.36-.54-1.98-.9-.62-.36-1.2-.78-1.74-1.26-.54-.48-1.02-1.02-1.44-1.62-.42-.6-.75-1.26-.99-1.98-.24-.72-.36-1.5-.36-2.34 0-1.56.916-3.01 2.821-4.11C6.93 3.59 9.247 3 12 3zm0 1.5c-2.463 0-4.463.48-6 1.44-1.537.96-2.305 2.16-2.305 3.6 0 .66.096 1.26.288 1.8.192.54.468 1.02.828 1.44.36.42.804.78 1.332 1.08.528.3 1.14.54 1.836.72.696.18 1.476.27 2.34.27.864 0 1.644-.09 2.34-.27.696-.18 1.308-.42 1.836-.72.528-.3.972-.66 1.332-1.08.36-.42.636-.9.828-1.44.192-.54.288-1.14.288-1.8 0-1.44-.768-2.64-2.305-3.6-1.537-.96-3.537-1.44-6-1.44z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-neutral-900">카카오톡</p>
+                      <a 
+                        href="https://open.kakao.com/o/your-chat-room-id" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-yellow-600 text-sm hover:text-yellow-700 transition-colors"
+                      >
+                        오픈채팅방 참여
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>

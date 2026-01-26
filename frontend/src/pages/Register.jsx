@@ -183,13 +183,25 @@ export default function Register() {
             </button>
           </form>
 
-          <div className="mt-8 text-center">
+          <div className="mt-8 text-center space-y-4">
             <p className="text-sm text-neutral-500">
               이미 계정이 있으신가요?{' '}
               <Link to="/login" className="text-primary-600 hover:text-primary-700 font-semibold hover:underline">
                 로그인
               </Link>
             </p>
+            
+            <div className="text-xs text-neutral-500 leading-relaxed">
+              회원가입 시{' '}
+              <Link to="/terms" className="text-primary-600 hover:text-primary-700 underline">
+                이용약관
+              </Link>
+              {' '}및{' '}
+              <Link to="/privacy" className="text-primary-600 hover:text-primary-700 underline">
+                개인정보처리방침
+              </Link>
+              에 동의한 것으로 간주됩니다.
+            </div>
           </div>
         </div>
       </div>

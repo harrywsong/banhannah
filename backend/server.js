@@ -27,11 +27,27 @@ async function startServer() {
     // Graceful shutdown
     const shutdown = async (signal) => {
       logger.info(`${signal} received, shutting down gracefully...`);
-      server.close(async () => {
+
+      // Set a hard timeout for shutdown
+      const forceExit = setTimeout(() => {
+        logger.warn('Forcefully shutting down after timeout');
+        process.exit(1);
+      }, 3000);
+
+      try {
+        server.close(() => {
+          logger.info('HTTP server closed');
+        });
+
         await prisma.$disconnect();
-        logger.info('✓ Server closed');
+        logger.info('✓ Database disconnected');
+
+        clearTimeout(forceExit);
         process.exit(0);
-      });
+      } catch (err) {
+        logger.error('Error during shutdown:', err);
+        process.exit(1);
+      }
     };
 
     process.on('SIGTERM', () => shutdown('SIGTERM'));

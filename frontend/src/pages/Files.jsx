@@ -1,16 +1,29 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import FileViewer from '../components/FileViewer';
+import FileReviewButton from '../components/FileReviewButton';
 import PreviewImage from '../components/PreviewImage';
 import { Download, FileText, Search, Star, Eye } from 'lucide-react';
+import { triggerDownload } from '../utils/helpers';
 
 export default function Files() {
+  const [searchParams] = useSearchParams();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('search') || '');
   const [formatFilter, setFormatFilter] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [viewingFile, setViewingFile] = useState(null);
+
+  useEffect(() => {
+    // Set search from URL params on mount and fetch files
+    const urlSearch = searchParams.get('search');
+    if (urlSearch && urlSearch !== search) {
+      setSearch(urlSearch);
+    }
+    fetchFiles();
+  }, [searchParams]);
 
   useEffect(() => {
     fetchFiles();
@@ -43,24 +56,31 @@ export default function Files() {
 
   const handleDownload = async (file) => {
     try {
-      await apiClient.get(`/files/download/${file.filename}`);
-      window.location.href = file.downloadUrl;
+      // Construct the URL. Use absolute backend path to bypass any proxy header-stripping issues.
+      const downloadUrl = file.downloadUrl || `/api/files/download/${file.filename}`;
+
+      // Use robust download trigger with authentication
+      await triggerDownload(downloadUrl, file.originalName || file.filename);
     } catch (error) {
       console.error('Download failed:', error);
+      alert('다운로드에 실패했습니다. 로그인 상태를 확인해주세요.');
     }
   };
 
   return (
     <div className="min-h-screen bg-neutral-50">
       {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden bg-gradient-to-br from-primary-400 to-primary-600">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center text-white">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-6 backdrop-blur-sm">
-              <FileText className="w-8 h-8" />
+      <section className="relative pt-12 pb-12 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-neutral-100">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-green-100/30 via-transparent to-transparent"></div>
+        <div className="container mx-auto px-4 relative">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl mb-4 shadow-lg shadow-green-500/25">
+              <FileText className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">학습 자료</h1>
-            <p className="text-xl opacity-90 font-light leading-relaxed">
+            <h1 className="text-3xl md:text-4xl font-bold mb-3 tracking-tight bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
+              학습 자료
+            </h1>
+            <p className="text-lg text-slate-600 font-light leading-relaxed max-w-2xl mx-auto">
               다양한 학습 자료를 다운로드하고 활용하세요
             </p>
           </div>
@@ -162,7 +182,7 @@ export default function Files() {
                           <Download className="h-4 w-4" />
                           <span>{file.downloads || 0}</span>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <button
                             onClick={() => handleView(file)}
                             className="btn btn-sm btn-outline rounded-full"
@@ -177,6 +197,10 @@ export default function Files() {
                             <Download className="h-4 w-4 mr-1" />
                             다운로드
                           </button>
+                          <FileReviewButton 
+                            fileId={file.id} 
+                            fileName={file.title}
+                          />
                         </div>
                       </div>
                     </div>

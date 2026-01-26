@@ -32,7 +32,8 @@ export default function VideoPlayer({ videoId, onError }) {
       // Initialize video player
       if (videoRef.current) {
         const video = videoRef.current;
-        const streamUrl = `${import.meta.env.VITE_API_URL}/videos/stream/${videoId}/index.m3u8?token=${response.data.token}`;
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+        const streamUrl = `${apiUrl}/videos/stream/${videoId}/index.m3u8?token=${response.data.token}`;
 
         // Check if HLS is supported
         if (video.canPlayType('application/vnd.apple.mpegurl')) {

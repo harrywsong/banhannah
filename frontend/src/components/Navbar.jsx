@@ -56,13 +56,17 @@ export default function Navbar() {
     }
   }, [isMobileMenuOpen]);
 
-  const navLinks = [
+  const leftNavLinks = [
     { path: '/', label: '홈', icon: Home },
-    { path: '/courses', label: '강의', icon: BookOpen },
-    { path: '/files', label: '자료실', icon: FileText },
+    { path: '/about', label: '소개', icon: User },
     { path: '/reviews', label: '후기', icon: Star },
     { path: '/faq', label: 'FAQ', icon: HelpCircle },
     { path: '/contact', label: '문의', icon: MessageCircle },
+  ];
+
+  const rightNavLinks = [
+    { path: '/courses', label: '강의', icon: BookOpen },
+    { path: '/files', label: '자료실', icon: FileText },
   ];
 
   return (
@@ -82,20 +86,40 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-1">
-              {navLinks.map(({ path, label, icon: Icon }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(path)
-                      ? 'bg-primary-50 text-primary-700'
-                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
-                    }`}
-                >
-                  <Icon className="w-4 h-4 opacity-70" />
-                  <span>{label}</span>
-                </Link>
-              ))}
+            <div className="hidden md:flex items-center justify-between flex-1 ml-8">
+              {/* Left Navigation */}
+              <div className="flex items-center space-x-1">
+                {leftNavLinks.map(({ path, label, icon: Icon }) => (
+                  <Link
+                    key={path}
+                    to={path}
+                    className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(path)
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      }`}
+                  >
+                    <Icon className="w-4 h-4 opacity-70" />
+                    <span>{label}</span>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Right Navigation */}
+              <div className="flex items-center space-x-1">
+                {rightNavLinks.map(({ path, label, icon: Icon }) => (
+                  <Link
+                    key={path}
+                    to={path}
+                    className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(path)
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      }`}
+                  >
+                    <Icon className="w-4 h-4 opacity-70" />
+                    <span>{label}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
 
             {/* Desktop Auth Section */}
@@ -112,6 +136,9 @@ export default function Navbar() {
                     <Home className="w-4 h-4" />
                     <span>대시보드</span>
                   </Link>
+
+                  {/* Pipe separator */}
+                  <div className="h-6 w-px bg-neutral-300 mx-2"></div>
 
                   {/* Profile Dropdown */}
                   <div className="relative" ref={dropdownRef}>
@@ -206,7 +233,7 @@ export default function Navbar() {
         <div className="fixed inset-0 z-40 bg-white md:hidden pt-20 pb-6 px-4 animate-fade-in overflow-y-auto">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              {navLinks.map(({ path, label, icon: Icon }) => (
+              {[...leftNavLinks, ...rightNavLinks].map(({ path, label, icon: Icon }) => (
                 <Link
                   key={path}
                   to={path}

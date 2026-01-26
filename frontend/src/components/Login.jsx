@@ -36,7 +36,8 @@ export default function Login() {
 
   const handleResendVerification = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/resend-verification`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+      const response = await fetch(`${apiUrl}/auth/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
