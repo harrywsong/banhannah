@@ -2,6 +2,7 @@
 import { prisma } from '../config/database.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import { deleteFile, getFilePath, buildFileUrl } from '../services/storage.service.js';
+import { trackFileAccess, getUserAccessedFiles } from '../services/userFileAccess.service.js';
 import { getFilePageCount } from '../utils/pdfUtils.js';
 import path from 'path';
 import fs from 'fs';
@@ -355,6 +356,9 @@ export async function downloadFile(req, res, next) {
       data: { downloads: { increment: 1 } }
     });
 
+    // Track user file access
+    await trackFileAccess(req.user.id, file.id, 'download');
+
     const finalName = file.originalName || file.filename;
     const encodedName = encodeURIComponent(finalName);
 
@@ -396,6 +400,17 @@ export async function viewFile(req, res, next) {
     // Security: validate filename (no path traversal)
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
       return res.status(400).json({ error: 'Invalid filename' });
+    }
+
+    // Track file access if user is authenticated
+    if (req.user) {
+      const file = await prisma.file.findFirst({
+        where: { filename, published: true }
+      });
+      
+      if (file) {
+        await trackFileAccess(req.user.id, file.id, 'view');
+      }
     }
 
     const filePath = getFilePath(filename, 'uploads');

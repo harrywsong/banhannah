@@ -198,9 +198,10 @@ export function buildFileUrl(filename, type = 'uploads') {
 
   const route = routes[type] || routes.uploads;
 
-  // In production, always use the SERVER_URL (HTTPS domain)
-  if (ENV.NODE_ENV === 'production' && ENV.SERVER_URL) {
-    return `${ENV.SERVER_URL}${route}/${encodeURIComponent(filename)}`;
+  // Force HTTPS domain in production
+  if (ENV.NODE_ENV === 'production') {
+    const serverUrl = ENV.SERVER_URL || 'https://api.banhannah.dpdns.org';
+    return `${serverUrl}${route}/${encodeURIComponent(filename)}`;
   }
 
   // Development: return relative URLs for Vite proxy

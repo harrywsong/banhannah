@@ -20,16 +20,16 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [coursesResponse, progressResponse, filesResponse, fileStatsResponse] = await Promise.all([
+      const [coursesResponse, progressResponse, myFilesResponse, fileStatsResponse] = await Promise.all([
         apiClient.get('/courses/my/courses'),
         apiClient.get('/auth/my-progress'),
-        apiClient.get('/files?limit=6'), // Get recent files for "내 파일" section
-        apiClient.get('/auth/file-stats').catch(() => ({ data: { totalDownloads: 0 } })) // Fallback if endpoint doesn't exist
+        apiClient.get('/auth/my-files?limit=6'), // Get user's accessed files
+        apiClient.get('/auth/file-stats').catch(() => ({ data: { totalFilesAccessed: 0, totalDownloads: 0 } }))
       ]);
       
       setMyCourses(coursesResponse.data.courses);
       setUserProgress(progressResponse.data.progress);
-      setMyFiles(filesResponse.data.files || []);
+      setMyFiles(myFilesResponse.data.files || []);
       setFileStats(fileStatsResponse.data);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -114,7 +114,7 @@ export default function Dashboard() {
     {
       icon: FileText,
       label: '내 파일',
-      value: myFiles.length,
+      value: fileStats.totalFilesAccessed || myFiles.length,
       color: 'from-green-400 to-green-600',
       iconBg: 'bg-green-100',
       iconColor: 'text-green-600'
@@ -340,7 +340,7 @@ export default function Dashboard() {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h2 className="text-2xl font-bold text-neutral-900 mb-1">내 파일</h2>
-                  <p className="text-neutral-600">최근 업로드된 학습 자료를 확인하세요</p>
+                  <p className="text-neutral-600">다운로드하거나 조회한 학습 자료</p>
                 </div>
                 <Link
                   to="/files"
@@ -362,10 +362,10 @@ export default function Dashboard() {
                     <FileText className="h-16 w-16 text-green-400" />
                   </div>
                   <h3 className="text-xl font-semibold text-neutral-900 mb-2">
-                    아직 업로드된 파일이 없습니다
+                    아직 다운로드한 파일이 없습니다
                   </h3>
                   <p className="text-neutral-600 mb-6 max-w-md mx-auto">
-                    다양한 학습 자료를 확인해보세요
+                    파일을 다운로드하거나 조회하면 여기에 표시됩니다
                   </p>
                   <Link
                     to="/files"
@@ -407,9 +407,20 @@ export default function Dashboard() {
                           {file.description}
                         </p>
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-sm text-neutral-500">
-                            <Download className="h-4 w-4" />
-                            <span>{file.downloads || 0}</span>
+                          <div className="flex items-center gap-3 text-sm text-neutral-500">
+                            <div className="flex items-center gap-1">
+                              <Download className="h-4 w-4" />
+                              <span>{file.downloads || 0}</span>
+                            </div>
+                            {file.userAccess && (
+                              <div className="flex items-center gap-1 text-green-600">
+                                {file.userAccess.accessType === 'download' && <Download className="h-3 w-3" />}
+                                {file.userAccess.accessType === 'view' && <FileText className="h-3 w-3" />}
+                                <span className="text-xs">
+                                  {file.userAccess.accessType === 'download' ? '다운로드함' : '조회함'}
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <span className="text-sm text-green-600 font-medium group-hover:translate-x-1 transition-transform">
                             보기 →

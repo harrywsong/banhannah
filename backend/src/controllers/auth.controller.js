@@ -201,36 +201,26 @@ export async function getMyProgress(req, res, next) {
  */
 export async function getFileStats(req, res, next) {
   try {
-    const { prisma } = await import('../config/database.js');
+    const { getUserFileStats } = await import('../services/userFileAccess.service.js');
     
-    // Get file statistics for the user
-    const [totalFiles, totalDownloads, recentFiles] = await Promise.all([
-      prisma.file.count({
-        where: { published: true }
-      }),
-      prisma.file.aggregate({
-        _sum: { downloads: true },
-        where: { published: true }
-      }),
-      prisma.file.findMany({
-        where: { published: true },
-        select: {
-          id: true,
-          title: true,
-          format: true,
-          downloads: true,
-          createdAt: true
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 5
-      })
-    ]);
+    const stats = await getUserFileStats(req.user.id);
     
-    res.json({
-      totalFiles,
-      totalDownloads: totalDownloads._sum.downloads || 0,
-      recentFiles
-    });
+    res.json(stats);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get user's accessed files (for "내 파일" section)
+ */
+export async function getMyFiles(req, res, next) {
+  try {
+    const { limit = 10, offset = 0 } = req.query;
+    
+    const myFiles = await getUserAccessedFiles(req.user.id, parseInt(limit), parseInt(offset));
+    
+    res.json({ files: myFiles });
   } catch (error) {
     next(error);
   }
