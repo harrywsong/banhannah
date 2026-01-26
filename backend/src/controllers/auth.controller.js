@@ -1,5 +1,6 @@
 // src/controllers/auth.controller.js
 import * as authService from '../services/auth.service.js';
+import { getUserAccessedFiles, getUserFileStats } from '../services/userFileAccess.service.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import { ENV } from '../config/env.js';
 
@@ -201,8 +202,6 @@ export async function getMyProgress(req, res, next) {
  */
 export async function getFileStats(req, res, next) {
   try {
-    const { getUserFileStats } = await import('../services/userFileAccess.service.js');
-    
     const stats = await getUserFileStats(req.user.id);
     
     res.json(stats);
@@ -218,7 +217,6 @@ export async function getMyFiles(req, res, next) {
   try {
     const { limit = 10, offset = 0 } = req.query;
     
-    const { getUserAccessedFiles } = await import('../services/userFileAccess.service.js');
     const myFiles = await getUserAccessedFiles(req.user.id, parseInt(limit), parseInt(offset));
     
     res.json({ files: myFiles });
