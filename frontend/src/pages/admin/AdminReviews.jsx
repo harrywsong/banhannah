@@ -13,7 +13,7 @@ const AdminReviews = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState(null);
   
-  const { request } = useApi();
+  const { loading: apiLoading, error: apiError, get, del } = useApi();
 
   const fetchReviews = async (page = 1) => {
     try {
@@ -29,7 +29,7 @@ const AdminReviews = () => {
       
       console.log('🔍 Fetching reviews with params:', params.toString());
       
-      const response = await request(`/admin/reviews/all?${params}`);
+      const response = await get(`/admin/reviews/all?${params}`);
       
       console.log('📊 Reviews API response:', response);
       console.log('📝 Reviews data:', response.reviews);
@@ -52,9 +52,7 @@ const AdminReviews = () => {
 
   const handleDeleteReview = async (reviewId) => {
     try {
-      await request(`/admin/reviews/${reviewId}`, {
-        method: 'DELETE'
-      });
+      await del(`/admin/reviews/${reviewId}`);
       
       // Remove from local state
       setReviews(reviews.filter(review => review.id !== reviewId));
@@ -173,7 +171,16 @@ const AdminReviews = () => {
         ) : reviews.length === 0 ? (
           <div className="p-8 text-center">
             <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">검색 조건에 맞는 리뷰가 없습니다.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">리뷰가 없습니다</h3>
+            <p className="text-gray-500">
+              {searchTerm || filterType || filterRating 
+                ? '검색 조건에 맞는 리뷰가 없습니다.' 
+                : '아직 등록된 리뷰가 없습니다.'
+              }
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              💡 사용자가 파일이나 강의에 리뷰를 남기면 여기에 표시됩니다.
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
@@ -188,8 +195,10 @@ const AdminReviews = () => {
                         <span className="font-medium">
                           {review.itemType === 'file' ? '파일' : '강의'}
                         </span>
-                        {review.item && (
+                        {review.item ? (
                           <span className="text-gray-800">→ {review.item.title}</span>
+                        ) : (
+                          <span className="text-red-500">→ [삭제된 항목] (ID: {review.itemId})</span>
                         )}
                       </div>
                       <div className="flex items-center gap-1">
