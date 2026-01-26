@@ -23,7 +23,7 @@ export default function Dashboard() {
       const [coursesResponse, progressResponse, myFilesResponse, fileStatsResponse] = await Promise.all([
         apiClient.get('/courses/my/courses'),
         apiClient.get('/auth/my-progress'),
-        apiClient.get('/auth/my-files?limit=6'), // Get user's accessed files
+        apiClient.get('/auth/my-files?limit=6&t=' + Date.now()), // Get user's accessed files
         apiClient.get('/auth/file-stats').catch(() => ({ data: { totalFilesAccessed: 0, totalDownloads: 0 } }))
       ]);
       

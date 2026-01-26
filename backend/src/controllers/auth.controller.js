@@ -218,6 +218,7 @@ export async function getMyFiles(req, res, next) {
   try {
     const { limit = 10, offset = 0 } = req.query;
     
+    const { getUserAccessedFiles } = await import('../services/userFileAccess.service.js');
     const myFiles = await getUserAccessedFiles(req.user.id, parseInt(limit), parseInt(offset));
     
     res.json({ files: myFiles });
