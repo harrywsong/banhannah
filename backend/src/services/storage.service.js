@@ -183,7 +183,7 @@ export function deleteFile(filename, type = 'uploads') {
 }
 
 /**
- * Build file URL - FIXED to return relative paths that work with proxy
+ * Build file URL - FIXED to always use HTTPS in production
  */
 export function buildFileUrl(filename, type = 'uploads') {
   if (!filename) return null;
@@ -198,17 +198,11 @@ export function buildFileUrl(filename, type = 'uploads') {
 
   const route = routes[type] || routes.uploads;
 
-  // Always return relative URLs in development for Vite proxy
-  // In production, we can return absolute URLs if needed
-  if (ENV.NODE_ENV === 'development') {
-    return `${route}/${encodeURIComponent(filename)}`;
-  }
-
-  // Production: return absolute URLs only if SERVER_URL is properly configured
-  if (ENV.SERVER_URL && !ENV.SERVER_URL.includes('undefined')) {
+  // In production, always use the SERVER_URL (HTTPS domain)
+  if (ENV.NODE_ENV === 'production' && ENV.SERVER_URL) {
     return `${ENV.SERVER_URL}${route}/${encodeURIComponent(filename)}`;
   }
 
-  // Fallback to relative URLs
+  // Development: return relative URLs for Vite proxy
   return `${route}/${encodeURIComponent(filename)}`;
 }
