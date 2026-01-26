@@ -195,3 +195,43 @@ export async function getMyProgress(req, res, next) {
     next(error);
   }
 }
+
+/**
+ * Get user's file statistics
+ */
+export async function getFileStats(req, res, next) {
+  try {
+    const { prisma } = await import('../config/database.js');
+    
+    // Get file statistics for the user
+    const [totalFiles, totalDownloads, recentFiles] = await Promise.all([
+      prisma.file.count({
+        where: { published: true }
+      }),
+      prisma.file.aggregate({
+        _sum: { downloads: true },
+        where: { published: true }
+      }),
+      prisma.file.findMany({
+        where: { published: true },
+        select: {
+          id: true,
+          title: true,
+          format: true,
+          downloads: true,
+          createdAt: true
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5
+      })
+    ]);
+    
+    res.json({
+      totalFiles,
+      totalDownloads: totalDownloads._sum.downloads || 0,
+      recentFiles
+    });
+  } catch (error) {
+    next(error);
+  }
+}

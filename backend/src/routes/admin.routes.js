@@ -24,4 +24,7 @@ router.get('/purchases/export', adminController.exportPurchases);
 // Course management (admin can see all courses, not just published)
 router.get('/courses/all', adminController.getAllCoursesAdmin);
 
+// File management
+router.get('/files/all', adminController.getAllFilesAdmin);
+
 export default router;

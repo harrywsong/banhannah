@@ -410,3 +410,72 @@ export async function getAllCoursesAdmin(req, res, next) {
     next(error);
   }
 }
+
+/**
+ * Get all files for admin (Admin only)
+ */
+export async function getAllFilesAdmin(req, res, next) {
+  try {
+    const { page = 1, limit = 20, search = '', format = '', published = '' } = req.query;
+    
+    const where = {};
+    
+    if (format) where.format = format;
+    if (published !== '') where.published = published === 'true';
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { originalName: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+    
+    const [files, totalCount] = await Promise.all([
+      prisma.file.findMany({
+        where,
+        orderBy: [
+          { featured: 'desc' },
+          { createdAt: 'desc' }
+        ],
+        skip: (parseInt(page) - 1) * parseInt(limit),
+        take: parseInt(limit)
+      }),
+      prisma.file.count({ where })
+    ]);
+    
+    // Calculate stats for each file
+    const filesWithStats = await Promise.all(
+      files.map(async (file) => {
+        const reviews = await prisma.review.findMany({
+          where: { 
+            itemType: 'file', 
+            itemId: file.id 
+          }
+        });
+        
+        const avgRating = reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+          : 0;
+        
+        return {
+          ...file,
+          reviewCount: reviews.length,
+          averageRating: Math.round(avgRating * 10) / 10
+        };
+      })
+    );
+    
+    res.json({
+      files: filesWithStats,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalCount,
+        pages: Math.ceil(totalCount / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error in getAllFilesAdmin:', error);
+    next(error);
+  }
+}

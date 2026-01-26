@@ -60,5 +60,6 @@ router.put('/change-password',
 // User data endpoints
 router.get('/my-purchases', authenticate, authController.getMyPurchases);
 router.get('/my-progress', authenticate, authController.getMyProgress);
+router.get('/file-stats', authenticate, authController.getFileStats);
 
 export default router;
