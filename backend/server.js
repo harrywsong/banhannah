@@ -4,12 +4,16 @@ import { ENV } from './src/config/env.js';
 import { logger } from './src/utils/logger.js';
 import { prisma } from './src/config/database.js';
 import { initializeAdmin } from './src/services/auth.service.js';
+import { setupGracefulShutdown, setupCrashHandlers, getHealthStatus } from './src/utils/processManager.js';
 
 const PORT = ENV.PORT;
 const HOST = ENV.HOST;
 
 async function startServer() {
   try {
+    // Setup crash handlers first
+    setupCrashHandlers();
+    
     // Test database connection
     await prisma.$connect();
     logger.info('✓ Database connected');
@@ -23,6 +27,16 @@ async function startServer() {
       logger.info(`✓ Environment: ${ENV.NODE_ENV}`);
       logger.info(`✓ Frontend: ${ENV.FRONTEND_URL}`);
     });
+
+    // Setup graceful shutdown
+    setupGracefulShutdown(server, prisma);
+
+    // Enhanced health check endpoint
+    app.get('/health', (req, res) => {
+      res.json(getHealthStatus());
+    });
+
+    return server;
 
     // Graceful shutdown
     const shutdown = async (signal) => {

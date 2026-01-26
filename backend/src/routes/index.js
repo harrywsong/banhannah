@@ -56,7 +56,15 @@ router.get('/', (req, res) => {
       admin: {
         path: '/api/admin',
         description: 'Admin-only endpoints',
-        methods: ['GET /stats/dashboard', 'GET /users', 'GET /purchases']
+        methods: [
+          'GET /stats/dashboard', 
+          'GET /users', 
+          'GET /purchases',
+          'GET /courses/all',
+          'GET /files/all',
+          'GET /reviews/all',
+          'DELETE /reviews/:id'
+        ]
       },
       contact: {
         path: '/api/contact',

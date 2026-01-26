@@ -291,24 +291,32 @@ export async function updateReview(req, res, next) {
 }
 
 /**
- * Delete review (Admin only)
+ * Delete review (User can delete own, Admin can delete any)
  */
 export async function deleteReview(req, res, next) {
   try {
     const { id } = req.params;
     
     const review = await prisma.review.findUnique({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true }
+        }
+      }
     });
     
     if (!review) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Review not found' });
     }
     
-    // Only admins can delete reviews
-    if (req.user.role !== 'ADMIN') {
+    // Check permissions: user can delete own review, admin can delete any
+    const isOwner = review.userId === req.user.id;
+    const isAdmin = req.user.role === 'ADMIN';
+    
+    if (!isOwner && !isAdmin) {
       return res.status(HTTP_STATUS.FORBIDDEN).json({ 
-        error: 'Only administrators can delete reviews' 
+        error: 'You can only delete your own reviews' 
       });
     }
     
@@ -316,7 +324,55 @@ export async function deleteReview(req, res, next) {
       where: { id: parseInt(id) }
     });
     
-    res.json({ message: 'Review deleted successfully' });
+    // Log admin deletions for audit purposes
+    if (isAdmin && !isOwner) {
+      logger.info(`Admin ${req.user.email} deleted review by ${review.user.email}: "${review.comment}"`);
+    }
+    
+    res.json({ 
+      message: 'Review deleted successfully',
+      deletedBy: isAdmin && !isOwner ? 'admin' : 'user'
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Report inappropriate review
+ */
+export async function reportReview(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    
+    const review = await prisma.review.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        user: {
+          select: { name: true, email: true }
+        }
+      }
+    });
+    
+    if (!review) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Review not found' });
+    }
+    
+    // Log the report for admin review
+    logger.warn(`Review reported by ${req.user.email}:`, {
+      reviewId: review.id,
+      reviewAuthor: review.user.email,
+      reviewContent: review.comment,
+      reportReason: reason || 'No reason provided',
+      reportedBy: req.user.email,
+      reportedAt: new Date().toISOString()
+    });
+    
+    res.json({ 
+      message: 'Review reported successfully. Administrators will review this report.',
+      reportId: `REP-${Date.now()}-${review.id}`
+    });
   } catch (error) {
     next(error);
   }

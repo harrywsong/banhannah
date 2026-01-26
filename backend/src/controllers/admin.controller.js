@@ -479,3 +479,123 @@ export async function getAllFilesAdmin(req, res, next) {
     next(error);
   }
 }
+
+/**
+ * Get all reviews for admin (Admin only)
+ */
+export async function getAllReviewsAdmin(req, res, next) {
+  try {
+    const { page = 1, limit = 20, search = '', itemType = '', rating = '' } = req.query;
+    
+    const where = {};
+    
+    if (itemType) where.itemType = itemType;
+    if (rating) where.rating = parseInt(rating);
+    if (search) {
+      where.OR = [
+        { comment: { contains: search, mode: 'insensitive' } },
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+        { user: { email: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+    
+    const [reviews, totalCount] = await Promise.all([
+      prisma.review.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (parseInt(page) - 1) * parseInt(limit),
+        take: parseInt(limit)
+      }),
+      prisma.review.count({ where })
+    ]);
+    
+    // Add item details for each review
+    const reviewsWithItems = await Promise.all(
+      reviews.map(async (review) => {
+        let itemDetails = null;
+        
+        if (review.itemType === 'file') {
+          itemDetails = await prisma.file.findUnique({
+            where: { id: review.itemId },
+            select: { id: true, title: true, format: true }
+          });
+        } else if (review.itemType === 'course') {
+          itemDetails = await prisma.course.findUnique({
+            where: { id: review.itemId },
+            select: { id: true, title: true, type: true }
+          });
+        }
+        
+        return {
+          ...review,
+          item: itemDetails
+        };
+      })
+    );
+    
+    res.json({
+      reviews: reviewsWithItems,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalCount,
+        pages: Math.ceil(totalCount / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Error in getAllReviewsAdmin:', error);
+    next(error);
+  }
+}
+
+/**
+ * Delete review (Admin only)
+ */
+export async function deleteReview(req, res, next) {
+  try {
+    const { id } = req.params;
+    
+    // Check if review exists
+    const review = await prisma.review.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        user: {
+          select: { name: true, email: true }
+        }
+      }
+    });
+    
+    if (!review) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ error: 'Review not found' });
+    }
+    
+    // Delete the review
+    await prisma.review.delete({
+      where: { id: parseInt(id) }
+    });
+    
+    logger.info(`Admin deleted review: ID ${id} by ${review.user.email}`);
+    
+    res.json({ 
+      message: 'Review deleted successfully',
+      deletedReview: {
+        id: review.id,
+        comment: review.comment,
+        rating: review.rating,
+        user: review.user
+      }
+    });
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    next(error);
+  }
+}

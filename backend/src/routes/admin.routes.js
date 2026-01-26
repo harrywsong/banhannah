@@ -27,4 +27,8 @@ router.get('/courses/all', adminController.getAllCoursesAdmin);
 // File management
 router.get('/files/all', adminController.getAllFilesAdmin);
 
+// Review management
+router.get('/reviews/all', adminController.getAllReviewsAdmin);
+router.delete('/reviews/:id', adminController.deleteReview);
+
 export default router;

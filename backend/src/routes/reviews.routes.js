@@ -14,6 +14,7 @@ router.get('/:itemType/:itemId', reviewsController.getReviews);
 router.post('/', authenticate, reviewValidation, reviewsController.createReview);
 router.put('/:id', authenticate, reviewsController.updateReview);
 router.delete('/:id', authenticate, reviewsController.deleteReview);
+router.post('/:id/report', authenticate, reviewsController.reportReview);
 router.get('/my/reviews', authenticate, reviewsController.getMyReviews);
 
 export default router;

@@ -20,12 +20,16 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
+      console.log('🔍 Fetching dashboard data...');
       const [coursesResponse, progressResponse, myFilesResponse, fileStatsResponse] = await Promise.all([
         apiClient.get('/courses/my/courses'),
         apiClient.get('/auth/my-progress'),
         apiClient.get('/auth/my-files?limit=6&t=' + Date.now()), // Get user's accessed files
         apiClient.get('/auth/file-stats').catch(() => ({ data: { totalFilesAccessed: 0, totalDownloads: 0 } }))
       ]);
+      
+      console.log('📊 My files response:', myFilesResponse.data);
+      console.log('📈 File stats response:', fileStatsResponse.data);
       
       setMyCourses(coursesResponse.data.courses);
       setUserProgress(progressResponse.data.progress);

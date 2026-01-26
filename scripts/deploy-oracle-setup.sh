@@ -116,16 +116,34 @@ print_info "Creating systemd service file..."
 cat > banhannah-backend.service << EOF
 [Unit]
 Description=BanHannah Educational Platform Backend
-After=network.target
+After=network.target postgresql.service
+Wants=postgresql.service
 
 [Service]
 Type=simple
 User=ubuntu
+Group=ubuntu
 WorkingDirectory=$(pwd)
 Environment=NODE_ENV=production
+Environment=PATH=/usr/bin:/usr/local/bin
 ExecStart=/usr/bin/node server.js
-Restart=on-failure
+Restart=always
 RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=banhannah-backend
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=$(pwd)
+ReadWritePaths=$(pwd)/storage
+ReadWritePaths=$(pwd)/logs
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=1G
 
 [Install]
 WantedBy=multi-user.target
